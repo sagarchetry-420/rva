@@ -29,38 +29,72 @@ export default function TeacherAttendance() {
   }, [user]);
 
   // 1. Fetch classes assigned to this teacher
-  const fetchTeacherClasses = async () => {
-    try {
-      const { data: teacherData } = await supabase
-        .from('teachers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
+ const fetchTeacherClasses = async () => {
+  try {
+    setLoading(true);
+    
+    // 1. Get the Teacher record
+    const { data: teacherData, error: teacherError } = await supabase
+      .from('teachers')
+      .select('id')
+      .eq('user_id', user?.id)
+      .maybeSingle();
 
-      if (!teacherData) return;
+    if (teacherError) throw teacherError;
+    if (!teacherData) {
+      toast({ title: "Setup Required", description: "You are not yet registered in the Teachers table." });
+      return;
+    }
 
-      const { data, error } = await supabase
+    // 2. Fetch Assignments with Fallback Logic
+    // Strategy A: Simple Join (Most likely to work)
+    let { data, error } = await supabase
+      .from('teacher_subjects')
+      .select('class_id, classes(id, name)')
+      .eq('teacher_id', teacherData.id);
+
+    // Strategy B: If A failed, try explicit join
+    if (error || !data || data.length === 0) {
+      console.log("Strategy A failed or returned no data, trying Strategy B...");
+      const fallback = await supabase
         .from('teacher_subjects')
         .select(`
           class_id,
-          classes (id, name)
+          classes!class_id(id, name)
         `)
         .eq('teacher_id', teacherData.id);
-
-      if (error) throw error;
-
-      // Filter unique classes
-      const uniqueClasses = Array.from(new Set(data.map(item => item.classes.id)))
-        .map(id => data.find(item => item.classes.id === id)?.classes);
       
-      setAssignedClasses(uniqueClasses || []);
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
+      data = fallback.data;
+      error = fallback.error;
     }
-  };
 
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      console.warn("No classes assigned to teacher ID:", teacherData.id);
+      setAssignedClasses([]);
+      return;
+    }
+
+    // 3. Clean and Deduplicate
+    const classMap = new Map();
+    data.forEach((item: any) => {
+      // Ensure the joined 'classes' object actually exists
+      if (item.classes) {
+        classMap.set(item.classes.id, item.classes);
+      }
+    });
+    
+    const uniqueClasses = Array.from(classMap.values());
+    setAssignedClasses(uniqueClasses);
+
+  } catch (error: any) {
+    console.error("Critical Fetch Error:", error);
+    toast({ title: "Fetch Error", description: error.message, variant: "destructive" });
+  } finally {
+    setLoading(false);
+  }
+};
   // 2. Fetch students when a class is selected
   const fetchStudents = async (classId: string) => {
     setSelectedClass(classId);

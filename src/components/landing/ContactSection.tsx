@@ -23,9 +23,9 @@ export default function ContactSection() {
             className="space-y-6"
           >
             {[
-              { icon: MapPin, label: "Address", value: "123 Education Lane, Rose Valley, New Delhi — 110001" },
-              { icon: Phone, label: "Phone", value: "+91 11 2345 6789" },
-              { icon: Mail, label: "Email", value: "info@rosevalleyacademy.edu" },
+              { icon: MapPin, label: "Address", value: "Rose Valley Academy, Bamunbari — 786613" },
+              { icon: Phone, label: "Phone", value: "+91 xxxxx xxxxx" },
+              { icon: Mail, label: "Email", value: "info@xxx.edu" },
               { icon: Clock, label: "Office Hours", value: "Mon – Sat: 8:00 AM – 4:00 PM" },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-4 bg-card border border-border rounded-xl p-5">
@@ -49,7 +49,7 @@ export default function ContactSection() {
             <div className="text-center p-8">
               <MapPin className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
               <p className="text-muted-foreground">Map placeholder — Rose Valley Academy</p>
-              <p className="text-sm text-muted-foreground/60">123 Education Lane, New Delhi</p>
+              <p className="text-sm text-muted-foreground/60">Bamunbari, 786613</p>
             </div>
           </motion.div>
         </div>

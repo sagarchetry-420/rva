@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, GraduationCap, Loader2 } from "lucide-react";
 
+// Hardcoded departments for the teachers table
 const DEPARTMENTS = [
   "Mathematics", "Science", "English", "History", 
   "Physical Education", "Arts", "Computer Science", "Languages"
@@ -16,6 +17,11 @@ const DEPARTMENTS = [
 
 export default function AddTeacher() {
   const [loading, setLoading] = useState(false);
+  
+  // State to hold the dynamic classes and subjects from your database
+  const [classes, setClasses] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]); 
+  
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -25,8 +31,34 @@ export default function AddTeacher() {
     firstName: "",
     lastName: "",
     department: "",
+    classId: "",   
+    subjectId: "", 
     hireDate: new Date().toISOString().split('T')[0],
   });
+
+  // Fetch Classes and Subjects when the component loads
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      const [classesRes, subjectsRes] = await Promise.all([
+        supabase.from('classes').select('id, name'),
+        supabase.from('subjects').select('id, name') 
+      ]);
+
+      if (classesRes.error || subjectsRes.error) {
+        console.error("Error fetching dropdowns:", classesRes.error || subjectsRes.error);
+        toast({ 
+          title: "Warning", 
+          description: "Could not load all class or subject options.", 
+          variant: "destructive" 
+        });
+      } else {
+        setClasses(classesRes.data || []);
+        setSubjects(subjectsRes.data || []);
+      }
+    };
+
+    fetchDropdownData();
+  }, [toast]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -37,41 +69,44 @@ export default function AddTeacher() {
     setLoading(true);
 
     try {
+      // 1. Create the Auth User
+      // We pass 'role' in the metadata so the SQL trigger handles Profile/Role creation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
-            first_name: formData.firstName, 
-            last_name: formData.lastName,  
-            role: 'teacher',               
-            department: formData.department,
-            hire_date: formData.hireDate
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            role: 'teacher', 
           },
         },
       });
 
-      // 🛑 1. Catch Supabase Auth Errors
-      if (authError) {
-        // Email Rate Limit (the 2 per hour limit we saw earlier)
-        if (authError.status === 429) {
-          throw new Error("Email rate limit exceeded. Please wait an hour or disable 'Confirm Email' in Supabase settings.");
-        }
-        // Duplicate User
-        if (authError.message.toLowerCase().includes("already registered") || authError.status === 422) {
-          throw new Error("This email is already registered. Please use a different email or check the Teacher Directory.");
-        }
-        throw authError;
-      }
+      if (authError) throw authError;
+      const userId = authData.user?.id;
 
-      // 🛑 2. Handle "Silent" failures (User exists but trigger didn't run)
-      if (authData.user?.identities?.length === 0) {
-        throw new Error("This email is already associated with an account. Please delete the old user from the Auth dashboard first.");
-      }
+      if (!userId) throw new Error("User creation failed - No ID returned.");
+
+      // 2. Add record to teachers table
+      // We add a tiny delay (200ms) to ensure the DB trigger has finished profile creation
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      const { error: teacherError } = await supabase
+        .from("teachers")
+        .insert([
+          { 
+            user_id: userId, 
+            department: formData.department,
+            hire_date: formData.hireDate
+          }
+        ]);
+
+      if (teacherError) throw teacherError;
 
       toast({ 
-        title: "Success", 
-        description: `${formData.firstName} ${formData.lastName} has been enrolled as a faculty member.`,
+        title: "Teacher Registered", 
+        description: `${formData.firstName} ${formData.lastName} has been added successfully.` 
       });
       
       navigate("/dashboard/teachers");
@@ -89,7 +124,7 @@ export default function AddTeacher() {
   };
 
   return (
-    <div className="container mx-auto py-8 max-w-2xl px-4">
+    <div className="container mx-auto py-8 max-w-3xl px-4">
       <Button 
         variant="ghost" 
         onClick={() => navigate("/dashboard/teachers")} 
@@ -107,63 +142,43 @@ export default function AddTeacher() {
             <CardTitle className="text-2xl">New Faculty Member</CardTitle>
           </div>
           <CardDescription>
-            Enter the details below to provision a new teacher account.
+            Enter the details below to provision a new teacher account and assign their first class.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
           <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {/* Personal Info Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                <Input 
-                  id="firstName" 
-                  placeholder="Jane" 
-                  required 
-                  value={formData.firstName} 
-                  onChange={handleInputChange} 
-                />
+                <Input id="firstName" placeholder="Jane" required value={formData.firstName} onChange={handleInputChange} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input 
-                  id="lastName" 
-                  placeholder="Smith" 
-                  required 
-                  value={formData.lastName} 
-                  onChange={handleInputChange} 
-                />
+                <Input id="lastName" placeholder="Smith" required value={formData.lastName} onChange={handleInputChange} />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Work Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="teacher@school.edu" 
-                required 
-                value={formData.email} 
-                onChange={handleInputChange} 
-              />
+            {/* Account Info Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Work Email</Label>
+                <Input id="email" type="email" placeholder="teacher@school.edu" required value={formData.email} onChange={handleInputChange} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Temporary Password</Label>
+                <Input id="password" type="password" placeholder="••••••••" required value={formData.password} onChange={handleInputChange} />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Temporary Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                placeholder="••••••••" 
-                required 
-                value={formData.password} 
-                onChange={handleInputChange} 
-              />
-            </div>
+            <hr className="my-4 border-slate-200" />
 
+            {/* Assignment Info Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Department</Label>
                 <Select 
-                  value={formData.department} // Controlled component
                   onValueChange={(val) => setFormData({...formData, department: val})}
                   required
                 >
@@ -177,15 +192,37 @@ export default function AddTeacher() {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="hireDate">Hire Date</Label>
-                <Input 
-                  id="hireDate" 
-                  type="date" 
-                  value={formData.hireDate} 
-                  onChange={handleInputChange} 
-                  required 
-                />
+                <Input id="hireDate" type="date" value={formData.hireDate} onChange={handleInputChange} required />
+              </div>
+            </div>
+
+            {/* Teacher Subjects Mapping Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="space-y-2">
+                <Label>Assigned Subject</Label>
+                <Select onValueChange={(val) => setFormData({...formData, subjectId: val})} required>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Assigned Class</Label>
+                <Select onValueChange={(val) => setFormData({...formData, classId: val})} required>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder="Select Class" /></SelectTrigger>
+                  <SelectContent>
+                    {classes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -193,7 +230,7 @@ export default function AddTeacher() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Provisioning Teacher...
+                  Provisioning Account & Assignments...
                 </>
               ) : (
                 "Enroll Teacher"

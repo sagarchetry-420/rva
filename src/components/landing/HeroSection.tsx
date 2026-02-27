@@ -6,8 +6,15 @@ import { Link } from "react-router-dom";
 export default function HeroSection() {
   return (
     <section id="home" className="relative min-h-screen flex items-center pt-16 overflow-hidden">
-      {/* Background pattern */}
+      {/* Existing Background pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-secondary/10" />
+      
+      {/* NEW: Styled Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20 mix-blend-luminosity"
+        style={{ backgroundImage: "url('/schools%20images/rva%20image.jpg')" }}
+      />
+
       <div className="absolute top-20 right-0 w-96 h-96 bg-secondary/20 rounded-full blur-3xl" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
 
@@ -31,7 +38,6 @@ export default function HeroSection() {
               Nurturing minds, building futures. We provide world-class education that empowers students to excel in academics, sports, and life.
             </p>
             <div className="flex flex-wrap gap-4">
-             
               <a href="#about">
                 <Button variant="outline" size="lg">Learn More</Button>
               </a>

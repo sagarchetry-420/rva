@@ -215,6 +215,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
+<<<<<<< HEAD
                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
                      <div>
                         <p className="font-semibold text-foreground">Active Notice Board</p>
@@ -225,6 +226,16 @@ export default function Dashboard() {
                           <Link to="/dashboard/notices">Manage</Link>
                        </Button>
                      </div>
+=======
+                   <p className="text-sm text-muted-foreground">You have <span className="font-bold text-foreground">{stats.notices}</span> published notices in the system.</p>
+                   <div className="flex gap-2">
+                     <Button variant="outline" size="sm" asChild>
+                        <Link to="/dashboard/notices">Manage Notices</Link>
+                     </Button>
+                     <Button variant="default" size="sm" asChild>
+                        <Link to="/dashboard/notices/create">Post New Notice</Link>
+                     </Button>
+>>>>>>> testing
                    </div>
                 </div>
               )}

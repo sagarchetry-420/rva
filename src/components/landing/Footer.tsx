@@ -2,6 +2,7 @@ import { GraduationCap } from "lucide-react";
 
 export default function Footer() {
   return (
+    
     <footer className="bg-foreground text-background py-12">
       <div className="container mx-auto px-4">
         <div className="grid sm:grid-cols-3 gap-8 mb-8">
@@ -23,12 +24,14 @@ export default function Footer() {
             </div>
           </div>
           <div>
+            <section id="portals">
             <h4 className="font-display font-semibold mb-3">Portal</h4>
             <div className="space-y-2 text-sm opacity-70">
               <a href="/studentlogin" className="block hover:opacity-100">Student Login</a>
               <a href="/teacherlogin" className="block hover:opacity-100">Teacher Login</a>
               <a href="/login" className="block hover:opacity-100">Admin Login</a>
             </div>
+            </section>
           </div>
         </div>
         <div className="border-t border-background/20 pt-6 text-center text-sm opacity-60">
@@ -36,5 +39,6 @@ export default function Footer() {
         </div>
       </div>
     </footer>
+    
   );
 }

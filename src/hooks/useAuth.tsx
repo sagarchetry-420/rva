@@ -11,56 +11,85 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          // Fetch role using setTimeout to avoid Supabase deadlock
-          setTimeout(async () => {
-            const { data } = await supabase
-              .from("user_roles")
-              .select("role")
-              .eq("user_id", session.user.id)
-              .maybeSingle();
-            setRole((data?.role as AppRole) ?? null);
-            setLoading(false);
-          }, 0);
-        } else {
-          setRole(null);
-          setLoading(false);
-        }
-      }
-    );
+    let mounted = true;
 
-    // THEN check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        supabase
+    // Helper to fetch user role from the database
+    const fetchUserRole = async (userId: string) => {
+      try {
+        const { data, error } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", session.user.id)
-          .maybeSingle()
-          .then(({ data }) => {
-            setRole((data?.role as AppRole) ?? null);
-            setLoading(false);
-          });
-      } else {
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching user role:", error.message);
+          return null;
+        }
+        return data?.role as AppRole;
+      } catch (err) {
+        console.error("Unexpected error in fetchUserRole:", err);
+        return null;
+      }
+    };
+
+    // Main sync function
+    const syncAuthState = async (currentSession: Session | null) => {
+      if (!mounted) return;
+
+      if (!currentSession) {
+        setUser(null);
+        setSession(null);
+        setRole(null);
         setLoading(false);
+        return;
+      }
+
+      setSession(currentSession);
+      setUser(currentSession.user);
+
+      // Fetch role before we stop loading
+      const userRole = await fetchUserRole(currentSession.user.id);
+      
+      if (mounted) {
+        setRole(userRole);
+        console.log("useAuth Sync -> User:", currentSession.user.email, "| Role:", userRole);
+        setLoading(false);
+      }
+    };
+
+    // 1. Initial Session Check
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      syncAuthState(initialSession);
+    });
+
+    // 2. Listen for Auth Changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log("Auth Event Fired:", event);
+      
+      if (event === 'SIGNED_OUT') {
+        syncAuthState(null);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        syncAuthState(currentSession);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setRole(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      setUser(null);
+      setSession(null);
+      setRole(null);
+    }
   };
 
   return { user, session, role, loading, signOut };

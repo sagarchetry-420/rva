@@ -35,19 +35,20 @@ export default function StudentManagement() {
     setLoading(true);
     try {
       // Using !inner tells Supabase to only return students who HAVE a profile
-      let query = supabase.from("students").select(`
-        id, 
-        user_id,
-        enrollment_date,
-        profiles!inner (
-          first_name, 
-          last_name,
-          avatar_url
-        ),
-        classes (
-          name
-        )
-      `);
+    // Changing !inner to a standard join (Left Join)
+let query = supabase.from("students").select(`
+  id, 
+  user_id,
+  enrollment_date,
+  profiles (
+    first_name, 
+    last_name,
+    avatar_url
+  ),
+  classes (
+    name
+  )
+`);
       
       if (selectedClass !== "all") {
         query = query.eq("class_id", selectedClass);

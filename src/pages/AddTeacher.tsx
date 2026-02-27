@@ -37,51 +37,49 @@ export default function AddTeacher() {
     setLoading(true);
 
     try {
-      // 1. Create the Auth User
-      // We pass 'role' in the metadata so the SQL trigger handles Profile/Role creation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            role: 'teacher', 
+            first_name: formData.firstName, 
+            last_name: formData.lastName,  
+            role: 'teacher',               
+            department: formData.department,
+            hire_date: formData.hireDate
           },
         },
       });
 
-      if (authError) throw authError;
-      const userId = authData.user?.id;
+      // 🛑 1. Catch Supabase Auth Errors
+      if (authError) {
+        // Email Rate Limit (the 2 per hour limit we saw earlier)
+        if (authError.status === 429) {
+          throw new Error("Email rate limit exceeded. Please wait an hour or disable 'Confirm Email' in Supabase settings.");
+        }
+        // Duplicate User
+        if (authError.message.toLowerCase().includes("already registered") || authError.status === 422) {
+          throw new Error("This email is already registered. Please use a different email or check the Teacher Directory.");
+        }
+        throw authError;
+      }
 
-      if (!userId) throw new Error("User creation failed - No ID returned.");
-
-      // 2. Add record to teachers table
-      // We add a tiny delay (200ms) to ensure the DB trigger has finished profile creation
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      const { error: teacherError } = await supabase
-        .from("teachers")
-        .insert([
-          { 
-            user_id: userId, 
-            department: formData.department,
-            hire_date: formData.hireDate
-          }
-        ]);
-
-      if (teacherError) throw teacherError;
+      // 🛑 2. Handle "Silent" failures (User exists but trigger didn't run)
+      if (authData.user?.identities?.length === 0) {
+        throw new Error("This email is already associated with an account. Please delete the old user from the Auth dashboard first.");
+      }
 
       toast({ 
-        title: "Teacher Registered", 
-        description: `${formData.firstName} ${formData.lastName} has been added successfully.` 
+        title: "Success", 
+        description: `${formData.firstName} ${formData.lastName} has been enrolled as a faculty member.`,
       });
       
       navigate("/dashboard/teachers");
 
     } catch (error: any) {
+      console.error("Enrollment Error:", error);
       toast({ 
-        title: "Registration Failed", 
+        title: "Enrollment Blocked", 
         description: error.message, 
         variant: "destructive" 
       });
@@ -165,6 +163,7 @@ export default function AddTeacher() {
               <div className="space-y-2">
                 <Label>Department</Label>
                 <Select 
+                  value={formData.department} // Controlled component
                   onValueChange={(val) => setFormData({...formData, department: val})}
                   required
                 >

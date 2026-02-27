@@ -70,7 +70,7 @@ export default function Dashboard() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/login");
+    navigate("/");
   };
 
   const dashboardStats = [
@@ -165,7 +165,7 @@ export default function Dashboard() {
                         <Link to="/dashboard/notices">Manage Notices</Link>
                      </Button>
                      <Button variant="default" size="sm" asChild>
-                        <Link to="/dashboard/notices">Post New Notice</Link>
+                        <Link to="/dashboard/notices/create">Post New Notice</Link>
                      </Button>
                    </div>
                 </div>

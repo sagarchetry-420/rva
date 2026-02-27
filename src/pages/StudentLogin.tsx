@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Eye, EyeOff } from "lucide-react";
+import { BookOpen, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function StudentLogin() {
@@ -20,21 +20,44 @@ export default function StudentLogin() {
     e.preventDefault();
     setLoading(true);
     
-    // Authenticate the student using Supabase
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    setLoading(false);
-    
-    if (error) {
+    try {
+      // 1. Authenticate the user
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      });
+      
+      if (authError) throw authError;
+
+      // 2. Check the user's role in the user_roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", authData.user.id)
+        .maybeSingle();
+
+      if (roleError) throw roleError;
+
+      // 3. Verify if the user is a student
+      if (roleData?.role !== 'student') {
+        // Log them out immediately if they are an admin or teacher
+        await supabase.auth.signOut();
+        throw new Error("Access denied. Invalid Credentials.");
+      }
+
+      // 4. Success!
+      toast({ title: "Welcome back!", description: "Loading your student portal..." });
+      navigate("/student-dashboard");
+
+    } catch (error: any) {
+      console.error("Login Error:", error.message);
       toast({ 
         title: "Login failed", 
-        description: "Please check your student email and password.", 
+        description: error.message || "Please check your student email and password.", 
         variant: "destructive" 
       });
-    } else {
-      toast({ title: "Welcome back!", description: "Loading your student portal..." });
-      // Redirect to the student-specific dashboard
-      navigate("/student-dashboard");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,8 +89,7 @@ export default function StudentLogin() {
       <Card className="w-full max-w-md border-blue-200 shadow-lg">
         <CardHeader className="text-center">
           <Link to="/" className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
-              {/* Using a Book icon to differentiate from the Admin Graduation Cap */}
+            <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center shadow-md">
               <BookOpen className="w-7 h-7 text-white" />
             </div>
           </Link>
@@ -117,17 +139,23 @@ export default function StudentLogin() {
             
             <Button 
               type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm" 
               disabled={loading}
             >
-              {loading ? "Verifying..." : "Access Portal"}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Verifying...
+                </span>
+              ) : (
+                "Access Portal"
+              )}
             </Button>
           </form>
 
           <div className="mt-6 text-center text-sm">
             <button 
               onClick={handleForgotPassword} 
-              className="text-blue-600 hover:underline hover:text-blue-800 transition-colors"
+              className="text-blue-600 font-medium hover:underline hover:text-blue-800 transition-colors"
             >
               Forgot your password?
             </button>

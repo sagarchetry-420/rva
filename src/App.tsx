@@ -18,6 +18,7 @@ import AddStudent from "./pages/AddStudent";
 import TeacherManagement from "./pages/TeacherManagement";
 import AddTeacher from "./pages/AddTeacher"; // Added this
 import ClassManagement from "./pages/ClassManagement";
+import CreateNotice from "./pages/CreateNotice";
 // Added this
 
 // Component Imports
@@ -40,6 +41,8 @@ const App = () => (
           
           {/* Protected Admin/Dashboard Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+
+            <Route path="/dashboard/notices/create" element={<ProtectedRoute><CreateNotice /></ProtectedRoute>} />
           
           {/* Student Routes */}
           <Route path="/dashboard/students" element={<ProtectedRoute><StudentManagement /></ProtectedRoute>} />

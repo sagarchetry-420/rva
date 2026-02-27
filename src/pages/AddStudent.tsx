@@ -49,81 +49,53 @@ export default function AddStudent() {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      // 1. Create the Auth User
-      // Note: In Supabase, if "Confirm Email" is ON, the user is created but not 'active'
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-          },
+  try {
+    // 1. Sign up the user with all necessary metadata
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          role: 'student',               // Trigger picks this up
+          class_id: formData.classId,    // Trigger picks this up
+          dob: formData.dob              // Trigger picks this up
         },
-      });
+      },
+    });
 
-      if (authError) throw authError;
-
-      const userId = authData.user?.id;
-
-      if (!userId) {
-        throw new Error("Could not retrieve User ID after signup.");
-      }
-
-      // 2. Assign 'student' role in user_roles table
-      // We do this first because other tables might depend on this role via RLS
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert([{ 
-            user_id: userId, 
-            role: 'student' 
-        }]);
-      
-      if (roleError) {
-        console.error("Role Error:", roleError);
-        throw new Error("User created, but failed to assign student role.");
-      }
-
-      // 3. Add record to students table
-      // The 'profiles' table is handled by your SQL trigger 'handle_new_user'
-      const { error: studentError } = await supabase
-        .from("students")
-        .insert([
-          { 
-            user_id: userId, 
-            class_id: formData.classId || null,
-            dob: formData.dob || null,
-            enrollment_date: new Date().toISOString().split('T')[0] // Format: YYYY-MM-DD
-          }
-        ]);
-
-      if (studentError) {
-        console.error("Student Table Error:", studentError);
-        throw new Error("User created, but failed to link to student profile.");
-      }
-
-      toast({ 
-        title: "Enrollment Successful", 
-        description: `${formData.firstName} has been added to the system.`,
-      });
-      
-      navigate("/dashboard/students");
-
-    } catch (error: any) {
-      toast({ 
-        title: "Registration Failed", 
-        description: error.message, 
-        variant: "destructive" 
-      });
-    } finally {
-      setLoading(false);
+    if (authError) {
+        if (authError.status === 429) throw new Error("Rate limit reached. Please wait or disable email confirmation.");
+        throw authError;
     }
-  };
+
+    // Check for "Zombie Users" (existing emails)
+    if (authData.user?.identities?.length === 0) {
+      throw new Error("This email is already in use.");
+    }
+
+    toast({ 
+      title: "Enrollment Successful", 
+      description: `${formData.firstName} has been registered successfully.`,
+    });
+    
+    navigate("/dashboard/students");
+
+  } catch (error: any) {
+    toast({ 
+      title: "Registration Failed", 
+      description: error.message, 
+      variant: "destructive" 
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="container mx-auto py-8 max-w-2xl px-4">

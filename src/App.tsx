@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import StudentLogin from "./pages/StudentLogin";
+import TeacherLogin from "./pages/TeacherLogin";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -20,6 +21,10 @@ import AddTeacher from "./pages/AddTeacher"; // Added this
 import ClassManagement from "./pages/ClassManagement";
 import CreateNotice from "./pages/CreateNotice";
 // Added this
+
+// Teacher Pages
+
+import TeacherDashboard from "./pages/TeacherDashboard";
 
 // Component Imports
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -37,12 +42,15 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/studentlogin" element={<StudentLogin />} />
+          <Route path="/teacherlogin" element={<TeacherLogin />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Protected Admin/Dashboard Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
-            <Route path="/dashboard/notices/create" element={<ProtectedRoute><CreateNotice /></ProtectedRoute>} />
+          <Route path="/dashboard/notices/create" element={<ProtectedRoute><CreateNotice /></ProtectedRoute>} />
+
+          <Route path="/dashboard/teacher" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
           
           {/* Student Routes */}
           <Route path="/dashboard/students" element={<ProtectedRoute><StudentManagement /></ProtectedRoute>} />

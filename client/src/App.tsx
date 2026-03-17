@@ -14,7 +14,6 @@ import Dashboard from "./pages/Dashboard"
 import NotFound from "./pages/NotFound"
 
 // Management Pages
-<<<<<<< HEAD:src/App.tsx
 import StudentManagement from "./pages/StudentManagement"
 import AddStudent from "./pages/AddStudent"
 import TeacherManagement from "./pages/TeacherManagement"
@@ -24,15 +23,6 @@ import CreateNotice from "./pages/CreateNotice"
 
 // Teacher Pages
 import TeacherDashboard from "./pages/TeacherDashboard"
-=======
-import StudentManagement from "./pages/StudentManagement";
-import AddStudent from "./pages/AddStudent";
-import TeacherManagement from "./pages/TeacherManagement";
-import AddTeacher from "./pages/AddTeacher";
-import ClassManagement from "./pages/ClassManagement";
-import CreateNotice from "./pages/CreateNotice";
-import TeacherDashboard from "./pages/TeacherDashboard";
->>>>>>> testing:client/src/App.tsx
 
 // Component Imports
 import { ProtectedRoute } from "./components/ProtectedRoute"
@@ -64,7 +54,16 @@ function App() {
               }
             />
 
-<<<<<<< HEAD:src/App.tsx
+            {/* Teacher Dashboard Route */}
+            <Route
+              path="/dashboard/teacher"
+              element={
+                <ProtectedRoute>
+                  <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Student Routes */}
             <Route
               path="/dashboard/students"
@@ -82,21 +81,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-=======
-          <Route path="/dashboard/teacher" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
-          
-          {/* Student Routes */}
-          <Route path="/dashboard/students" element={<ProtectedRoute><StudentManagement /></ProtectedRoute>} />
-          <Route path="/dashboard/students/add" element={<ProtectedRoute><AddStudent /></ProtectedRoute>} />
-          
-          {/* Teacher Routes */}
-          <Route path="/dashboard/teachers" element={<ProtectedRoute><TeacherManagement /></ProtectedRoute>} />
-          <Route path="/dashboard/teachers/add" element={<ProtectedRoute><AddTeacher /></ProtectedRoute>} />
-          
-          {/* School Structure Routes */}
-          <Route path="/dashboard/classes" element={<ProtectedRoute><ClassManagement /></ProtectedRoute>} />
-          
->>>>>>> testing:client/src/App.tsx
 
             {/* Teacher Routes */}
             <Route
@@ -132,16 +116,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CreateNotice />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Teacher Dashboard Route */}
-            <Route
-              path="/dashboard/teacher"
-              element={
-                <ProtectedRoute>
-                  <TeacherDashboard />
                 </ProtectedRoute>
               }
             />

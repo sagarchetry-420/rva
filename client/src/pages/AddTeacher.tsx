@@ -11,17 +11,17 @@ import { ArrowLeft, GraduationCap, Loader2 } from "lucide-react";
 
 // Hardcoded departments for the teachers table
 const DEPARTMENTS = [
-  "Mathematics", "Science", "English", "History", 
+  "Mathematics", "Science", "English", "History",
   "Physical Education", "Arts", "Computer Science", "Languages"
 ];
 
 export default function AddTeacher() {
   const [loading, setLoading] = useState(false);
-  
+
   // State to hold the dynamic classes and subjects from your database
   const [classes, setClasses] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]); 
-  
+  const [subjects, setSubjects] = useState<any[]>([]);
+
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -31,8 +31,8 @@ export default function AddTeacher() {
     firstName: "",
     lastName: "",
     department: "",
-    classId: "",   
-    subjectId: "", 
+    classId: "",
+    subjectId: "",
     hireDate: new Date().toISOString().split('T')[0],
   });
 
@@ -68,46 +68,6 @@ export default function AddTeacher() {
     setLoading(true);
 
     try {
-<<<<<<< HEAD:src/pages/AddTeacher.tsx
-      // 1. Create the Auth User
-      // We pass 'role' in the metadata so the SQL trigger handles Profile/Role creation
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            role: 'teacher', 
-          },
-        },
-      });
-
-      if (authError) throw authError;
-      const userId = authData.user?.id;
-
-      if (!userId) throw new Error("User creation failed - No ID returned.");
-
-      // 2. Add record to teachers table
-      // We add a tiny delay (200ms) to ensure the DB trigger has finished profile creation
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      const { error: teacherError } = await supabase
-        .from("teachers")
-        .insert([
-          { 
-            user_id: userId, 
-            department: formData.department,
-            hire_date: formData.hireDate
-          }
-        ]);
-
-      if (teacherError) throw teacherError;
-
-      toast({ 
-        title: "Teacher Registered", 
-        description: `${formData.firstName} ${formData.lastName} has been added successfully.` 
-=======
       await api.post('/api/teachers', {
         email: formData.email,
         password: formData.password,
@@ -122,24 +82,15 @@ export default function AddTeacher() {
       toast({
         title: "Teacher Registered",
         description: `${formData.firstName} ${formData.lastName} has been added and assigned successfully.`
->>>>>>> testing:client/src/pages/AddTeacher.tsx
       });
 
       navigate("/dashboard/teachers");
 
     } catch (error: any) {
-<<<<<<< HEAD:src/pages/AddTeacher.tsx
-      console.error("Enrollment Error:", error);
-      toast({ 
-        title: "Enrollment Blocked", 
-        description: error.message, 
-        variant: "destructive" 
-=======
       toast({
         title: "Registration Failed",
         description: error.message,
         variant: "destructive"
->>>>>>> testing:client/src/pages/AddTeacher.tsx
       });
     } finally {
       setLoading(false);
@@ -148,9 +99,9 @@ export default function AddTeacher() {
 
   return (
     <div className="container mx-auto py-8 max-w-3xl px-4">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate("/dashboard/teachers")} 
+      <Button
+        variant="ghost"
+        onClick={() => navigate("/dashboard/teachers")}
         className="mb-4 gap-2 text-muted-foreground hover:text-primary transition-colors"
       >
         <ArrowLeft className="w-4 h-4" /> Back to Directory
@@ -170,7 +121,7 @@ export default function AddTeacher() {
         </CardHeader>
         <CardContent className="pt-4">
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             {/* Personal Info Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -201,7 +152,7 @@ export default function AddTeacher() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Department</Label>
-                <Select 
+                <Select
                   onValueChange={(val) => setFormData({...formData, department: val})}
                   required
                 >

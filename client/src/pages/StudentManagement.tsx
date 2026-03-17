@@ -37,36 +37,9 @@ export default function StudentManagement() {
   async function fetchStudents() {
     setLoading(true);
     try {
-<<<<<<< HEAD:src/pages/StudentManagement.tsx
-      // Using !inner tells Supabase to only return students who HAVE a profile
-    // Changing !inner to a standard join (Left Join)
-let query = supabase.from("students").select(`
-  id, 
-  user_id,
-  enrollment_date,
-  profiles (
-    first_name, 
-    last_name,
-    avatar_url
-  ),
-  classes (
-    name
-  )
-`);
-      
-      if (selectedClass !== "all") {
-        query = query.eq("class_id", selectedClass);
-      }
-
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      setStudents(data || []);
-=======
       const classParam = selectedClass !== "all" ? `?class_id=${selectedClass}` : '';
       const data = await api.get<any[]>(`/api/students${classParam}`);
       setStudents(data);
->>>>>>> testing:client/src/pages/StudentManagement.tsx
     } catch (error: any) {
       console.error("Fetch Error:", error);
       toast.error(error.message);
@@ -98,9 +71,9 @@ let query = supabase.from("students").select(`
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate("/dashboard")} 
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
             className="mb-2 p-0 h-auto hover:bg-transparent text-muted-foreground hover:text-primary"
           >
             <ArrowLeft className="w-4 h-4 mr-1" /> Back to Dashboard
@@ -108,7 +81,7 @@ let query = supabase.from("students").select(`
           <h1 className="text-3xl font-bold tracking-tight">Student Directory</h1>
           <p className="text-muted-foreground">Manage and view all enrolled students.</p>
         </div>
-        
+
         <div className="flex items-center gap-3 w-full md:w-auto">
           <Button asChild className="gap-2 w-full md:w-auto shadow-sm">
             <Link to="/dashboard/students/add">
@@ -122,8 +95,8 @@ let query = supabase.from("students").select(`
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-muted/30 p-4 rounded-lg border">
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search student names..." 
+          <Input
+            placeholder="Search student names..."
             className="pl-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -205,9 +178,9 @@ let query = supabase.from("students").select(`
                         })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="text-muted-foreground hover:text-destructive"
                           onClick={() => handleDelete(student.id, student.user_id)}
                         >
@@ -222,7 +195,7 @@ let query = supabase.from("students").select(`
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Footer Info */}
       <div className="text-xs text-muted-foreground px-2">
         Showing {filteredStudents.length} of {students.length} students

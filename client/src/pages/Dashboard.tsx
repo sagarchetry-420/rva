@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  GraduationCap, 
-  Users, 
-  BookOpen, 
-  Bell, 
-  LogOut, 
-  Loader2, 
-  PlusCircle, 
+import {
+  GraduationCap,
+  Users,
+  BookOpen,
+  Bell,
+  LogOut,
+  Loader2,
+  PlusCircle,
   School,
   RefreshCw,
   LayoutDashboard
@@ -22,7 +22,7 @@ export default function Dashboard() {
   const { user, role, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [stats, setStats] = useState({
     students: 0,
     teachers: 0,
@@ -40,7 +40,7 @@ export default function Dashboard() {
       navigate("/login");
       return;
     }
-    
+
     if (role === 'admin') {
       fetchDashboardStats();
     } else {
@@ -51,28 +51,6 @@ export default function Dashboard() {
   const fetchDashboardStats = async () => {
     try {
       setStatsLoading(true);
-<<<<<<< HEAD:src/pages/Dashboard.tsx
-      console.log("Fetching stats... Current role is:", role);
-
-      const [studentsRes, teachersRes, classesRes, noticesRes] = await Promise.all([
-        supabase.from('students').select('id', { count: 'exact', head: true }),
-        supabase.from('teachers').select('id', { count: 'exact', head: true }),
-        supabase.from('classes').select('id', { count: 'exact', head: true }),
-        supabase.from('notices').select('id', { count: 'exact', head: true }),
-      ]);
-
-      // Explicitly check for Supabase errors
-      if (studentsRes.error) throw new Error(`Students Error: ${studentsRes.error.message}`);
-      if (teachersRes.error) throw new Error(`Teachers Error: ${teachersRes.error.message}`);
-      if (classesRes.error) throw new Error(`Classes Error: ${classesRes.error.message}`);
-      if (noticesRes.error) throw new Error(`Notices Error: ${noticesRes.error.message}`);
-
-      console.log("Fetch successful!", {
-        students: studentsRes.count,
-        teachers: teachersRes.count,
-        classes: classesRes.count,
-        notices: noticesRes.count
-=======
       const data = await api.get<{
         totalStudents: number;
         totalTeachers: number;
@@ -85,20 +63,12 @@ export default function Dashboard() {
         teachers: data.totalTeachers,
         classes: data.totalClasses,
         notices: data.totalNotices,
->>>>>>> testing:client/src/pages/Dashboard.tsx
-      });
-
-      setStats({
-        students: studentsRes.count || 0,
-        teachers: teachersRes.count || 0,
-        classes: classesRes.count || 0,
-        notices: noticesRes.count || 0,
       });
     } catch (error: any) {
-      console.error("Dashboard Stats Blocked:", error.message);
+      console.error("Error fetching stats:", error);
       toast({
-        title: "Stats Error",
-        description: error.message,
+        title: "Error",
+        description: "Failed to load dashboard statistics.",
         variant: "destructive"
       });
     } finally {
@@ -147,10 +117,10 @@ export default function Dashboard() {
             <span className="text-sm font-medium text-foreground">{user.email}</span>
             <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">Active</span>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleSignOut} 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSignOut}
             className="gap-2 border-destructive/20 text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm"
           >
             <LogOut className="w-4 h-4" /> <span className="hidden xs:inline">Sign Out</span>
@@ -171,10 +141,10 @@ export default function Dashboard() {
             <p className="text-muted-foreground">Quick summary of school operations and active notices.</p>
           </div>
           {role === 'admin' && (
-            <Button 
-              onClick={fetchDashboardStats} 
-              variant="outline" 
-              size="sm" 
+            <Button
+              onClick={fetchDashboardStats}
+              variant="outline"
+              size="sm"
               className="gap-2 hover:bg-primary/5 border-primary/20"
               disabled={statsLoading}
             >
@@ -230,18 +200,6 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
-<<<<<<< HEAD
-                   <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
-                     <div>
-                        <p className="font-semibold text-foreground">Active Notice Board</p>
-                        <p className="text-sm text-muted-foreground">You currently have {stats.notices} live announcements.</p>
-                     </div>
-                     <div className="flex gap-2">
-                       <Button variant="default" size="sm" asChild>
-                          <Link to="/dashboard/notices">Manage</Link>
-                       </Button>
-                     </div>
-=======
                    <p className="text-sm text-muted-foreground">You have <span className="font-bold text-foreground">{stats.notices}</span> published notices in the system.</p>
                    <div className="flex gap-2">
                      <Button variant="outline" size="sm" asChild>
@@ -250,7 +208,6 @@ export default function Dashboard() {
                      <Button variant="default" size="sm" asChild>
                         <Link to="/dashboard/notices/create">Post New Notice</Link>
                      </Button>
->>>>>>> testing
                    </div>
                 </div>
               )}

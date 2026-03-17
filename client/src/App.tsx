@@ -25,6 +25,9 @@ import NoticeManagement from "./pages/NoticeManagement"
 // Teacher Pages
 import TeacherDashboard from "./pages/TeacherDashboard"
 
+// Student Pages
+import StudentDashboard from "./pages/StudentDashboard"
+
 // Component Imports
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { PublicRoute } from "./components/PublicRoute"
@@ -62,6 +65,16 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["teacher"]}>
                   <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Student Dashboard Route */}
+            <Route
+              path="/student-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <StudentDashboard />
                 </ProtectedRoute>
               }
             />

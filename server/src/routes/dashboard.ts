@@ -1,12 +1,19 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { createUserClient } from '../lib/supabase.js';
+import { createAdminClient, isUserAdmin } from '../lib/supabase.js';
 
 export const dashboardRouter = Router();
 
 dashboardRouter.get('/stats', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    // Use admin client to get accurate counts (bypasses RLS)
+    const supabase = createAdminClient();
 
     const [students, teachers, classes, notices] = await Promise.all([
       supabase.from('students').select('*', { count: 'exact', head: true }),

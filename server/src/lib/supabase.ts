@@ -7,14 +7,14 @@ export function createAdminClient() {
   );
 }
 
-export function createUserClient(accessToken: string) {
-  return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      global: {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      }
-    }
-  );
+// Helper to check if a user has admin role
+export async function isUserAdmin(userId: string): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  return data?.role === 'admin';
 }

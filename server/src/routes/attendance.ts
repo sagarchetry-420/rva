@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { createUserClient, createAdminClient } from '../lib/supabase.js';
+import { createAdminClient } from '../lib/supabase.js';
 
 export const attendanceRouter = Router();
 
 // GET /api/attendance/teacher-classes — get classes assigned to the logged-in teacher
 attendanceRouter.get('/teacher-classes', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    const supabase = createAdminClient();
 
     const { data: teacherData, error: teacherError } = await supabase
       .from('teachers')
@@ -52,7 +52,7 @@ attendanceRouter.get('/teacher-classes', requireAuth, async (req, res) => {
 // GET /api/attendance/students?class_id=xxx
 attendanceRouter.get('/students', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    const supabase = createAdminClient();
     const classId = req.query.class_id as string;
 
     if (!classId) return res.status(400).json({ error: 'class_id is required' });
@@ -75,8 +75,7 @@ attendanceRouter.get('/students', requireAuth, async (req, res) => {
       if (studentsError) return res.status(400).json({ error: studentsError.message });
 
       const userIds = (studentsData || []).map((s: any) => s.user_id);
-      const adminSupa = createAdminClient();
-      const { data: profilesData } = await adminSupa
+      const { data: profilesData } = await supabase
         .from('profiles')
         .select('user_id, first_name, last_name')
         .in('user_id', userIds);
@@ -99,7 +98,7 @@ attendanceRouter.get('/students', requireAuth, async (req, res) => {
 // GET /api/attendance/teacher-stats — get stats for the teacher dashboard
 attendanceRouter.get('/teacher-stats', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    const supabase = createAdminClient();
 
     const { data: teacherData, error: teacherError } = await supabase
       .from('teachers')
@@ -161,7 +160,7 @@ attendanceRouter.get('/teacher-stats', requireAuth, async (req, res) => {
 // POST /api/attendance — save attendance records
 attendanceRouter.post('/', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    const supabase = createAdminClient();
     const { records, date } = req.body;
 
     const attendanceData = records.map((r: { studentId: string; status: string }) => ({

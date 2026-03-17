@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { createUserClient, createAdminClient } from '../lib/supabase.js';
+import { createAdminClient, isUserAdmin } from '../lib/supabase.js';
 
 export const noticesRouter = Router();
 
@@ -23,10 +23,16 @@ noticesRouter.get('/public', async (_req, res) => {
   }
 });
 
-// GET /api/notices
+// GET /api/notices (admin only - for management)
 noticesRouter.get('/', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('notices')
       .select('*')
@@ -42,19 +48,13 @@ noticesRouter.get('/', requireAuth, async (req, res) => {
 // POST /api/notices (admin only)
 noticesRouter.post('/', requireAuth, async (req, res) => {
   try {
-    // Check that the user is an admin
-    const adminSupa = createAdminClient();
-    const { data: roleData } = await adminSupa
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', req.userId)
-      .maybeSingle();
-
-    if (roleData?.role !== 'admin') {
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
       return res.status(403).json({ error: 'Only admins can post notices' });
     }
 
-    const supabase = createUserClient(req.accessToken!);
+    const supabase = createAdminClient();
     const { title, content, targetAudience } = req.body;
     const { error } = await supabase.from('notices').insert([{
       title,
@@ -73,18 +73,13 @@ noticesRouter.post('/', requireAuth, async (req, res) => {
 // DELETE /api/notices/:id (admin only)
 noticesRouter.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const adminSupa = createAdminClient();
-    const { data: roleData } = await adminSupa
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', req.userId)
-      .maybeSingle();
-
-    if (roleData?.role !== 'admin') {
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
       return res.status(403).json({ error: 'Only admins can delete notices' });
     }
 
-    const supabase = createUserClient(req.accessToken!);
+    const supabase = createAdminClient();
     const { error } = await supabase.from('notices').delete().eq('id', req.params.id);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true });

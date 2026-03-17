@@ -1,13 +1,19 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { createAdminClient, createUserClient } from '../lib/supabase.js';
+import { createAdminClient, isUserAdmin } from '../lib/supabase.js';
 
 export const teachersRouter = Router();
 
-// GET /api/teachers
+// GET /api/teachers (admin only)
 teachersRouter.get('/', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('teachers')
       .select(`
@@ -31,6 +37,12 @@ teachersRouter.get('/', requireAuth, async (req, res) => {
 // POST /api/teachers — admin creates a teacher account
 teachersRouter.post('/', requireAuth, async (req, res) => {
   try {
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
     const admin = createAdminClient();
     const { email, password, firstName, lastName, department, classId, subjectId, hireDate } = req.body;
 
@@ -56,10 +68,16 @@ teachersRouter.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/teachers/:id
+// DELETE /api/teachers/:id (admin only)
 teachersRouter.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
     const { error } = await supabase.from('teachers').delete().eq('id', req.params.id);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true });

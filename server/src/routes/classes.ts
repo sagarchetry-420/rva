@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { createUserClient } from '../lib/supabase.js';
+import { createAdminClient, isUserAdmin } from '../lib/supabase.js';
 
 export const classesRouter = Router();
 
-// GET /api/classes
+// GET /api/classes (all authenticated users can read)
 classesRouter.get('/', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('classes')
       .select('*, school_levels(name)')
@@ -23,7 +23,7 @@ classesRouter.get('/', requireAuth, async (req, res) => {
 // GET /api/classes/simple — id and name only (for dropdowns)
 classesRouter.get('/simple', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('classes')
       .select('id, name')
@@ -36,10 +36,16 @@ classesRouter.get('/simple', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/classes
+// POST /api/classes (admin only)
 classesRouter.post('/', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
     const { name, schoolLevelId } = req.body;
     const { error } = await supabase
       .from('classes')
@@ -52,10 +58,16 @@ classesRouter.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/classes/:id
+// DELETE /api/classes/:id (admin only)
 classesRouter.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
     const { error } = await supabase.from('classes').delete().eq('id', req.params.id);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true });
@@ -64,10 +76,10 @@ classesRouter.delete('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/classes/school-levels
+// GET /api/classes/school-levels (all authenticated users can read)
 classesRouter.get('/school-levels', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('school_levels')
       .select('id, name')
@@ -80,10 +92,16 @@ classesRouter.get('/school-levels', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/classes/school-levels
+// POST /api/classes/school-levels (admin only)
 classesRouter.post('/school-levels', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
     const { name, description } = req.body;
     const { error } = await supabase
       .from('school_levels')
@@ -96,10 +114,16 @@ classesRouter.post('/school-levels', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/classes/school-levels/:id
+// DELETE /api/classes/school-levels/:id (admin only)
 classesRouter.delete('/school-levels/:id', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
     const { error } = await supabase.from('school_levels').delete().eq('id', req.params.id);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true });
@@ -108,10 +132,10 @@ classesRouter.delete('/school-levels/:id', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/classes/subjects
+// GET /api/classes/subjects (all authenticated users can read)
 classesRouter.get('/subjects', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('subjects')
       .select('*')
@@ -124,10 +148,16 @@ classesRouter.get('/subjects', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/classes/subjects
+// POST /api/classes/subjects (admin only)
 classesRouter.post('/subjects', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
     const { name, code } = req.body;
     const { error } = await supabase
       .from('subjects')
@@ -140,10 +170,16 @@ classesRouter.post('/subjects', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/classes/subjects/:id
+// DELETE /api/classes/subjects/:id (admin only)
 classesRouter.delete('/subjects/:id', requireAuth, async (req, res) => {
   try {
-    const supabase = createUserClient(req.accessToken!);
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
     const { error } = await supabase.from('subjects').delete().eq('id', req.params.id);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true });

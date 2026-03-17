@@ -39,9 +39,21 @@ noticesRouter.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/notices
+// POST /api/notices (admin only)
 noticesRouter.post('/', requireAuth, async (req, res) => {
   try {
+    // Check that the user is an admin
+    const adminSupa = createAdminClient();
+    const { data: roleData } = await adminSupa
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', req.userId)
+      .maybeSingle();
+
+    if (roleData?.role !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can post notices' });
+    }
+
     const supabase = createUserClient(req.accessToken!);
     const { title, content, targetAudience } = req.body;
     const { error } = await supabase.from('notices').insert([{
@@ -55,5 +67,28 @@ noticesRouter.post('/', requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create notice' });
+  }
+});
+
+// DELETE /api/notices/:id (admin only)
+noticesRouter.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const adminSupa = createAdminClient();
+    const { data: roleData } = await adminSupa
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', req.userId)
+      .maybeSingle();
+
+    if (roleData?.role !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can delete notices' });
+    }
+
+    const supabase = createUserClient(req.accessToken!);
+    const { error } = await supabase.from('notices').delete().eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete notice' });
   }
 });

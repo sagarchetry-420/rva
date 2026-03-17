@@ -20,12 +20,14 @@ import TeacherManagement from "./pages/TeacherManagement"
 import AddTeacher from "./pages/AddTeacher"
 import ClassManagement from "./pages/ClassManagement"
 import CreateNotice from "./pages/CreateNotice"
+import NoticeManagement from "./pages/NoticeManagement"
 
 // Teacher Pages
 import TeacherDashboard from "./pages/TeacherDashboard"
 
 // Component Imports
 import { ProtectedRoute } from "./components/ProtectedRoute"
+import { PublicRoute } from "./components/PublicRoute"
 
 const queryClient = new QueryClient()
 
@@ -37,18 +39,18 @@ function App() {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/studentlogin" element={<StudentLogin />} />
-            <Route path="/teacherlogin" element={<TeacherLogin />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            {/* Public Routes - redirect logged-in users to their dashboard */}
+            <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/studentlogin" element={<PublicRoute><StudentLogin /></PublicRoute>} />
+            <Route path="/teacherlogin" element={<PublicRoute><TeacherLogin /></PublicRoute>} />
+            <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
 
-            {/* Protected Admin/Dashboard Routes */}
+            {/* Protected Admin Dashboard Routes */}
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <Dashboard />
                 </ProtectedRoute>
               }
@@ -58,17 +60,17 @@ function App() {
             <Route
               path="/dashboard/teacher"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["teacher"]}>
                   <TeacherDashboard />
                 </ProtectedRoute>
               }
             />
 
-            {/* Student Routes */}
+            {/* Admin-only Management Routes */}
             <Route
               path="/dashboard/students"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <StudentManagement />
                 </ProtectedRoute>
               }
@@ -76,17 +78,15 @@ function App() {
             <Route
               path="/dashboard/students/add"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <AddStudent />
                 </ProtectedRoute>
               }
             />
-
-            {/* Teacher Routes */}
             <Route
               path="/dashboard/teachers"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <TeacherManagement />
                 </ProtectedRoute>
               }
@@ -94,27 +94,31 @@ function App() {
             <Route
               path="/dashboard/teachers/add"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <AddTeacher />
                 </ProtectedRoute>
               }
             />
-
-            {/* School Structure Routes */}
             <Route
               path="/dashboard/classes"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <ClassManagement />
                 </ProtectedRoute>
               }
             />
-
-            {/* Notices Routes */}
+            <Route
+              path="/dashboard/notices"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <NoticeManagement />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard/notices/create"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <CreateNotice />
                 </ProtectedRoute>
               }

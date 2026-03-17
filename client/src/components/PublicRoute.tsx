@@ -1,12 +1,11 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import type { AppRole } from "@/hooks/useAuth";
 
-interface ProtectedRouteProps {
+interface PublicRouteProps {
   children: ReactNode;
-  allowedRoles?: AppRole[];
 }
 
 function getDashboardPath(role: AppRole): string {
@@ -22,13 +21,11 @@ function getDashboardPath(role: AppRole): string {
   }
 }
 
-export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
+export const PublicRoute = ({ children }: PublicRouteProps) => {
   const [state, setState] = useState<{
     loading: boolean;
-    authenticated: boolean;
-    role: AppRole | null;
-  }>({ loading: true, authenticated: false, role: null });
-  const location = useLocation();
+    redirectTo: string | null;
+  }>({ loading: true, redirectTo: null });
 
   useEffect(() => {
     let mounted = true;
@@ -39,10 +36,11 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
       } = await supabase.auth.getSession();
 
       if (!session) {
-        if (mounted) setState({ loading: false, authenticated: false, role: null });
+        if (mounted) setState({ loading: false, redirectTo: null });
         return;
       }
 
+      // User is logged in — fetch their role to redirect to the right dashboard
       const { data } = await supabase
         .from("user_roles")
         .select("role")
@@ -50,31 +48,21 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
         .maybeSingle();
 
       if (mounted) {
+        const role = data?.role as AppRole | undefined;
         setState({
           loading: false,
-          authenticated: true,
-          role: (data?.role as AppRole) ?? null,
+          redirectTo: role ? getDashboardPath(role) : null,
         });
       }
     };
 
     checkAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session && mounted) {
-        setState({ loading: false, authenticated: false, role: null });
-      }
-    });
-
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
   }, []);
 
-  // Loading
   if (state.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -83,14 +71,8 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  // Not authenticated → send to login
-  if (!state.authenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // Authenticated but role not allowed → redirect to their own dashboard
-  if (allowedRoles && state.role && !allowedRoles.includes(state.role)) {
-    return <Navigate to={getDashboardPath(state.role)} replace />;
+  if (state.redirectTo) {
+    return <Navigate to={state.redirectTo} replace />;
   }
 
   return <>{children}</>;

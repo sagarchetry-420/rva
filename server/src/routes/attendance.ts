@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { createUserClient } from '../lib/supabase.js';
+import { createUserClient, createAdminClient } from '../lib/supabase.js';
 
 export const attendanceRouter = Router();
 
@@ -20,13 +20,13 @@ attendanceRouter.get('/teacher-classes', requireAuth, async (req, res) => {
 
     let { data, error } = await supabase
       .from('teacher_subjects')
-      .select('class_id, classes(id, name)')
+      .select('class_id, classes!class_id(id, name)')
       .eq('teacher_id', teacherData.id);
 
     if (error) {
       const fallback = await supabase
         .from('teacher_subjects')
-        .select('class_id, classes!class_id(id, name)')
+        .select('class_id, classes(id, name)')
         .eq('teacher_id', teacherData.id);
       data = fallback.data;
       error = fallback.error;
@@ -44,6 +44,7 @@ attendanceRouter.get('/teacher-classes', requireAuth, async (req, res) => {
 
     res.json(Array.from(classMap.values()));
   } catch (err) {
+    console.error('Teacher classes error:', err);
     res.status(500).json({ error: 'Failed to fetch teacher classes' });
   }
 });
@@ -56,15 +57,104 @@ attendanceRouter.get('/students', requireAuth, async (req, res) => {
 
     if (!classId) return res.status(400).json({ error: 'class_id is required' });
 
-    const { data, error } = await supabase
+    // Try join with hint first, fallback to manual join
+    let { data, error } = await supabase
       .from('students')
-      .select('id, profiles (first_name, last_name)')
-      .eq('class_id', classId);
+      .select('id, user_id, profiles!user_id(first_name, last_name)')
+      .eq('class_id', classId)
+      .order('id');
 
-    if (error) return res.status(400).json({ error: error.message });
+    if (error) {
+      // Fallback: fetch students then fetch profiles separately
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('id, user_id')
+        .eq('class_id', classId)
+        .order('id');
+
+      if (studentsError) return res.status(400).json({ error: studentsError.message });
+
+      const userIds = (studentsData || []).map((s: any) => s.user_id);
+      const adminSupa = createAdminClient();
+      const { data: profilesData } = await adminSupa
+        .from('profiles')
+        .select('user_id, first_name, last_name')
+        .in('user_id', userIds);
+
+      const profileMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
+      data = (studentsData || []).map((s: any) => ({
+        ...s,
+        profiles: profileMap.get(s.user_id) || { first_name: 'Unknown', last_name: '' },
+      }));
+    }
+
+    if (!data) data = [];
     res.json(data);
   } catch (err) {
+    console.error('Fetch students error:', err);
     res.status(500).json({ error: 'Failed to fetch students' });
+  }
+});
+
+// GET /api/attendance/teacher-stats — get stats for the teacher dashboard
+attendanceRouter.get('/teacher-stats', requireAuth, async (req, res) => {
+  try {
+    const supabase = createUserClient(req.accessToken!);
+
+    const { data: teacherData, error: teacherError } = await supabase
+      .from('teachers')
+      .select('id, department, hire_date')
+      .eq('user_id', req.userId)
+      .maybeSingle();
+
+    if (teacherError) return res.status(400).json({ error: teacherError.message });
+    if (!teacherData) return res.status(404).json({ error: 'Teacher record not found' });
+
+    // Get assigned classes count
+    const { data: classData } = await supabase
+      .from('teacher_subjects')
+      .select('class_id')
+      .eq('teacher_id', teacherData.id);
+
+    const uniqueClasses = new Set((classData || []).map((c: any) => c.class_id));
+
+    // Get assigned subjects count
+    const { data: subjectData } = await supabase
+      .from('teacher_subjects')
+      .select('subject_id')
+      .eq('teacher_id', teacherData.id);
+
+    const uniqueSubjects = new Set((subjectData || []).map((s: any) => s.subject_id));
+
+    // Get total students across assigned classes
+    let totalStudents = 0;
+    if (uniqueClasses.size > 0) {
+      const { count } = await supabase
+        .from('students')
+        .select('*', { count: 'exact', head: true })
+        .in('class_id', Array.from(uniqueClasses));
+      totalStudents = count ?? 0;
+    }
+
+    // Get today's attendance count
+    const today = new Date().toISOString().split('T')[0];
+    const { count: attendanceToday } = await supabase
+      .from('student_attendance')
+      .select('*', { count: 'exact', head: true })
+      .eq('marked_by', req.userId)
+      .eq('date', today);
+
+    res.json({
+      department: teacherData.department,
+      hireDate: teacherData.hire_date,
+      totalClasses: uniqueClasses.size,
+      totalSubjects: uniqueSubjects.size,
+      totalStudents,
+      attendanceMarkedToday: attendanceToday ?? 0,
+    });
+  } catch (err) {
+    console.error('Teacher stats error:', err);
+    res.status(500).json({ error: 'Failed to fetch teacher stats' });
   }
 });
 

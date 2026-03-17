@@ -43,7 +43,7 @@ export default function CreateNotice() {
       // Clear form or navigate back
       setTitle("");
       setContent("");
-      navigate("/dashboard"); // Or wherever your notice board lives
+      navigate("/dashboard/notices");
 
     } catch (error: any) {
       toast({ 

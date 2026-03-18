@@ -138,7 +138,7 @@ classesRouter.get('/subjects', requireAuth, async (req, res) => {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('subjects')
-      .select('*')
+      .select('*, classes(id, name)')
       .order('name');
 
     if (error) return res.status(400).json({ error: error.message });
@@ -158,10 +158,10 @@ classesRouter.post('/subjects', requireAuth, async (req, res) => {
     }
 
     const supabase = createAdminClient();
-    const { name, code } = req.body;
+    const { name, code, classId } = req.body;
     const { error } = await supabase
       .from('subjects')
-      .insert([{ name, code }]);
+      .insert([{ name, code, class_id: classId }]);
 
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true });

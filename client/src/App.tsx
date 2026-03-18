@@ -19,8 +19,12 @@ import AddStudent from "./pages/AddStudent"
 import TeacherManagement from "./pages/TeacherManagement"
 import AddTeacher from "./pages/AddTeacher"
 import ClassManagement from "./pages/ClassManagement"
+import SubjectManagement from "./pages/SubjectManagement"
 import CreateNotice from "./pages/CreateNotice"
 import NoticeManagement from "./pages/NoticeManagement"
+import AttendanceManagement from "./pages/AttendanceManagement"
+import ExamManagement from "./pages/ExamManagement"
+import RoutineManagement from "./pages/RoutineManagement"
 
 // Teacher Pages
 import TeacherDashboard from "./pages/TeacherDashboard"
@@ -31,6 +35,7 @@ import StudentDashboard from "./pages/StudentDashboard"
 // Component Imports
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { PublicRoute } from "./components/PublicRoute"
+import DashboardLayout from "./components/layout/DashboardLayout"
 
 const queryClient = new QueryClient()
 
@@ -49,15 +54,28 @@ function App() {
             <Route path="/teacherlogin" element={<PublicRoute><TeacherLogin /></PublicRoute>} />
             <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
 
-            {/* Protected Admin Dashboard Routes */}
+            {/* Protected Admin Dashboard Routes - Nested under DashboardLayout */}
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <Dashboard />
+                  <DashboardLayout />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="students" element={<StudentManagement />} />
+              <Route path="students/add" element={<AddStudent />} />
+              <Route path="teachers" element={<TeacherManagement />} />
+              <Route path="teachers/add" element={<AddTeacher />} />
+              <Route path="classes" element={<ClassManagement />} />
+              <Route path="subjects" element={<SubjectManagement />} />
+              <Route path="notices" element={<NoticeManagement />} />
+              <Route path="notices/create" element={<CreateNotice />} />
+              <Route path="attendance" element={<AttendanceManagement />} />
+              <Route path="exams" element={<ExamManagement />} />
+              <Route path="routines" element={<RoutineManagement />} />
+            </Route>
 
             {/* Teacher Dashboard Route */}
             <Route
@@ -75,64 +93,6 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
                   <StudentDashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Admin-only Management Routes */}
-            <Route
-              path="/dashboard/students"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <StudentManagement />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/students/add"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AddStudent />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/teachers"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <TeacherManagement />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/teachers/add"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AddTeacher />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/classes"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <ClassManagement />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/notices"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <NoticeManagement />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/notices/create"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <CreateNotice />
                 </ProtectedRoute>
               }
             />

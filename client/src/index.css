@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -15,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 4%;
 
-    --primary: 237 97% 50%;
+    --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 60 100% 66%;
@@ -32,26 +32,29 @@
 
     --border: 210 20% 90%;
     --input: 210 20% 90%;
-    --ring: 237 97% 50%;
+    --ring: 262 83% 58%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 20%;
-    --sidebar-primary: 237 97% 50%;
+    --sidebar-background: 262 83% 58%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 262 83% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 120 100% 38%;
+    --sidebar-accent: 262 73% 68%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 210 20% 90%;
-    --sidebar-ring: 237 97% 50%;
+    --sidebar-border: 262 73% 50%;
+    --sidebar-ring: 262 83% 58%;
 
     /* RVA brand colors */
     --rva-yellow: 60 100% 66%;
     --rva-green: 120 100% 38%;
+    --rva-purple: 262 83% 58%;
     --rva-blue: 237 97% 50%;
     --rva-red: 1 97% 47%;
     --rva-black: 0 0% 4%;
     --rva-white: 0 0% 100%;
+    --rva-orange: 25 95% 53%;
+    --rva-peach: 24 100% 94%;
   }
 
   .dark {

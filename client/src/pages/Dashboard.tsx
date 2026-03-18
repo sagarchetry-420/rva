@@ -1,6 +1,5 @@
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate, Link, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,17 +8,18 @@ import {
   Users,
   BookOpen,
   Bell,
-  LogOut,
   Loader2,
   PlusCircle,
   School,
-  RefreshCw,
-  LayoutDashboard,
   ChevronRight,
   TrendingUp,
   Megaphone,
   UserPlus,
-  ClipboardList,
+  Calendar,
+  Clock,
+  Award,
+  CheckSquare,
+  MoreHorizontal,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,12 +28,43 @@ interface DashboardStats {
   totalTeachers: number;
   totalClasses: number;
   totalNotices: number;
+  totalSubjects: number;
+  totalAttendanceRecords: number;
+}
+
+interface TopStudent {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  className: string;
+  enrollmentDate: string;
+  attendancePercent: number;
+  totalDays: number;
+  presentDays: number;
+}
+
+interface RecentNotice {
+  id: string;
+  title: string;
+  content: string;
+  publish_date: string;
+  target_audience: string;
+}
+
+interface ClassStat {
+  id: string;
+  name: string;
+  schoolLevel: string;
+  studentCount: number;
+}
+
+interface Subject {
+  id: string;
+  name: string;
+  code: string;
 }
 
 export default function Dashboard() {
-  const { user, role, loading: authLoading, signOut } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -41,32 +72,39 @@ export default function Dashboard() {
     totalTeachers: 0,
     totalClasses: 0,
     totalNotices: 0,
+    totalSubjects: 0,
+    totalAttendanceRecords: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
+  const [topStudents, setTopStudents] = useState<TopStudent[]>([]);
+  const [recentNotices, setRecentNotices] = useState<RecentNotice[]>([]);
+  const [classStats, setClassStats] = useState<ClassStat[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-    if (role === "admin") {
-      fetchDashboardStats();
-    } else {
-      setStatsLoading(false);
-    }
-  }, [authLoading, user, role, navigate]);
+    fetchAllDashboardData();
+  }, []);
 
-  const fetchDashboardStats = async () => {
+  const fetchAllDashboardData = async () => {
     try {
       setStatsLoading(true);
-      const data = await api.get<DashboardStats>("/api/dashboard/stats");
-      setStats(data);
+      const [statsData, studentsData, noticesData, classData, subjectsData] = await Promise.all([
+        api.get<DashboardStats>("/api/dashboard/stats"),
+        api.get<TopStudent[]>("/api/dashboard/top-students").catch(() => []),
+        api.get<RecentNotice[]>("/api/dashboard/recent-notices").catch(() => []),
+        api.get<ClassStat[]>("/api/dashboard/class-stats").catch(() => []),
+        api.get<Subject[]>("/api/dashboard/subjects").catch(() => []),
+      ]);
+      setStats(statsData);
+      setTopStudents(studentsData);
+      setRecentNotices(noticesData);
+      setClassStats(classData);
+      setSubjects(subjectsData);
     } catch (error: any) {
-      console.error("Error fetching stats:", error);
+      console.error("Error fetching dashboard data:", error);
       toast({
         title: "Error",
-        description: "Failed to load dashboard statistics.",
+        description: "Failed to load dashboard data.",
         variant: "destructive",
       });
     } finally {
@@ -74,359 +112,516 @@ export default function Dashboard() {
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="animate-spin w-8 h-8 text-primary" />
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const sidebarLinks = [
-    { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
-    { icon: Users, label: "Students", path: "/dashboard/students" },
-    { icon: GraduationCap, label: "Teachers", path: "/dashboard/teachers" },
-    { icon: School, label: "Classes & Subjects", path: "/dashboard/classes" },
-    { icon: Bell, label: "Notices", path: "/dashboard/notices" },
-  ];
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  };
 
-  const isActive = (path: string) => location.pathname === path;
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
 
+  const subjectIcons: Record<string, string> = {
+    'Literature': '📖',
+    'Mathematics': '📐',
+    'Math': '📐',
+    'English': '📝',
+    'Science': '🔬',
+    'Physics': '⚡',
+    'Chemistry': '🧪',
+    'Biology': '🧬',
+    'History': '📜',
+    'Geography': '🌍',
+    'Computer': '💻',
+    'Art': '🎨',
+  };
+
+  const getSubjectIcon = (name: string) => {
+    for (const [key, icon] of Object.entries(subjectIcons)) {
+      if (name.toLowerCase().includes(key.toLowerCase())) return icon;
+    }
+    return '📚';
+  };
+
+  // Brand colors: Purple, Gold/Amber, Green
+  const subjectColors = ['bg-violet-100', 'bg-amber-100', 'bg-green-100', 'bg-violet-100', 'bg-amber-100', 'bg-green-100'];
+
+  // Brand stat cards (Purple, Gold/Amber, Green)
   const statCards = [
     {
       icon: Users,
-      label: "Total Students",
-      value: stats.totalStudents,
-      color: "bg-blue-500",
-      lightColor: "bg-blue-50 text-blue-600",
+      label: "Students",
+      value: stats.totalStudents > 1000 ? `${(stats.totalStudents / 1000).toFixed(1)}K` : stats.totalStudents.toString(),
+      rawValue: stats.totalStudents,
+      color: "bg-violet-50/80",
+      iconBg: "bg-violet-100",
+      iconColor: "text-violet-500",
       path: "/dashboard/students",
     },
     {
       icon: GraduationCap,
-      label: "Total Teachers",
-      value: stats.totalTeachers,
-      color: "bg-emerald-500",
-      lightColor: "bg-emerald-50 text-emerald-600",
+      label: "Teachers",
+      value: stats.totalTeachers.toString(),
+      rawValue: stats.totalTeachers,
+      color: "bg-amber-50/80",
+      iconBg: "bg-amber-100",
+      iconColor: "text-amber-500",
       path: "/dashboard/teachers",
     },
     {
-      icon: BookOpen,
-      label: "Total Classes",
-      value: stats.totalClasses,
-      color: "bg-amber-500",
-      lightColor: "bg-amber-50 text-amber-600",
+      icon: Award,
+      label: "Classes",
+      value: stats.totalClasses.toString(),
+      rawValue: stats.totalClasses,
+      color: "bg-green-50/80",
+      iconBg: "bg-green-100",
+      iconColor: "text-green-500",
       path: "/dashboard/classes",
-    },
-    {
-      icon: Megaphone,
-      label: "Total Notices",
-      value: stats.totalNotices,
-      color: "bg-rose-500",
-      lightColor: "bg-rose-50 text-rose-600",
-      path: "/dashboard/notices",
     },
   ];
 
-  const quickActions = [
-    {
-      icon: UserPlus,
-      label: "Add Student",
-      description: "Enroll a new student",
-      path: "/dashboard/students/add",
-      color: "text-blue-600",
-    },
-    {
-      icon: UserPlus,
-      label: "Add Teacher",
-      description: "Register a new teacher",
-      path: "/dashboard/teachers/add",
-      color: "text-emerald-600",
-    },
-    {
-      icon: PlusCircle,
-      label: "Create Notice",
-      description: "Post an announcement",
-      path: "/dashboard/notices/create",
-      color: "text-rose-600",
-    },
-    {
-      icon: School,
-      label: "Manage Classes",
-      description: "Add classes & subjects",
-      path: "/dashboard/classes",
-      color: "text-amber-600",
-    },
-  ];
+  const totalStudentsInClasses = classStats.reduce((acc, c) => acc + c.studentCount, 0);
+  // Brand colors: Purple, Amber/Gold, Green
+  const brandChartColors = ['#8B5CF6', '#F59E0B', '#16A34A'];
+  const classDistribution = classStats.slice(0, 4).map((c, i) => ({
+    name: c.name,
+    value: c.studentCount,
+    percent: totalStudentsInClasses > 0 ? Math.round((c.studentCount / totalStudentsInClasses) * 100) : 0,
+    color: brandChartColors[i % 3],
+  }));
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-200 fixed h-full z-20">
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-            <GraduationCap className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="font-bold text-base text-slate-900 leading-tight">
-              Rose Valley
-            </h1>
-            <p className="text-[11px] text-slate-500 font-medium">
-              Academy Admin
-            </p>
-          </div>
-        </div>
-
-        {/* Nav Links */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {sidebarLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                isActive(link.path)
-                  ? "bg-primary/10 text-primary shadow-sm"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              }`}
-            >
-              <link.icon className="w-5 h-5" />
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* User section at bottom */}
-        <div className="border-t border-slate-100 px-4 py-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-sm font-bold text-primary">
-                {user.email?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 truncate">
-                {user.email}
-              </p>
-              <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wider">
-                {role}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSignOut}
-            className="w-full gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 lg:ml-64">
-        {/* Top bar (mobile only) */}
-        <header className="lg:hidden border-b border-slate-200 bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-slate-900">RVA Admin</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Mobile nav links */}
-            <div className="flex gap-1">
-              {sidebarLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`p-2 rounded-lg transition-colors ${
-                    isActive(link.path)
-                      ? "bg-primary/10 text-primary"
-                      : "text-slate-500 hover:bg-slate-100"
-                  }`}
-                >
-                  <link.icon className="w-5 h-5" />
-                </Link>
-              ))}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSignOut}
-              className="text-red-600 hover:bg-red-50"
-            >
-              <LogOut className="w-5 h-5" />
-            </Button>
-          </div>
-        </header>
-
-        <main className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
-          {/* Page Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="w-5 h-5 text-primary" />
-                <span className="text-sm font-semibold uppercase tracking-wider text-primary">
-                  Dashboard
-                </span>
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
-                Welcome back, Admin!
-              </h2>
-              <p className="text-slate-500 mt-1">
-                Here's what's happening at Rose Valley Academy today.
-              </p>
-            </div>
-            <Button
-              onClick={fetchDashboardStats}
-              variant="outline"
-              size="sm"
-              className="gap-2 border-slate-300 hover:bg-white self-start"
-              disabled={statsLoading}
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${statsLoading ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </Button>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {statCards.map((stat, i) => (
-              <Link key={i} to={stat.path}>
-                <Card className="hover:shadow-md transition-all cursor-pointer group border-slate-200 bg-white h-full">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div
-                        className={`w-10 h-10 rounded-xl ${stat.lightColor} flex items-center justify-center`}
-                      >
-                        <stat.icon className="w-5 h-5" />
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-primary transition-colors" />
-                    </div>
-                    <p className="text-2xl font-bold text-slate-900">
-                      {statsLoading ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
-                      ) : (
-                        stat.value.toLocaleString()
-                      )}
-                    </p>
-                    <p className="text-sm text-slate-500 mt-0.5">
-                      {stat.label}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-
-          {/* Bottom Grid - Quick Actions + Recent Activity */}
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Quick Actions */}
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardHeader className="border-b border-slate-100 pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg text-slate-900">
-                  <ClipboardList className="w-5 h-5 text-primary" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-3 pt-5">
-                {quickActions.map((action, i) => (
-                  <Link key={i} to={action.path}>
-                    <div className="border border-slate-200 rounded-xl p-4 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer group h-full">
-                      <action.icon
-                        className={`w-6 h-6 ${action.color} mb-2 group-hover:scale-110 transition-transform`}
-                      />
-                      <p className="font-semibold text-sm text-slate-900">
-                        {action.label}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {action.description}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Recent Activity / Notices Summary */}
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardHeader className="border-b border-slate-100 pb-4 flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg text-slate-900">
-                  <Bell className="w-5 h-5 text-rose-500" />
-                  Notices Summary
-                </CardTitle>
-                <Button variant="ghost" size="sm" asChild className="text-xs">
-                  <Link to="/dashboard/notices">View All</Link>
-                </Button>
-              </CardHeader>
-              <CardContent className="pt-5">
-                {statsLoading ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-                  </div>
-                ) : stats.totalNotices === 0 ? (
-                  <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-                    <Megaphone className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-600 font-medium">
-                      No notices published yet
-                    </p>
-                    <p className="text-sm text-slate-400 mt-1 mb-4">
-                      Create your first announcement for the school.
-                    </p>
-                    <Button size="sm" asChild>
-                      <Link to="/dashboard/notices/create" className="gap-2">
-                        <PlusCircle className="w-4 h-4" /> Create Notice
-                      </Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center">
-                        <Megaphone className="w-6 h-6 text-rose-500" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-2xl font-bold text-slate-900">
-                          {stats.totalNotices}
-                        </p>
-                        <p className="text-sm text-slate-500">
-                          Published notices in system
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        asChild
-                      >
-                        <Link to="/dashboard/notices">Manage All</Link>
-                      </Button>
-                      <Button size="sm" className="flex-1 gap-2" asChild>
-                        <Link to="/dashboard/notices/create">
-                          <PlusCircle className="w-4 h-4" /> New Notice
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </main>
+    <>
+      {/* Welcome Section */}
+      <div className="mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Welcome back! 👋</h2>
+        <p className="text-gray-500 mt-1">Navigate the future of education with Rose Valley Academy.</p>
       </div>
-    </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+        {statCards.map((stat, i) => (
+          <Link key={i} to={stat.path} className="block group">
+            <Card className={`${stat.color} border border-black/5 hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden relative`}>
+              <div className={`absolute top-0 right-0 w-32 h-32 rounded-full ${stat.iconBg} mix-blend-multiply opacity-50 blur-2xl -translate-y-1/2 translate-x-1/3 group-hover:scale-110 transition-transform`}></div>
+              <CardContent className="p-5 md:p-6 flex items-center justify-between relative z-10">
+                <div>
+                  <p className="text-sm font-semibold text-gray-600 mb-1">{stat.label}</p>
+                  <p className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+                    {statsLoading ? (
+                      <Loader2 className="w-7 h-7 animate-spin text-gray-400" />
+                    ) : (
+                      stat.value
+                    )}
+                  </p>
+                </div>
+                <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl ${stat.iconBg} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+                  <stat.icon className={`w-7 h-7 md:w-8 md:h-8 ${stat.iconColor}`} />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* Left Column */}
+        <div className="md:col-span-12 xl:col-span-5 space-y-6">
+          {/* Class Statistics Card */}
+          <Card className="border-0 shadow-sm rounded-2xl overflow-hidden bg-white hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4 bg-gray-50/50 border-b border-gray-50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-bold text-gray-800">Class Overview</CardTitle>
+                <Link to="/dashboard/classes" className="text-sm text-violet-600 font-semibold hover:text-violet-700 flex items-center gap-1 group">
+                  View All <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {statsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                </div>
+              ) : classStats.length === 0 ? (
+                <div className="text-center py-10 text-gray-500">
+                  <School className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium text-gray-600">No classes found</p>
+                  <Button size="sm" className="mt-4 bg-violet-600 hover:bg-violet-700 rounded-xl" asChild>
+                    <Link to="/dashboard/classes">Add Class</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {classStats.slice(0, 4).map((cls, i) => (
+                    <div key={cls.id} className="border border-gray-100 rounded-2xl p-4 md:p-5 hover:border-violet-200 hover:bg-violet-50/30 transition-colors group">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`w-10 h-10 rounded-xl ${['bg-violet-100', 'bg-amber-100', 'bg-green-100', 'bg-violet-100'][i % 3]} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                          <School className={`w-5 h-5 ${['text-violet-600', 'text-amber-600', 'text-green-600', 'text-violet-600'][i % 3]}`} />
+                        </div>
+                      </div>
+                      <p className="font-bold text-gray-800">{cls.name}</p>
+                      <p className="text-sm text-gray-500 font-medium mt-1">{cls.studentCount} students</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{cls.schoolLevel}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Star Students */}
+          <Card className="border-0 shadow-sm rounded-2xl overflow-hidden bg-white hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4 bg-gray-50/50 border-b border-gray-50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-bold text-gray-800">Top Students</CardTitle>
+                <Link to="/dashboard/students" className="text-sm text-violet-600 font-semibold hover:text-violet-700 flex items-center gap-1 group">
+                  View All <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 px-0">
+              {statsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                </div>
+              ) : topStudents.length === 0 ? (
+                <div className="text-center py-10 text-gray-500 px-6">
+                  <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium text-gray-600">No students found</p>
+                  <Button size="sm" className="mt-4 bg-violet-600 hover:bg-violet-700 rounded-xl" asChild>
+                    <Link to="/dashboard/students/add">Add Student</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white">
+                      <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                        <th className="py-4 px-6 font-semibold">Name</th>
+                        <th className="py-4 px-6 font-semibold">Class</th>
+                        <th className="py-4 px-6 font-semibold">Attendance</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {topStudents.map((student, i) => (
+                        <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${['bg-violet-500', 'bg-amber-500', 'bg-green-500'][i % 3]}`}>
+                                {getInitials(student.name)}
+                              </div>
+                              <span className="font-semibold text-gray-800">{student.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 whitespace-nowrap text-gray-600 font-medium">{student.className}</td>
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${student.attendancePercent >= 80 ? 'bg-green-100 text-green-700' : student.attendancePercent >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                              {student.attendancePercent}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Notifications */}
+          <Card className="border-0 shadow-sm rounded-2xl overflow-hidden bg-white hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4 bg-gray-50/50 border-b border-gray-50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-bold text-gray-800">Recent Notices</CardTitle>
+                <Link to="/dashboard/notices" className="text-sm text-violet-600 font-semibold hover:text-violet-700 flex items-center gap-1 group">
+                  View All <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-5">
+              {statsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                </div>
+              ) : recentNotices.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium">No notices yet</p>
+                  <Button size="sm" className="mt-4 bg-violet-600 hover:bg-violet-700 rounded-xl" asChild>
+                    <Link to="/dashboard/notices/create">Create Notice</Link>
+                  </Button>
+                </div>
+              ) : (
+                recentNotices.map((notice, i) => (
+                  <div key={notice.id} className="flex items-start gap-4 group">
+                    <div className={`shrink-0 w-12 h-12 rounded-2xl ${['bg-violet-100 text-violet-600', 'bg-amber-100 text-amber-600', 'bg-green-100 text-green-600'][i % 3]} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                      <Bell className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <p className="font-bold text-gray-800 truncate pr-2">{notice.title}</p>
+                      <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-gray-500 font-medium">
+                        <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md">
+                          <Clock className="w-3.5 h-3.5" /> {formatTime(notice.publish_date)}
+                        </span>
+                        <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md">
+                          <Calendar className="w-3.5 h-3.5" /> {formatDate(notice.publish_date)}
+                        </span>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
+                      notice.target_audience === 'All' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                      notice.target_audience === 'Students' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                      'bg-purple-50 text-purple-700 border border-purple-100'
+                    }`}>
+                      {notice.target_audience}
+                    </span>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Middle Column */}
+        <div className="md:col-span-12 xl:col-span-4 space-y-6">
+          {/* Subjects / Library */}
+          <Card className="border-0 shadow-sm rounded-2xl bg-white hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-bold text-gray-800">Subjects</CardTitle>
+                <Link to="/dashboard/classes" className="text-sm text-violet-600 font-semibold hover:text-violet-700">View All</Link>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {statsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                </div>
+              ) : subjects.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <BookOpen className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium">No subjects found</p>
+                  <Button size="sm" className="mt-4 rounded-xl" asChild>
+                    <Link to="/dashboard/classes">Add Subject</Link>
+                  </Button>
+                </div>
+              ) : (
+                subjects.slice(0, 5).map((subject, i) => (
+                  <div key={subject.id} className="flex items-center justify-between p-3.5 hover:bg-gray-50 rounded-2xl transition-all border border-transparent hover:border-gray-100 group">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl ${subjectColors[i % subjectColors.length]} flex items-center justify-center text-xl shadow-sm group-hover:scale-105 transition-transform`}>
+                        {getSubjectIcon(subject.name)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-800">{subject.name}</p>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">Code: {subject.code}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-violet-500 transition-colors" />
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Total Stats Summary */}
+          <Card className="border-0 shadow-sm rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 text-white overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/3"></div>
+            <CardContent className="p-6 relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <Megaphone className="w-5 h-5 text-white" />
+                </div>
+                {stats.totalNotices > 0 && (
+                  <span className="text-xs font-bold bg-white/20 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                    <TrendingUp className="w-3.5 h-3.5" /> Active
+                  </span>
+                )}
+              </div>
+              <p className="text-5xl font-extrabold mb-2 tracking-tight">
+                {statsLoading ? <Loader2 className="w-8 h-8 animate-spin text-white/70" /> : stats.totalNotices}
+              </p>
+              <p className="text-sm text-white/80 font-medium mb-4">
+                Total announcements active in the system across all classes.
+              </p>
+              <Link to="/dashboard/notices" className="text-sm font-bold text-white flex items-center gap-1 group w-max">
+                Manage notices <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions Card */}
+          <Card className="border-0 shadow-sm rounded-2xl overflow-hidden bg-[#1e293b] text-white">
+            <CardContent className="p-6 relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 rounded-full blur-xl -translate-y-1/2 translate-x-1/2"></div>
+              <span className="text-xs font-bold bg-indigo-500/30 text-indigo-200 px-2.5 py-1 rounded-full mb-4 inline-block">Quick Actions</span>
+              <h3 className="text-xl font-bold mb-5">Manage your school</h3>
+              <div className="space-y-3 relative z-10">
+                <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 w-full justify-start rounded-xl h-11" asChild>
+                  <Link to="/dashboard/students/add">
+                    <UserPlus className="w-4 h-4 mr-3" /> Add Student
+                  </Link>
+                </Button>
+                <Button size="sm" variant="outline" className="w-full justify-start border-white/10 text-white bg-white/5 hover:bg-white/10 rounded-xl h-11" asChild>
+                  <Link to="/dashboard/teachers/add">
+                    <UserPlus className="w-4 h-4 mr-3" /> Add Teacher
+                  </Link>
+                </Button>
+                <Button size="sm" variant="outline" className="w-full justify-start border-white/10 text-white bg-white/5 hover:bg-white/10 rounded-xl h-11" asChild>
+                  <Link to="/dashboard/notices/create">
+                    <PlusCircle className="w-4 h-4 mr-3" /> Create Notice
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column */}
+        <div className="md:col-span-12 xl:col-span-3 space-y-6">
+          {/* Student Distribution */}
+          <Card className="border-0 shadow-sm rounded-2xl bg-white hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-bold text-gray-800">Distribution</CardTitle>
+                <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full">
+                  <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {statsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                </div>
+              ) : classDistribution.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 font-medium">
+                  <p className="text-sm">No data available</p>
+                </div>
+              ) : (
+                <>
+                  {/* Donut Chart */}
+                  <div className="relative w-44 h-44 mx-auto mb-6">
+                    <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90 drop-shadow-sm">
+                      <circle cx="50" cy="50" r="35" fill="none" stroke="#F1F5F9" strokeWidth="12" />
+                      {classDistribution.map((item, i) => {
+                        const prevPercent = classDistribution.slice(0, i).reduce((acc, c) => acc + c.percent, 0);
+                        const dashArray = (item.percent / 100) * 220;
+                        const dashOffset = -(prevPercent / 100) * 220;
+                        return (
+                          <circle
+                            key={item.name}
+                            cx="50" cy="50" r="35" fill="none"
+                            stroke={item.color} strokeWidth="12"
+                            strokeDasharray={`${dashArray} 220`}
+                            strokeDashoffset={dashOffset}
+                            strokeLinecap="round"
+                            className="transition-all duration-1000 ease-out"
+                          />
+                        );
+                      })}
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Total</p>
+                      <p className="text-3xl font-extrabold text-gray-900 mt-0.5">{totalStudentsInClasses}</p>
+                    </div>
+                  </div>
+                  {/* Legend */}
+                  <div className="flex flex-col gap-3">
+                    {classDistribution.map((item) => (
+                      <div key={item.name} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: item.color }}></div>
+                          <span className="font-semibold text-gray-600">{item.name}</span>
+                        </div>
+                        <span className="font-bold text-gray-900">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Class Performance */}
+          <Card className="border-0 shadow-sm rounded-2xl bg-white hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-bold text-gray-800">Capacity</CardTitle>
+                <select className="text-xs border-gray-200 rounded-lg px-2.5 py-1.5 bg-gray-50 font-medium text-gray-600 focus:ring-violet-500 focus:border-violet-500 outline-none">
+                  <option>All Classes</option>
+                </select>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {statsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                </div>
+              ) : classStats.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm font-medium">No classes found</p>
+                </div>
+              ) : (
+                classStats.slice(0, 5).map((cls, i) => {
+                  const maxStudents = Math.max(...classStats.map(c => c.studentCount), 1);
+                  const percent = Math.round((cls.studentCount / maxStudents) * 100);
+                  return (
+                    <div key={cls.id} className="space-y-2 group">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-bold text-gray-700">{cls.name}</span>
+                        <span className="font-bold text-gray-900">{cls.studentCount}</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${['bg-violet-500', 'bg-amber-500', 'bg-green-500'][i % 3]} group-hover:opacity-80 transition-all duration-500 ease-out`}
+                          style={{ width: `${percent}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Attendance Summary */}
+          <Card className="border-0 shadow-sm rounded-2xl bg-white hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-bold text-gray-800">Quick Stats</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3.5 bg-violet-50/80 rounded-xl border border-violet-100">
+                <div className="flex items-center gap-2 text-violet-700">
+                  <BookOpen className="w-4 h-4" />
+                  <span className="text-sm font-bold">Subjects</span>
+                </div>
+                <span className="font-extrabold text-violet-700 text-base">{stats.totalSubjects}</span>
+              </div>
+              <div className="flex items-center justify-between p-3.5 bg-emerald-50/80 rounded-xl border border-emerald-100">
+                <div className="flex items-center gap-2 text-emerald-700">
+                  <CheckSquare className="w-4 h-4" />
+                  <span className="text-sm font-bold">Records</span>
+                </div>
+                <span className="font-extrabold text-emerald-700 text-base">{stats.totalAttendanceRecords}</span>
+              </div>
+              <div className="flex items-center justify-between p-3.5 bg-amber-50/80 rounded-xl border border-amber-100">
+                <div className="flex items-center gap-2 text-amber-700">
+                  <School className="w-4 h-4" />
+                  <span className="text-sm font-bold">Rooms</span>
+                </div>
+                <span className="font-extrabold text-amber-700 text-base">{stats.totalClasses}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </>
   );
 }

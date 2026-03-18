@@ -19,12 +19,13 @@ studentsRouter.get('/', requireAuth, async (req, res) => {
       id,
       user_id,
       enrollment_date,
-      profiles!inner (
+      profiles (
         first_name,
         last_name,
         avatar_url
       ),
       classes (
+        id,
         name
       )
     `);
@@ -201,6 +202,87 @@ studentsRouter.post('/', requireAuth, async (req, res) => {
     res.json({ user: userData.user });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create student' });
+  }
+});
+
+// GET /api/students/:id — get a single student's full details (admin only)
+studentsRouter.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
+
+    // Get student with profile and class info
+    const { data: studentData, error: studentError } = await supabase
+      .from('students')
+      .select(`
+        id,
+        user_id,
+        class_id,
+        enrollment_date,
+        roll_number,
+        profiles (
+          first_name,
+          last_name,
+          avatar_url,
+          dob
+        ),
+        classes (
+          id,
+          name
+        )
+      `)
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (studentError) return res.status(400).json({ error: studentError.message });
+    if (!studentData) return res.status(404).json({ error: 'Student not found' });
+
+    // Get user email from auth
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(studentData.user_id);
+
+    // Get attendance stats
+    const { data: attendanceData } = await supabase
+      .from('student_attendance')
+      .select('status')
+      .eq('student_id', studentData.id);
+
+    const records = attendanceData || [];
+    const totalDays = records.length;
+    const presentDays = records.filter((r: any) => r.status === 'Present').length;
+    const absentDays = records.filter((r: any) => r.status === 'Absent').length;
+    const lateDays = records.filter((r: any) => r.status === 'Late').length;
+    const attendancePercentage = totalDays > 0 ? Math.round(((presentDays + lateDays) / totalDays) * 100) : 0;
+
+    const profile = studentData.profiles as any;
+    const classInfo = studentData.classes as any;
+
+    res.json({
+      id: studentData.id,
+      userId: studentData.user_id,
+      firstName: profile?.first_name ?? '',
+      lastName: profile?.last_name ?? '',
+      email: authUser?.user?.email ?? '',
+      avatarUrl: profile?.avatar_url,
+      dob: profile?.dob,
+      className: classInfo?.name ?? 'Not assigned',
+      classId: classInfo?.id ?? null,
+      rollNumber: (studentData as any).roll_number,
+      enrollmentDate: studentData.enrollment_date,
+      attendance: {
+        totalDays,
+        presentDays,
+        absentDays,
+        lateDays,
+        attendancePercentage,
+      }
+    });
+  } catch (err) {
+    console.error('Get student details error:', err);
+    res.status(500).json({ error: 'Failed to fetch student details' });
   }
 });
 

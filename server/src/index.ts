@@ -7,6 +7,8 @@ import { classesRouter } from './routes/classes.js';
 import { noticesRouter } from './routes/notices.js';
 import { attendanceRouter } from './routes/attendance.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { examsRouter } from './routes/exams.js';
+import { routinesRouter } from './routes/routines.js';
 
 dotenv.config();
 
@@ -26,6 +28,8 @@ app.use('/api/classes', classesRouter);
 app.use('/api/notices', noticesRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/exams', examsRouter);
+app.use('/api/routines', routinesRouter);
 
 app.listen(PORT, () => {
   console.log(`[server] running on http://localhost:${PORT}`);

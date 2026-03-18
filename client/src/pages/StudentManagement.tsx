@@ -1,205 +1,723 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, UserPlus, Search, Loader2, Trash2, User } from "lucide-react";
+import {
+  UserPlus,
+  Search,
+  Loader2,
+  Trash2,
+  Users,
+  School,
+  ChevronDown,
+  ChevronRight,
+  Calendar,
+  X,
+  Mail,
+  GraduationCap,
+  CheckCircle2,
+  XCircle,
+  Clock
+} from "lucide-react";
 import { toast } from "sonner";
 
+interface Student {
+  id: string;
+  user_id: string;
+  enrollment_date: string;
+  profiles?: {
+    first_name: string;
+    last_name: string;
+    avatar_url?: string;
+  };
+  classes?: {
+    id: string;
+    name: string;
+  };
+}
+
+interface StudentDetail {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl?: string;
+  dob?: string;
+  className: string;
+  classId: string | null;
+  rollNumber?: string;
+  enrollmentDate: string;
+  attendance: {
+    totalDays: number;
+    presentDays: number;
+    absentDays: number;
+    lateDays: number;
+    attendancePercentage: number;
+  };
+}
+
+interface ClassGroup {
+  id: string;
+  name: string;
+  students: Student[];
+  sortOrder: number;
+}
+
+// Class sorting order
+const CLASS_ORDER: Record<string, number> = {
+  'nursery': 1,
+  'kg': 2,
+  'kindergarten': 2,
+  'lkg': 2,
+  'ukg': 3,
+  '1': 4, 'class 1': 4, 'grade 1': 4, 'i': 4,
+  '2': 5, 'class 2': 5, 'grade 2': 5, 'ii': 5,
+  '3': 6, 'class 3': 6, 'grade 3': 6, 'iii': 6,
+  '4': 7, 'class 4': 7, 'grade 4': 7, 'iv': 7,
+  '5': 8, 'class 5': 8, 'grade 5': 8, 'v': 8,
+  '6': 9, 'class 6': 9, 'grade 6': 9, 'vi': 9,
+  '7': 10, 'class 7': 10, 'grade 7': 10, 'vii': 10,
+  '8': 11, 'class 8': 11, 'grade 8': 11, 'viii': 11,
+  '9': 12, 'class 9': 12, 'grade 9': 12, 'ix': 12,
+  '10': 13, 'class 10': 13, 'grade 10': 13, 'x': 13,
+  '11': 14, 'class 11': 14, 'grade 11': 14, 'xi': 14,
+  '12': 15, 'class 12': 15, 'grade 12': 15, 'xii': 15,
+  'unassigned': 99
+};
+
+function getClassSortOrder(className: string): number {
+  const lower = className.toLowerCase().trim();
+  if (CLASS_ORDER[lower] !== undefined) return CLASS_ORDER[lower];
+
+  // Extract number from class name
+  const numMatch = lower.match(/(\d+)/);
+  if (numMatch) {
+    const num = parseInt(numMatch[1]);
+    if (num >= 1 && num <= 12) return num + 3;
+  }
+
+  return 50; // Default for unknown classes
+}
+
 export default function StudentManagement() {
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
-  const [selectedClass, setSelectedClass] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+  const [selectedStudent, setSelectedStudent] = useState<StudentDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const classRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
     fetchInitialData();
   }, []);
 
+  // Auto-expand classes with matching students and scroll to first match when searching
   useEffect(() => {
-    fetchStudents();
-  }, [selectedClass]);
+    if (!searchQuery.trim() || loading) return;
+
+    // Find all class IDs that have matching students
+    const matchingClassIds = new Set<string>();
+    filteredStudents.forEach(student => {
+      const classId = student.classes?.id || 'unassigned';
+      matchingClassIds.add(classId);
+    });
+
+    // Expand all matching classes
+    if (matchingClassIds.size > 0) {
+      setExpandedClasses(prev => {
+        const newExpanded = new Set(prev);
+        matchingClassIds.forEach(id => newExpanded.add(id));
+        return newExpanded;
+      });
+
+      // Scroll to the first matching class after a short delay for DOM update
+      setTimeout(() => {
+        // Find the first class in sorted order that has matches
+        const sortedClassIds = Array.from(matchingClassIds).sort((a, b) => {
+          const classA = classes.find(c => c.id === a);
+          const classB = classes.find(c => c.id === b);
+          const orderA = classA ? getClassSortOrder(classA.name) : (a === 'unassigned' ? 99 : 50);
+          const orderB = classB ? getClassSortOrder(classB.name) : (b === 'unassigned' ? 99 : 50);
+          return orderA - orderB;
+        });
+
+        if (sortedClassIds.length > 0) {
+          const firstMatchingClassId = sortedClassIds[0];
+          const element = classRefs.current.get(firstMatchingClassId);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }, 100);
+    }
+  }, [searchQuery, loading]);
 
   async function fetchInitialData() {
-    try {
-      const data = await api.get<any[]>('/api/classes/simple');
-      setClasses(data);
-    } catch {
-      toast.error("Failed to load classes");
-    }
-  }
-
-  async function fetchStudents() {
     setLoading(true);
     try {
-      const classParam = selectedClass !== "all" ? `?class_id=${selectedClass}` : '';
-      const data = await api.get<any[]>(`/api/students${classParam}`);
-      setStudents(data);
+      const [classesData, studentsData] = await Promise.all([
+        api.get<any[]>('/api/classes/simple'),
+        api.get<Student[]>('/api/students')
+      ]);
+      setClasses(classesData);
+      setStudents(studentsData);
+      // Expand all classes by default
+      const allClassIds = new Set(classesData.map((c: any) => c.id));
+      allClassIds.add('unassigned');
+      setExpandedClasses(allClassIds);
     } catch (error: any) {
       console.error("Fetch Error:", error);
-      toast.error(error.message);
+      toast.error("Failed to load data");
     } finally {
       setLoading(false);
     }
   }
 
-  const handleDelete = async (studentId: string, userId: string) => {
-    if (!confirm("Are you sure? This will remove the student record, but keep the Auth account. Admin manual cleanup may be required in Auth.")) return;
+  const handleDelete = async (studentId: string) => {
+    if (!confirm("Are you sure? This will remove the student record.")) return;
 
     try {
       await api.delete(`/api/students/${studentId}`);
       toast.success("Student removed from directory");
       setStudents(students.filter(s => s.id !== studentId));
+      if (selectedStudent?.id === studentId) {
+        setSelectedStudent(null);
+      }
     } catch (error: any) {
       toast.error("Delete failed: " + error.message);
     }
   };
 
-  // Filter students based on search query (client-side for speed)
+  const handleStudentClick = async (studentId: string) => {
+    setDetailLoading(true);
+    try {
+      const data = await api.get<StudentDetail>(`/api/students/${studentId}`);
+      setSelectedStudent(data);
+    } catch (error: any) {
+      toast.error("Failed to load student details");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const toggleClass = (classId: string) => {
+    const newExpanded = new Set(expandedClasses);
+    if (newExpanded.has(classId)) {
+      newExpanded.delete(classId);
+    } else {
+      newExpanded.add(classId);
+    }
+    setExpandedClasses(newExpanded);
+  };
+
+  const expandAll = () => {
+    const allClassIds = new Set(classes.map(c => c.id));
+    allClassIds.add('unassigned');
+    setExpandedClasses(allClassIds);
+  };
+
+  const collapseAll = () => {
+    setExpandedClasses(new Set());
+  };
+
+  // Filter students based on search query
   const filteredStudents = students.filter(s => {
-    const fullName = `${s.profiles?.first_name} ${s.profiles?.last_name}`.toLowerCase();
-    return fullName.includes(searchQuery.toLowerCase());
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase().trim();
+    const firstName = (s.profiles?.first_name || '').toLowerCase();
+    const lastName = (s.profiles?.last_name || '').toLowerCase();
+    const fullName = `${firstName} ${lastName}`;
+    const className = (s.classes?.name || '').toLowerCase();
+
+    return firstName.includes(query) ||
+           lastName.includes(query) ||
+           fullName.includes(query) ||
+           className.includes(query);
   });
 
+  // Group students by class and sort classes properly
+  const groupedStudents = (): ClassGroup[] => {
+    const groups: Map<string, ClassGroup> = new Map();
+
+    // Initialize groups for all classes
+    classes.forEach(c => {
+      groups.set(c.id, {
+        id: c.id,
+        name: c.name,
+        students: [],
+        sortOrder: getClassSortOrder(c.name)
+      });
+    });
+
+    // Add unassigned group
+    groups.set('unassigned', {
+      id: 'unassigned',
+      name: 'Unassigned',
+      students: [],
+      sortOrder: 99
+    });
+
+    // Distribute students
+    filteredStudents.forEach(student => {
+      const classId = student.classes?.id || 'unassigned';
+      const group = groups.get(classId);
+      if (group) {
+        group.students.push(student);
+      } else {
+        groups.get('unassigned')?.students.push(student);
+      }
+    });
+
+    // Convert to array, sort by class order, and filter out empty classes
+    return Array.from(groups.values())
+      .filter(g => g.students.length > 0 || g.id !== 'unassigned')
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  };
+
+  const classGroups = groupedStudents();
+  const totalStudents = filteredStudents.length;
+
+  const getInitials = (firstName?: string, lastName?: string) => {
+    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase() || '?';
+  };
+
+  // Brand colors: Purple (#8B5CF6), Gold (#EAB308), Green (#16A34A)
+  const brandColors = {
+    purple: { bg: 'bg-violet-100', text: 'text-violet-600', border: 'border-violet-200', solid: 'bg-violet-500' },
+    gold: { bg: 'bg-amber-100', text: 'text-amber-600', border: 'border-amber-200', solid: 'bg-amber-500' },
+    green: { bg: 'bg-green-100', text: 'text-green-600', border: 'border-green-200', solid: 'bg-green-500' },
+  };
+
+  const getColorForIndex = (index: number) => {
+    const colors = [brandColors.purple, brandColors.gold, brandColors.green];
+    return colors[index % 3];
+  };
+
+  const getAvatarColor = (index: number) => {
+    const colors = ['bg-violet-500', 'bg-amber-500', 'bg-green-500'];
+    return colors[index % 3];
+  };
+
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/dashboard")}
-            className="mb-2 p-0 h-auto hover:bg-transparent text-muted-foreground hover:text-primary"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" /> Back to Dashboard
-          </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Student Directory</h1>
-          <p className="text-muted-foreground">Manage and view all enrolled students.</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Student Directory</h1>
+          <p className="text-gray-500 mt-1 text-sm sm:text-base">Manage and view all enrolled students by class.</p>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <Button asChild className="gap-2 w-full md:w-auto shadow-sm">
-            <Link to="/dashboard/students/add">
-              <UserPlus className="w-4 h-4" /> Add Student
-            </Link>
-          </Button>
-        </div>
+        <Button asChild className="gap-2 bg-violet-600 hover:bg-violet-700 shadow-sm rounded-xl h-10 sm:h-11 w-full sm:w-auto sm:self-start">
+          <Link to="/dashboard/students/add">
+            <UserPlus className="w-4 h-4" /> Add Student
+          </Link>
+        </Button>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-muted/30 p-4 rounded-lg border">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search student names..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <Card className="bg-violet-50/80 border border-black/5 hover:shadow-md transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 rounded-full bg-violet-100 mix-blend-multiply opacity-50 blur-2xl -translate-y-1/2 translate-x-1/3"></div>
+            <CardContent className="p-4 sm:p-5 md:p-6 flex items-center justify-between relative z-10">
+              <div>
+                <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Total Students</p>
+                <p className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+                  {loading ? (
+                    <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 animate-spin text-gray-400" />
+                  ) : (
+                    totalStudents
+                  )}
+                </p>
+              </div>
+              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-2xl bg-violet-100 flex items-center justify-center shadow-sm">
+                <Users className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-violet-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-amber-50/80 border border-black/5 hover:shadow-md transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 rounded-full bg-amber-100 mix-blend-multiply opacity-50 blur-2xl -translate-y-1/2 translate-x-1/3"></div>
+            <CardContent className="p-4 sm:p-5 md:p-6 flex items-center justify-between relative z-10">
+              <div>
+                <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Total Classes</p>
+                <p className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+                  {loading ? (
+                    <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 animate-spin text-gray-400" />
+                  ) : (
+                    classGroups.filter(g => g.id !== 'unassigned').length
+                  )}
+                </p>
+              </div>
+              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-2xl bg-amber-100 flex items-center justify-center shadow-sm">
+                <School className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-amber-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-green-50/80 border border-black/5 hover:shadow-md transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 rounded-full bg-green-100 mix-blend-multiply opacity-50 blur-2xl -translate-y-1/2 translate-x-1/3"></div>
+            <CardContent className="p-4 sm:p-5 md:p-6 flex items-center justify-between relative z-10">
+              <div>
+                <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Avg per Class</p>
+                <p className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+                  {loading ? (
+                    <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 animate-spin text-gray-400" />
+                  ) : (
+                    classGroups.filter(g => g.id !== 'unassigned').length > 0
+                      ? Math.round(totalStudents / classGroups.filter(g => g.id !== 'unassigned').length)
+                      : 0
+                  )}
+                </p>
+              </div>
+              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-2xl bg-green-100 flex items-center justify-center shadow-sm">
+                <GraduationCap className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Filter:</span>
-          <Select onValueChange={setSelectedClass} defaultValue="all">
-            <SelectTrigger className="w-full md:w-[200px] bg-background">
-              <SelectValue placeholder="All Classes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Classes</SelectItem>
-              {classes.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Main Table */}
-      <Card className="border shadow-sm overflow-hidden">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead className="w-[300px]">Student Name</TableHead>
-                  <TableHead>Assigned Class</TableHead>
-                  <TableHead>Enrollment Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-48 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">Retrieving records...</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredStudents.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-48 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <Search className="w-10 h-10 text-muted-foreground/20" />
-                        <p className="font-medium">No students found</p>
-                        <p className="text-sm text-muted-foreground">Try adjusting your filters or search terms.</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredStudents.map((student) => (
-                    <TableRow key={student.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="w-4 h-4 text-primary" />
-                          </div>
-                          <span>
-                            {student.profiles?.first_name} {student.profiles?.last_name}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-secondary/50">
-                          {student.classes?.name || "Unassigned"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(student.enrollment_date).toLocaleDateString(undefined, {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDelete(student.id, student.user_id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+        {/* Search and Controls */}
+        <Card className="border-0 shadow-sm rounded-2xl bg-white">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
+              <div className="relative w-full sm:w-80 md:w-96 group">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-violet-500 transition-colors" />
+                <Input
+                  placeholder="Search by name or class..."
+                  className="pl-10 bg-gray-50/80 hover:bg-gray-100/80 border-transparent rounded-xl focus:bg-white focus:border-violet-200 focus:ring-4 focus:ring-violet-500/10 transition-all h-10 sm:h-11"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+              </div>
 
-      {/* Footer Info */}
-      <div className="text-xs text-muted-foreground px-2">
-        Showing {filteredStudents.length} of {students.length} students
-      </div>
+              <div className="flex items-center gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={expandAll}
+                  className="rounded-xl border-gray-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 text-xs sm:text-sm px-3"
+                >
+                  Expand All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={collapseAll}
+                  className="rounded-xl border-gray-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 text-xs sm:text-sm px-3"
+                >
+                  Collapse All
+                </Button>
+              </div>
+            </div>
+
+            {/* Search results count */}
+            {searchQuery && (
+              <p className="text-sm text-gray-500 mt-3">
+                Found <span className="font-semibold text-violet-600">{totalStudents}</span> student{totalStudents !== 1 ? 's' : ''} matching "{searchQuery}"
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Class-wise Student List */}
+        {loading ? (
+          <Card className="border-0 shadow-sm rounded-2xl bg-white">
+            <CardContent className="p-8 sm:p-12 flex flex-col items-center justify-center">
+              <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-violet-500 mb-4" />
+              <p className="text-gray-500 font-medium">Loading students...</p>
+            </CardContent>
+          </Card>
+        ) : classGroups.length === 0 ? (
+          <Card className="border-0 shadow-sm rounded-2xl bg-white">
+            <CardContent className="p-8 sm:p-12 flex flex-col items-center justify-center">
+              <Users className="w-12 h-12 sm:w-16 sm:h-16 text-gray-200 mb-4" />
+              <p className="text-base sm:text-lg font-semibold text-gray-700">No students found</p>
+              <p className="text-gray-500 mt-1 text-sm sm:text-base text-center">
+                {searchQuery ? "Try adjusting your search query." : "Add new students to get started."}
+              </p>
+              {!searchQuery && (
+                <Button asChild className="mt-4 bg-violet-600 hover:bg-violet-700 rounded-xl">
+                  <Link to="/dashboard/students/add">
+                    <UserPlus className="w-4 h-4 mr-2" /> Add Student
+                  </Link>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3 sm:space-y-4">
+            {classGroups.map((group, index) => {
+              const colors = getColorForIndex(index);
+              const isExpanded = expandedClasses.has(group.id);
+
+              return (
+                <Card
+                  key={group.id}
+                  ref={(el) => {
+                    if (el) classRefs.current.set(group.id, el);
+                    else classRefs.current.delete(group.id);
+                  }}
+                  className="border-0 shadow-sm rounded-2xl bg-white overflow-hidden hover:shadow-md transition-shadow"
+                >
+                  {/* Class Header */}
+                  <button
+                    onClick={() => toggleClass(group.id)}
+                    className="w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-gray-50/50 border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${colors.bg} flex items-center justify-center shadow-sm`}>
+                        <School className={`w-5 h-5 sm:w-6 sm:h-6 ${colors.text}`} />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-base sm:text-lg font-bold text-gray-800">{group.name}</h3>
+                        <p className="text-xs sm:text-sm text-gray-500 font-medium">{group.students.length} student{group.students.length !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-bold ${colors.bg} ${colors.text}`}>
+                        {group.students.length}
+                      </span>
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Student List */}
+                  {isExpanded && (
+                    <CardContent className="p-0">
+                      <div className="divide-y divide-gray-50">
+                        {group.students.map((student, sIndex) => (
+                          <div
+                            key={student.id}
+                            onClick={() => handleStudentClick(student.id)}
+                            className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between hover:bg-violet-50/30 transition-colors group cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold text-white shadow-sm shrink-0 ${getAvatarColor(sIndex)}`}>
+                                {getInitials(student.profiles?.first_name, student.profiles?.last_name)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-gray-800 text-sm sm:text-base truncate">
+                                  {student.profiles?.first_name} {student.profiles?.last_name}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                  <Calendar className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">
+                                    {new Date(student.enrollment_date).toLocaleDateString(undefined, {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="hidden sm:inline-flex text-xs text-violet-600 font-medium bg-violet-50 px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                View Details
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all rounded-xl w-8 h-8 sm:w-9 sm:h-9"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(student.id);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Footer Summary */}
+        {!loading && totalStudents > 0 && (
+          <div className="text-center text-xs sm:text-sm text-gray-500 font-medium py-3 sm:py-4">
+            Showing {totalStudents} student{totalStudents !== 1 ? 's' : ''} across {classGroups.filter(g => g.id !== 'unassigned').length} class{classGroups.filter(g => g.id !== 'unassigned').length !== 1 ? 'es' : ''}
+          </div>
+        )}
+
+      {/* Student Detail Modal */}
+      {(selectedStudent || detailLoading) && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          onClick={() => !detailLoading && setSelectedStudent(null)}
+        >
+          <div
+            className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {detailLoading ? (
+              <div className="p-8 sm:p-12 flex flex-col items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-violet-500 mb-4" />
+                <p className="text-gray-500 font-medium">Loading student details...</p>
+              </div>
+            ) : selectedStudent && (
+              <>
+                {/* Modal Header */}
+                <div className="relative bg-gradient-to-r from-violet-600 to-violet-700 p-6 sm:p-8 text-white">
+                  <button
+                    onClick={() => setSelectedStudent(null)}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/20 flex items-center justify-center text-xl sm:text-2xl font-bold shadow-lg">
+                      {getInitials(selectedStudent.firstName, selectedStudent.lastName)}
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold">
+                        {selectedStudent.firstName} {selectedStudent.lastName}
+                      </h2>
+                      <p className="text-violet-200 mt-1">{selectedStudent.className}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Content */}
+                <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                  {/* Contact Info */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Contact Information</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <Mail className="w-5 h-5 text-violet-500" />
+                        <span className="text-gray-700 text-sm sm:text-base truncate">{selectedStudent.email || 'Not available'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Academic Info */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Academic Details</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-violet-50 rounded-xl">
+                        <p className="text-xs text-gray-500 mb-1">Class</p>
+                        <p className="font-semibold text-violet-700">{selectedStudent.className}</p>
+                      </div>
+                      <div className="p-3 bg-amber-50 rounded-xl">
+                        <p className="text-xs text-gray-500 mb-1">Roll Number</p>
+                        <p className="font-semibold text-amber-700">{selectedStudent.rollNumber || 'N/A'}</p>
+                      </div>
+                      <div className="p-3 bg-green-50 rounded-xl col-span-2">
+                        <p className="text-xs text-gray-500 mb-1">Enrollment Date</p>
+                        <p className="font-semibold text-green-700">
+                          {new Date(selectedStudent.enrollmentDate).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Attendance Stats */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Attendance Overview</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="p-3 bg-gray-50 rounded-xl text-center">
+                        <p className="text-2xl font-bold text-gray-800">{selectedStudent.attendance.totalDays}</p>
+                        <p className="text-xs text-gray-500 mt-1">Total Days</p>
+                      </div>
+                      <div className="p-3 bg-green-50 rounded-xl text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        </div>
+                        <p className="text-2xl font-bold text-green-600">{selectedStudent.attendance.presentDays}</p>
+                        <p className="text-xs text-gray-500 mt-1">Present</p>
+                      </div>
+                      <div className="p-3 bg-red-50 rounded-xl text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        </div>
+                        <p className="text-2xl font-bold text-red-600">{selectedStudent.attendance.absentDays}</p>
+                        <p className="text-xs text-gray-500 mt-1">Absent</p>
+                      </div>
+                      <div className="p-3 bg-amber-50 rounded-xl text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Clock className="w-4 h-4 text-amber-500" />
+                        </div>
+                        <p className="text-2xl font-bold text-amber-600">{selectedStudent.attendance.lateDays}</p>
+                        <p className="text-xs text-gray-500 mt-1">Late</p>
+                      </div>
+                    </div>
+
+                    {/* Attendance Progress */}
+                    <div className="p-4 bg-gradient-to-r from-violet-50 to-green-50 rounded-xl">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-600">Attendance Rate</span>
+                        <span className={`text-lg font-bold ${
+                          selectedStudent.attendance.attendancePercentage >= 80 ? 'text-green-600' :
+                          selectedStudent.attendance.attendancePercentage >= 60 ? 'text-amber-600' : 'text-red-600'
+                        }`}>
+                          {selectedStudent.attendance.attendancePercentage}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            selectedStudent.attendance.attendancePercentage >= 80 ? 'bg-green-500' :
+                            selectedStudent.attendance.attendancePercentage >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${selectedStudent.attendance.attendancePercentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 rounded-xl border-gray-200 hover:bg-gray-50"
+                      onClick={() => setSelectedStudent(null)}
+                    >
+                      Close
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="rounded-xl"
+                      onClick={() => {
+                        handleDelete(selectedStudent.id);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" /> Remove
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

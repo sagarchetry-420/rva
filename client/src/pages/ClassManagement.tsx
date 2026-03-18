@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2, School, BookOpen } from "lucide-react";
 
@@ -25,25 +26,22 @@ interface SubjectRecord {
   id: string;
   name: string;
   code: string;
+  class_id?: string;
+  classes?: { name: string } | null;
 }
 
 const ClassManagement: React.FC = () => {
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
   const [levels, setLevels] = useState<SchoolLevel[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const [newClass, setNewClass] = useState({
-    name: "",
-    levelId: "",
-  });
-
   const [newSubject, setNewSubject] = useState({
     name: "",
     code: "",
+    classId: "",
   });
 
   useEffect(() => {
@@ -69,51 +67,29 @@ const ClassManagement: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmitSubject = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const isClassFilled = newClass.name.trim() !== "" && newClass.levelId !== "";
-  const isSubjectFilled = newSubject.name.trim() !== "" && newSubject.code.trim() !== "";
-
-  if (!isClassFilled && !isSubjectFilled) {
-    toast({ title: "Incomplete Form", description: "Please fill out a record.", variant: "destructive" });
-    return;
-  }
-
-  setIsSubmitting(true);
-
-  try {
-    if (isClassFilled) {
-      await api.post('/api/classes', { name: newClass.name, schoolLevelId: newClass.levelId });
-      setNewClass({ name: "", levelId: "" });
+    if (!newSubject.name.trim() || !newSubject.code.trim() || !newSubject.classId) {
+      toast({ title: "Incomplete Form", description: "Please fill out all subject fields.", variant: "destructive" });
+      return;
     }
 
-    if (isSubjectFilled) {
-      console.log("Saving subject:", newSubject);
-      await api.post('/api/classes/subjects', { name: newSubject.name, code: newSubject.code });
-      setNewSubject({ name: "", code: "" });
-    }
-
-    toast({ title: "Success", description: "Records updated." });
-    fetchData();
-
-  } catch (error: any) {
-    console.error("Submission failed:", error);
-    toast({ title: "Save Error", description: error.message, variant: "destructive" });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-  const handleDeleteClass = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this class?")) return;
+    setIsSubmitting(true);
 
     try {
-      await api.delete(`/api/classes/${id}`);
-      setClasses(classes.filter((c) => c.id !== id));
-      toast({ title: "Deleted", description: "Class removed successfully." });
+      await api.post('/api/classes/subjects', {
+        name: newSubject.name,
+        code: newSubject.code,
+        classId: newSubject.classId,
+      });
+      setNewSubject({ name: "", code: "", classId: "" });
+      toast({ title: "Success", description: "Subject added successfully." });
+      fetchData();
     } catch (error: any) {
-      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      toast({ title: "Save Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -129,6 +105,19 @@ const ClassManagement: React.FC = () => {
     }
   };
 
+  // Group classes by school level
+  const classesByLevel = levels.map(level => ({
+    level,
+    classes: classes.filter(cls => cls.school_level_id === level.id)
+  })).filter(group => group.classes.length > 0);
+
+  // Get class name by ID
+  const getClassName = (classId?: string) => {
+    if (!classId) return "N/A";
+    const cls = classes.find(c => c.id === classId);
+    return cls?.name || "N/A";
+  };
+
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8 lg:p-12">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -139,174 +128,161 @@ const ClassManagement: React.FC = () => {
             <div className="p-2.5 bg-primary/10 rounded-xl shadow-sm border border-primary/10">
               <School className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">School Structure</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Class & Subject Management</h1>
           </div>
           <p className="text-muted-foreground ml-[3.25rem]">
-            Manage all educational levels and active classes within your institution.
+            View classes and manage subjects for each class.
           </p>
         </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Consolidated Form Section */}
-        <Card className="lg:col-span-1 h-fit">
-          <CardHeader>
-            <CardTitle>Add New Records</CardTitle>
-            <CardDescription>Create a new class, a new subject, or both.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-              {/* Class Inputs */}
-              <div className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                <div className="flex items-center gap-2 font-semibold text-slate-700">
-                  <School className="w-4 h-4" /> Class Details
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="className">Class Name</Label>
-                  <Input
-                    id="className"
-                    placeholder="e.g. Grade 10-A"
-                    value={newClass.name}
-                    onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>School Level</Label>
-                  <Select
-                    value={newClass.levelId}
-                    onValueChange={(val) => setNewClass({ ...newClass, levelId: val })}
-                  >
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Select Level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {levels.map((level) => (
-                        <SelectItem key={level.id} value={level.id}>
+          {/* Left Column - Classes Overview (Read-only) */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <School className="w-5 h-5" /> Classes Overview
+                </CardTitle>
+                <CardDescription>Classes organized by school level</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex justify-center p-8">
+                    <Loader2 className="animate-spin" />
+                  </div>
+                ) : classesByLevel.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No classes available.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {classesByLevel.map(({ level, classes: levelClasses }) => (
+                      <div key={level.id} className="space-y-2">
+                        <h4 className="font-semibold text-sm text-slate-700 border-b pb-1">
                           {level.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {levelClasses.map((cls) => (
+                            <Badge key={cls.id} variant="secondary" className="px-3 py-1">
+                              {cls.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-              {/* Subject Inputs */}
-              <div className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                <div className="flex items-center gap-2 font-semibold text-slate-700">
-                  <BookOpen className="w-4 h-4" /> Subject Details
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subjectName">Subject Name</Label>
-                  <Input
-                    id="subjectName"
-                    placeholder="e.g. Advanced Calculus"
-                    value={newSubject.name}
-                    onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subjectCode">Subject Code</Label>
-                  <Input
-                    id="subjectCode"
-                    placeholder="e.g. MATH-401"
-                    value={newSubject.code}
-                    onChange={(e) => setNewSubject({ ...newSubject, code: e.target.value })}
-                  />
-                </div>
-              </div>
+            {/* Add Subject Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" /> Add New Subject
+                </CardTitle>
+                <CardDescription>Create a subject and assign it to a class</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmitSubject} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="classSelect">Assign to Class</Label>
+                    <Select
+                      value={newSubject.classId}
+                      onValueChange={(val) => setNewSubject({ ...newSubject, classId: val })}
+                    >
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Select a class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {classesByLevel.map(({ level, classes: levelClasses }) => (
+                          <React.Fragment key={level.id}>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-slate-50">
+                              {level.name}
+                            </div>
+                            {levelClasses.map((cls) => (
+                              <SelectItem key={cls.id} value={cls.id}>
+                                {cls.name}
+                              </SelectItem>
+                            ))}
+                          </React.Fragment>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="animate-spin mr-2 w-4 h-4" /> : <Plus className="mr-2 w-4 h-4" />}
-                Save Records
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="subjectName">Subject Name</Label>
+                    <Input
+                      id="subjectName"
+                      placeholder="e.g. Advanced Calculus"
+                      value={newSubject.name}
+                      onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
+                    />
+                  </div>
 
-        {/* Data Tables Section */}
-        <div className="lg:col-span-2 space-y-8">
+                  <div className="space-y-2">
+                    <Label htmlFor="subjectCode">Subject Code</Label>
+                    <Input
+                      id="subjectCode"
+                      placeholder="e.g. MATH-401"
+                      value={newSubject.code}
+                      onChange={(e) => setNewSubject({ ...newSubject, code: e.target.value })}
+                    />
+                  </div>
 
-          {/* Classes Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <School className="w-5 h-5" /> Existing Classes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Class Name</TableHead>
-                      <TableHead>Level</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {classes.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground">
-                          No classes found.
-                        </TableCell>
-                      </TableRow>
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <Loader2 className="animate-spin mr-2 w-4 h-4" />
                     ) : (
-                      classes.map((cls) => (
-                        <TableRow key={cls.id}>
-                          <TableCell className="font-medium">{cls.name}</TableCell>
-                          <TableCell>{cls.school_levels?.name || "N/A"}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteClass(cls.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      <Plus className="mr-2 w-4 h-4" />
                     )}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                    Add Subject
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Subjects Table */}
-          <Card>
+          {/* Right Column - Subjects Table */}
+          <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5" /> Existing Subjects
+                <BookOpen className="w-5 h-5" /> Subjects
               </CardTitle>
+              <CardDescription>All subjects with their assigned classes</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
+                <div className="flex justify-center p-8">
+                  <Loader2 className="animate-spin" />
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Subject Name</TableHead>
                       <TableHead>Code</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Class</TableHead>
+                      <TableHead className="text-right w-20">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {subjects.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground">
-                          No subjects found.
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          No subjects found. Add a subject to get started.
                         </TableCell>
                       </TableRow>
                     ) : (
                       subjects.map((sub) => (
                         <TableRow key={sub.id}>
                           <TableCell className="font-medium">{sub.name}</TableCell>
-                          <TableCell>{sub.code}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{sub.code}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {sub.classes?.name || getClassName(sub.class_id)}
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="ghost"
@@ -329,7 +305,6 @@ const ClassManagement: React.FC = () => {
         </div>
       </div>
     </div>
-  </div>
   );
 };
 

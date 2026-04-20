@@ -13,9 +13,9 @@ export default function HeroSection() {
       <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
 
       {/* Hero Image / Overlay */}
-      <div 
+      <div
         className="absolute right-0 top-0 w-full lg:w-[60%] h-full bg-cover bg-center bg-no-repeat opacity-[0.05] dark:opacity-10 lg:mask-image-hero transition-all"
-        style={{ backgroundImage: "url('/school-images/rva-image.jpg')", maskImage: 'linear-gradient(to right, transparent, black)' }}
+        style={{ backgroundImage: "url('/school_image/school image1.jpg')", maskImage: 'linear-gradient(to right, transparent, black)' }}
       />
 
       {/* Abstract Glowing Orbs */}

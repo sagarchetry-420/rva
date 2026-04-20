@@ -72,9 +72,10 @@ export default function AboutSection() {
           >
             {/* Main Image Placeholder (Styled well) */}
             <div className="relative aspect-square md:aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl">
-              <div 
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: "url('/school-images/rva-image.jpg')" }}
+              <img
+                src="/school_image/school image1.jpg"
+                alt="Rose Valley Academy Campus"
+                className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-primary/10 mix-blend-multiply" />
             </div>
@@ -89,9 +90,11 @@ export default function AboutSection() {
             >
               <Quote className="absolute top-6 right-6 w-12 h-12 text-primary/10 rotate-180" />
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-inner">
-                  <span className="font-display font-bold text-xl text-primary-foreground">PC</span>
-                </div>
+                <img
+                  src="/principal's_image/principal's image1.jpg"
+                  alt="Principal Bhargav Chetia"
+                  className="w-14 h-14 rounded-full object-cover border-2 border-primary/20 shadow-inner"
+                />
                 <div>
                   <h3 className="font-display font-bold text-lg text-foreground">Principal's Message</h3>
                   <p className="text-sm font-medium text-primary">Bhargav Chetia</p>

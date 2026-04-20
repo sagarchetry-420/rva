@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Quote } from "lucide-react";
 
 const highlights = [
   "State-of-the-art science and computer labs",
@@ -12,57 +12,96 @@ const highlights = [
 
 export default function AboutSection() {
   return (
-    <section id="about" className="py-24 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+    <section id="about" className="py-24 relative overflow-hidden bg-muted/20">
+      {/* Decorative gradients */}
+      <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
+
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+          
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
+            initial={{ opacity: 0, x: -40 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="flex flex-col"
           >
-            <h2 className="font-display text-4xl font-bold mb-4 text-foreground">About Our School</h2>
-            <div className="w-16 h-1 bg-primary rounded mb-6" />
-            <p className="text-muted-foreground mb-6 leading-relaxed">
+            <div className="inline-flex items-center gap-2 bg-secondary/10 text-secondary-foreground px-4 py-1.5 rounded-full text-sm font-semibold mb-6 self-start">
+              <span className="w-2 h-2 rounded-full bg-secondary"></span>
+              Our Legacy
+            </div>
+            
+            <h2 className="font-display text-4xl lg:text-5xl font-extrabold mb-6 text-foreground leading-tight">
+              Shaping the <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Leaders</span> of Tomorrow
+            </h2>
+            
+            <p className="text-lg text-muted-foreground mb-6 leading-relaxed font-medium">
               Rose Valley Academy was founded with a vision to provide quality education that combines academic excellence with moral values. Located in a serene environment, our school has been a beacon of learning for over two decades.
             </p>
             <p className="text-muted-foreground mb-8 leading-relaxed">
               We believe every child is unique and deserves an education that nurtures their individual talents while preparing them for the challenges of the future.
             </p>
-            <div className="grid sm:grid-cols-2 gap-3">
+            
+            <div className="grid sm:grid-cols-1 gap-4">
               {highlights.map((h, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <CheckCircle className="w-5 h-5 text-accent mt-0.5 shrink-0" />
-                  <span className="text-sm text-foreground">{h}</span>
-                </div>
+                <motion.div 
+                  key={i} 
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: i * 0.1 }}
+                  className="flex items-start gap-4 p-3 rounded-2xl hover:bg-background/60 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <CheckCircle className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="text-foreground font-medium pt-1">{h}</span>
+                </motion.div>
               ))}
             </div>
           </motion.div>
 
+          {/* Right Side - Visuals & Message */}
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
+            initial={{ opacity: 0, x: 40 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
             className="relative"
           >
-            {/* Principal's Message Card */}
-            <div className="bg-card border border-border rounded-2xl p-8 shadow-xl">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="font-display font-bold text-2xl text-primary">P</span>
+            {/* Main Image Placeholder (Styled well) */}
+            <div className="relative aspect-square md:aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl">
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: "url('/school-images/rva-image.jpg')" }}
+              />
+              <div className="absolute inset-0 bg-primary/10 mix-blend-multiply" />
+            </div>
+
+            {/* Principal's Message Floating Card */}
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+              className="absolute -bottom-12 -left-4 md:-left-16 right-4 md:right-8 bg-background/80 backdrop-blur-xl border border-border/50 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/10"
+            >
+              <Quote className="absolute top-6 right-6 w-12 h-12 text-primary/10 rotate-180" />
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-inner">
+                  <span className="font-display font-bold text-xl text-primary-foreground">PC</span>
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-lg text-card-foreground">Principal's Message</h3>
-                  <p className="text-sm text-muted-foreground">Bhargav Chetia</p>
+                  <h3 className="font-display font-bold text-lg text-foreground">Principal's Message</h3>
+                  <p className="text-sm font-medium text-primary">Bhargav Chetia</p>
                 </div>
               </div>
-              <blockquote className="text-muted-foreground italic leading-relaxed border-l-4 border-primary pl-4">
-                "At Rose Valley Academy, we don't just educate minds — we shape futures. Our commitment is to provide each student with the tools, guidance, and inspiration they need to become responsible global citizens and leaders of tomorrow."
+              <blockquote className="text-muted-foreground italic leading-relaxed text-sm sm:text-base relative z-10">
+                "Welcome to the Phrontistery of Knowledge and Harmony. Education is not just about subjects learned in school. It is a life-long exercise that can be exceedingly exciting if we jump onto the train of experience. We encourage children to ask questions and learn as much as possible. Your child will gain real-world skills to succeed in today's competitive world. Founded in 2008, we've grown from 52 students to 750+ today with 40+ dedicated staff."
               </blockquote>
-            </div>
-            <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-secondary/30 rounded-2xl -z-10" />
-            <div className="absolute -top-4 -left-4 w-24 h-24 bg-accent/20 rounded-2xl -z-10" />
+            </motion.div>
+            
           </motion.div>
         </div>
       </div>

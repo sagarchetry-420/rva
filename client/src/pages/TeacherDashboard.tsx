@@ -79,6 +79,10 @@ export default function TeacherDashboard() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [noticesLoading, setNoticesLoading] = useState(false);
 
+  // Attendance validation state
+  const [attendanceAlreadyMarked, setAttendanceAlreadyMarked] = useState(false);
+  const [markedByOtherTeacher, setMarkedByOtherTeacher] = useState(false);
+
   // Mobile sidebar state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -90,7 +94,6 @@ export default function TeacherDashboard() {
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
     { icon: ClipboardCheck, label: "Attendance", id: "attendance" },
     { icon: Bell, label: "Notices", id: "notices" },
-    { icon: Users, label: "My Students", id: "students" },
     { icon: BookOpen, label: "My Classes", id: "classes" },
   ];
 
@@ -139,7 +142,28 @@ export default function TeacherDashboard() {
   const fetchStudents = async (classId: string) => {
     setSelectedClass(classId);
     setAttendanceLoading(true);
+    setAttendanceAlreadyMarked(false);
+    setMarkedByOtherTeacher(false);
     try {
+      // Check if attendance already marked for this class today
+      const checkResult = await api.get<{
+        markedToday: boolean;
+        isMarkedByCurrentTeacher: boolean;
+      }>(`/api/attendance/check-class?class_id=${classId}`);
+
+      if (checkResult.markedToday) {
+        setAttendanceAlreadyMarked(true);
+        setMarkedByOtherTeacher(true);
+        setAttendanceLoading(false);
+        toast({
+          title: "Attendance Already Marked",
+          description:
+            "Attendance for this class has already been marked today and cannot be changed. Attendance is locked once marked.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const data = await api.get<any[]>(
         `/api/attendance/students?class_id=${classId}`
       );
@@ -171,6 +195,9 @@ export default function TeacherDashboard() {
         description: `Attendance recorded for ${students.length} students on ${today}.`,
       });
       fetchTeacherStats();
+      setAttendance({});
+      setSelectedClass("");
+      setStudents([]);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -185,7 +212,7 @@ export default function TeacherDashboard() {
   const fetchNotices = async () => {
     setNoticesLoading(true);
     try {
-      const data = await api.get<Notice[]>("/api/notices");
+      const data = await api.get<Notice[]>("/api/notices/teacher");
       setNotices(data || []);
     } catch (error: any) {
       console.error("Notices fetch error:", error);
@@ -245,11 +272,9 @@ export default function TeacherDashboard() {
         {/* Logo */}
         <div className="flex items-center justify-between gap-3 px-5 py-5 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 shadow-inner flex items-center justify-center backdrop-blur-md">
-              <GraduationCap className="w-6 h-6 text-white" />
-            </div>
+            <img src="/rva-logo.svg" alt="Rose Valley Academy" className="w-10 h-10" />
             <div>
-              <h1 className="font-bold text-lg text-white tracking-tight">Rose Valley</h1>
+              <h1 className="font-bold text-lg text-white tracking-tight whitespace-nowrap">Rose Valley Academy</h1>
               <p className="text-[10px] text-emerald-200 uppercase tracking-wider font-medium">Teacher Portal</p>
             </div>
           </div>
@@ -266,19 +291,6 @@ export default function TeacherDashboard() {
 
         {/* User Info */}
         <div className="px-5 py-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-sm font-bold text-white">
-                {user.email?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {user.email?.split("@")[0]}
-              </p>
-              <p className="text-xs text-emerald-200">{user.email}</p>
-            </div>
-          </div>
         </div>
 
         {/* Nav Links */}
@@ -312,14 +324,6 @@ export default function TeacherDashboard() {
 
         {/* Sign Out Button */}
         <div className="px-3 py-4 border-t border-white/10">
-          <Button
-            variant="ghost"
-            onClick={handleSignOut}
-            className="w-full justify-start gap-3 text-white/80 hover:text-white hover:bg-red-500/20 px-4 py-3 h-auto"
-          >
-            <LogOut className="w-5 h-5" />
-            Sign Out
-          </Button>
         </div>
       </aside>
 
@@ -349,28 +353,20 @@ export default function TeacherDashboard() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <Button
-              onClick={() => {
-                fetchTeacherStats();
-                fetchNotices();
-              }}
-              variant="outline"
-              size="sm"
-              className="gap-2 hover:bg-emerald-50 border-emerald-200 text-emerald-700"
-              disabled={statsLoading}
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${statsLoading ? "animate-spin" : ""}`}
-              />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
-
-            {/* Mobile user avatar */}
-            <div className="lg:hidden w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center border border-emerald-200">
+            <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center border border-emerald-200">
               <span className="text-sm font-bold text-emerald-700">
                 {user.email?.charAt(0).toUpperCase()}
               </span>
             </div>
+            <Button
+              variant="ghost"
+              onClick={handleSignOut}
+              className="gap-2 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+              size="sm"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">Sign Out</span>
+            </Button>
           </div>
         </header>
 
@@ -474,7 +470,7 @@ export default function TeacherDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <Button
                       variant="outline"
                       className="h-auto py-4 flex flex-col gap-2 hover:bg-emerald-50 hover:border-emerald-200"
@@ -490,14 +486,6 @@ export default function TeacherDashboard() {
                     >
                       <Bell className="w-6 h-6 text-rose-500" />
                       <span className="text-xs font-medium">View Notices</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-auto py-4 flex flex-col gap-2 hover:bg-blue-50 hover:border-blue-200"
-                      onClick={() => setActiveTab("students")}
-                    >
-                      <Users className="w-6 h-6 text-blue-500" />
-                      <span className="text-xs font-medium">My Students</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -567,21 +555,16 @@ export default function TeacherDashboard() {
           {/* Attendance View */}
           {activeTab === "attendance" && (
             <Card>
-              <CardHeader className="border-b bg-muted/20">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <ClipboardCheck className="w-5 h-5 text-emerald-600" />
-                      Mark Attendance
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Select a class to mark today's attendance
-                    </p>
-                  </div>
-                  <div className="w-full sm:w-64">
+              <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-emerald-100">
+                <div className="flex flex-col gap-4">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <ClipboardCheck className="w-6 h-6 text-emerald-600" />
+                    Mark Attendance
+                  </CardTitle>
+                  <div className="w-full">
                     <Select onValueChange={fetchStudents} value={selectedClass}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a class" />
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Select a class" />
                       </SelectTrigger>
                       <SelectContent>
                         {assignedClasses.map((c) => (
@@ -597,87 +580,86 @@ export default function TeacherDashboard() {
 
               <CardContent className="pt-6">
                 {!selectedClass ? (
-                  <div className="text-center py-12 sm:py-16 border-2 border-dashed rounded-lg bg-muted/5">
-                    <ClipboardCheck className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/40 mx-auto mb-4" />
-                    <p className="text-muted-foreground font-medium">
-                      Select a class above to begin
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {assignedClasses.length === 0
-                        ? "No classes assigned yet. Please contact your administrator."
-                        : `You have ${assignedClasses.length} class${assignedClasses.length !== 1 ? "es" : ""} assigned.`}
-                    </p>
+                  <div className="text-center py-16">
+                    <ClipboardCheck className="w-16 h-16 text-emerald-200 mx-auto mb-4" />
+                    <p className="text-foreground font-medium text-lg">Select a class to begin</p>
                   </div>
                 ) : attendanceLoading ? (
                   <div className="flex justify-center py-12">
                     <Loader2 className="animate-spin w-8 h-8 text-emerald-600" />
                   </div>
                 ) : students.length === 0 ? (
-                  <div className="text-center py-12 sm:py-16 border-2 border-dashed rounded-lg bg-muted/5">
-                    <Users className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/40 mx-auto mb-4" />
-                    <p className="text-muted-foreground font-medium">
-                      No students found in this class
+                  <div className="text-center py-12">
+                    <Users className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                    <p className="text-muted-foreground">No students in this class</p>
+                  </div>
+                ) : markedByOtherTeacher ? (
+                  <div className="text-center py-12">
+                    <XCircle className="w-12 h-12 text-red-500/30 mx-auto mb-4" />
+                    <p className="text-red-700 font-medium">Attendance Marked by Another Teacher</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      This class's attendance has already been marked by another teacher today.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Only the teacher who marked the attendance can update it.
                     </p>
                   </div>
                 ) : (
                   <>
                     {/* Quick actions bar */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          Quick set:
-                        </span>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-7 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                            onClick={() => setAllStatus("Present")}
-                          >
-                            <CheckCircle className="w-3 h-3 mr-1" /> All Present
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-7 border-red-200 text-red-700 hover:bg-red-50"
-                            onClick={() => setAllStatus("Absent")}
-                          >
-                            <XCircle className="w-3 h-3 mr-1" /> All Absent
-                          </Button>
-                        </div>
+                    <div className="flex flex-col sm:flex-row gap-4 mb-6 p-3 bg-muted/50 rounded-lg">
+                      <div className="flex gap-2 flex-1">
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                          onClick={() => setAllStatus("Present")}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          All Present
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 border-red-200 text-red-700 hover:bg-red-50"
+                          onClick={() => setAllStatus("Absent")}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          All Absent
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-2 sm:gap-3 text-xs font-medium">
-                        <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                          {attendanceSummary.present}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-red-500" />
-                          {attendanceSummary.absent}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-amber-500" />
-                          {attendanceSummary.late}
-                        </span>
+                      <div className="flex items-center gap-4 text-sm font-medium">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                          <span>{attendanceSummary.present}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-red-500" />
+                          <span>{attendanceSummary.absent}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-amber-500" />
+                          <span>{attendanceSummary.late}</span>
+                        </div>
                       </div>
                     </div>
 
                     {/* Students list - Mobile friendly */}
-                    <div className="rounded-lg border overflow-hidden">
+                    <div className="rounded-lg border divide-y max-h-[500px] overflow-y-auto">
                       {/* Desktop Table */}
                       <div className="hidden sm:block">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-muted/30">
                               <TableHead className="w-12 text-center">#</TableHead>
-                              <TableHead>Student Name</TableHead>
-                              <TableHead className="text-center">Status</TableHead>
+                              <TableHead>Name</TableHead>
+                              <TableHead className="w-16 text-center">Roll</TableHead>
+                              <TableHead className="text-center w-80">Status</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {students.map((student, index) => (
                               <TableRow key={student.id} className="hover:bg-muted/20">
-                                <TableCell className="text-center text-muted-foreground text-sm">
+                                <TableCell className="text-center text-xs text-muted-foreground">
                                   {index + 1}
                                 </TableCell>
                                 <TableCell className="font-medium">
@@ -688,42 +670,45 @@ export default function TeacherDashboard() {
                                     return `${p?.first_name || ""} ${p?.last_name || ""}`.trim() || "Unknown";
                                   })()}
                                 </TableCell>
+                                <TableCell className="text-center text-sm text-muted-foreground">
+                                  {student.roll_number || "—"}
+                                </TableCell>
                                 <TableCell>
-                                  <div className="flex justify-center gap-2">
+                                  <div className="flex justify-center gap-1">
                                     <Button
                                       size="sm"
                                       variant={attendance[student.id] === "Present" ? "default" : "outline"}
-                                      className={
+                                      className={`w-20 text-xs ${
                                         attendance[student.id] === "Present"
-                                          ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                                          : "hover:border-emerald-300 hover:text-emerald-700"
-                                      }
+                                          ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                          : ""
+                                      }`}
                                       onClick={() => setAttendance({ ...attendance, [student.id]: "Present" })}
                                     >
-                                      <CheckCircle className="w-3.5 h-3.5 mr-1" />
-                                      Present
+                                      <CheckCircle className="w-3 h-3 mr-1" />
+                                      P
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant={attendance[student.id] === "Absent" ? "destructive" : "outline"}
-                                      className={attendance[student.id] !== "Absent" ? "hover:border-red-300 hover:text-red-700" : "shadow-sm"}
+                                      className="w-20 text-xs"
                                       onClick={() => setAttendance({ ...attendance, [student.id]: "Absent" })}
                                     >
-                                      <XCircle className="w-3.5 h-3.5 mr-1" />
-                                      Absent
+                                      <XCircle className="w-3 h-3 mr-1" />
+                                      A
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant={attendance[student.id] === "Late" ? "default" : "outline"}
-                                      className={
+                                      className={`w-20 text-xs ${
                                         attendance[student.id] === "Late"
-                                          ? "bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
-                                          : "hover:border-amber-300 hover:text-amber-700"
-                                      }
+                                          ? "bg-amber-500 hover:bg-amber-600 text-white"
+                                          : ""
+                                      }`}
                                       onClick={() => setAttendance({ ...attendance, [student.id]: "Late" })}
                                     >
-                                      <Clock className="w-3.5 h-3.5 mr-1" />
-                                      Late
+                                      <Clock className="w-3 h-3 mr-1" />
+                                      L
                                     </Button>
                                   </div>
                                 </TableCell>
@@ -734,39 +719,42 @@ export default function TeacherDashboard() {
                       </div>
 
                       {/* Mobile Cards */}
-                      <div className="sm:hidden divide-y">
+                      <div className="sm:hidden">
                         {students.map((student, index) => {
                           const p = Array.isArray(student.profiles) ? student.profiles[0] : student.profiles;
                           const name = `${p?.first_name || ""} ${p?.last_name || ""}`.trim() || "Unknown";
                           return (
-                            <div key={student.id} className="p-4 space-y-3">
+                            <div key={student.id} className="p-3 space-y-2">
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className="text-xs font-bold text-muted-foreground bg-muted rounded px-2 py-1 shrink-0">
                                     {index + 1}
                                   </span>
-                                  <span className="font-medium text-sm">{name}</span>
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-sm truncate">{name}</p>
+                                    <p className="text-xs text-muted-foreground">Roll: {student.roll_number || "—"}</p>
+                                  </div>
                                 </div>
                                 <Badge
-                                  className={
+                                  className={`text-xs shrink-0 ml-2 ${
                                     attendance[student.id] === "Present"
                                       ? "bg-emerald-100 text-emerald-700"
                                       : attendance[student.id] === "Absent"
                                         ? "bg-red-100 text-red-700"
                                         : "bg-amber-100 text-amber-700"
-                                  }
+                                  }`}
                                 >
-                                  {attendance[student.id]}
+                                  {attendance[student.id]?.[0]}
                                 </Badge>
                               </div>
-                              <div className="flex gap-2">
+                              <div className="flex gap-1">
                                 <Button
                                   size="sm"
                                   variant={attendance[student.id] === "Present" ? "default" : "outline"}
-                                  className={`flex-1 ${
+                                  className={`flex-1 h-9 text-xs ${
                                     attendance[student.id] === "Present"
                                       ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                      : "hover:border-emerald-300 hover:text-emerald-700"
+                                      : ""
                                   }`}
                                   onClick={() => setAttendance({ ...attendance, [student.id]: "Present" })}
                                 >
@@ -775,7 +763,7 @@ export default function TeacherDashboard() {
                                 <Button
                                   size="sm"
                                   variant={attendance[student.id] === "Absent" ? "destructive" : "outline"}
-                                  className={`flex-1 ${attendance[student.id] !== "Absent" ? "hover:border-red-300 hover:text-red-700" : ""}`}
+                                  className="flex-1 h-9 text-xs"
                                   onClick={() => setAttendance({ ...attendance, [student.id]: "Absent" })}
                                 >
                                   <XCircle className="w-3.5 h-3.5" />
@@ -783,10 +771,10 @@ export default function TeacherDashboard() {
                                 <Button
                                   size="sm"
                                   variant={attendance[student.id] === "Late" ? "default" : "outline"}
-                                  className={`flex-1 ${
+                                  className={`flex-1 h-9 text-xs ${
                                     attendance[student.id] === "Late"
                                       ? "bg-amber-500 hover:bg-amber-600 text-white"
-                                      : "hover:border-amber-300 hover:text-amber-700"
+                                      : ""
                                   }`}
                                   onClick={() => setAttendance({ ...attendance, [student.id]: "Late" })}
                                 >
@@ -800,17 +788,17 @@ export default function TeacherDashboard() {
                     </div>
 
                     {/* Submit bar */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 pt-4 border-t">
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">{students.length}</span> students in class
-                      </p>
+                    <div className="flex flex-col sm:flex-row items-center gap-3 mt-6 pt-4 border-t">
+                      <span className="text-sm text-muted-foreground">
+                        <span className="font-semibold text-foreground">{students.length}</span> students
+                      </span>
                       <Button
                         onClick={saveAttendance}
                         disabled={saving}
-                        className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 gap-2 px-6"
+                        className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 gap-2"
                       >
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                        Submit Attendance
+                        Submit
                       </Button>
                     </div>
                   </>

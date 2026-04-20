@@ -60,7 +60,7 @@ attendanceRouter.get('/students', requireAuth, async (req, res) => {
     // Try join with hint first, fallback to manual join
     let { data, error } = await supabase
       .from('students')
-      .select('id, user_id, profiles!user_id(first_name, last_name)')
+      .select('id, user_id, roll_number, profiles!user_id(first_name, last_name)')
       .eq('class_id', classId)
       .order('id');
 
@@ -68,7 +68,7 @@ attendanceRouter.get('/students', requireAuth, async (req, res) => {
       // Fallback: fetch students then fetch profiles separately
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
-        .select('id, user_id')
+        .select('id, user_id, roll_number')
         .eq('class_id', classId)
         .order('id');
 
@@ -92,6 +92,50 @@ attendanceRouter.get('/students', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Fetch students error:', err);
     res.status(500).json({ error: 'Failed to fetch students' });
+  }
+});
+
+// GET /api/attendance/check-class?class_id=xxx — check if attendance already marked for this class today
+attendanceRouter.get('/check-class', requireAuth, async (req, res) => {
+  try {
+    const supabase = createAdminClient();
+    const classId = req.query.class_id as string;
+
+    if (!classId) return res.status(400).json({ error: 'class_id is required' });
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get all students in the class
+    const { data: studentsInClass, error: studentsError } = await supabase
+      .from('students')
+      .select('id')
+      .eq('class_id', classId);
+
+    if (studentsError) return res.status(400).json({ error: studentsError.message });
+    if (!studentsInClass || studentsInClass.length === 0) {
+      return res.json({ markedToday: false, markedBy: null });
+    }
+
+    const studentIds = studentsInClass.map((s: any) => s.id);
+
+    // Check if ANY student in this class has attendance marked today
+    const { data: existingAttendance, error: attendanceError } = await supabase
+      .from('student_attendance')
+      .select('id, marked_by')
+      .eq('date', today)
+      .in('student_id', studentIds)
+      .limit(1);
+
+    if (attendanceError) return res.status(400).json({ error: attendanceError.message });
+
+    const markedToday = (existingAttendance && existingAttendance.length > 0);
+    const markedBy = markedToday ? existingAttendance[0].marked_by : null;
+    const isMarkedByCurrentTeacher = markedBy === req.userId;
+
+    res.json({ markedToday, markedBy, isMarkedByCurrentTeacher });
+  } catch (err) {
+    console.error('Check class attendance error:', err);
+    res.status(500).json({ error: 'Failed to check attendance' });
   }
 });
 
@@ -163,6 +207,23 @@ attendanceRouter.post('/', requireAuth, async (req, res) => {
     const supabase = createAdminClient();
     const { records, date } = req.body;
 
+    // Check if ANY attendance is already marked for these students on this date
+    if (records.length > 0) {
+      const studentIds = records.map((r: { studentId: string }) => r.studentId);
+      const { data: existingRecords } = await supabase
+        .from('student_attendance')
+        .select('student_id, marked_by')
+        .eq('date', date)
+        .in('student_id', studentIds);
+
+      // If any attendance exists for any student on this date, reject all
+      if (existingRecords && existingRecords.length > 0) {
+        return res.status(403).json({
+          error: 'Attendance has already been marked for today. Attendance cannot be changed once marked.'
+        });
+      }
+    }
+
     const attendanceData = records.map((r: { studentId: string; status: string }) => ({
       student_id: r.studentId,
       status: r.status,
@@ -170,11 +231,20 @@ attendanceRouter.post('/', requireAuth, async (req, res) => {
       marked_by: req.userId,
     }));
 
+    // Use insert only (not upsert) to prevent updates
     const { error } = await supabase
       .from('student_attendance')
-      .upsert(attendanceData, { onConflict: 'student_id, date' });
+      .insert(attendanceData);
 
-    if (error) return res.status(400).json({ error: error.message });
+    if (error) {
+      // Check if it's a unique constraint violation
+      if (error.message.includes('duplicate') || error.message.includes('unique')) {
+        return res.status(403).json({
+          error: 'Attendance has already been marked for today. Attendance cannot be changed once marked.'
+        });
+      }
+      return res.status(400).json({ error: error.message });
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save attendance' });

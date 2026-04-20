@@ -36,7 +36,7 @@ export default function Navbar() {
       <div className="container mx-auto flex items-center justify-between px-4">
         {/* LOGO */}
         <Link to="/" className="flex items-center gap-3 group">
-          <img src="/rva-logo.svg" alt="Rose Valley Academy" className="w-10 h-10 group-hover:scale-105 transition-transform" />
+          <img src="/logo/logo.png" alt="Rose Valley Academy" className="w-12 h-12 group-hover:scale-105 transition-transform object-contain" />
           <div>
             <span className="font-display font-bold text-lg leading-tight block text-foreground tracking-tight">Rose Valley Academy</span>
             <span className="text-[10px] text-muted-foreground font-semibold tracking-widest uppercase">Excellence Hub</span>

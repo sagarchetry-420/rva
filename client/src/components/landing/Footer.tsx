@@ -1,4 +1,4 @@
-import { GraduationCap, Facebook, Twitter, Instagram, Linkedin, MapPin, Phone, Mail } from "lucide-react";
+import { Facebook, Twitter, Instagram } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Footer() {
@@ -13,10 +13,7 @@ export default function Footer() {
           <div className="lg:col-span-1">
             <Link to="/" className="flex items-center gap-3 mb-6 inline-block">
               <img src="/logo/logo.png" alt="Rose Valley Academy" className="w-10 h-10 object-contain" />
-              <div>
-                <span className="font-display font-bold text-xl leading-tight block text-background tracking-tight">Rose Valley</span>
-                <span className="text-[10px] text-muted-foreground font-semibold tracking-widest uppercase text-primary">Academy</span>
-              </div>
+              <span className="font-display font-bold text-xl text-white tracking-tight">Rose Valley Academy</span>
             </Link>
             <p className="text-sm text-background/60 leading-relaxed font-medium mb-6 pe-4">
               Cultivating dynamic minds since 1995. Education that prepares you for the world, grounded in traditional values.
@@ -64,10 +61,6 @@ export default function Footer() {
               <Link to="/studentlogin" className="block text-background/60 hover:text-primary transition-colors">• Student Portal</Link>
               <Link to="/teacherlogin" className="block text-background/60 hover:text-primary transition-colors">• Teacher Portal</Link>
               <Link to="/login" className="block text-background/60 hover:text-primary transition-colors">• Admin Portal</Link>
-            </div>
-            <div className="space-y-3 text-sm font-medium text-background/60 bg-background/5 p-4 rounded-xl border border-background/10">
-              <p className="flex items-center gap-2"><Phone className="w-4 h-4 text-primary" /> +91 xxxxx xxxxx</p>
-              <p className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /> info@rva.edu</p>
             </div>
           </div>
 

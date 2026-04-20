@@ -64,7 +64,7 @@ export default function HeroSection() {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </a>
-              <a href="#courses" className="flex items-center gap-2.5 text-foreground/80 hover:text-primary font-semibold transition-colors group">
+              <a href="#gallery" className="flex items-center gap-2.5 text-foreground/80 hover:text-primary font-semibold transition-colors group">
                 <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <PlayCircle className="w-6 h-6 text-secondary" />
                 </div>

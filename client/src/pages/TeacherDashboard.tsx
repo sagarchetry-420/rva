@@ -272,7 +272,7 @@ export default function TeacherDashboard() {
         {/* Logo */}
         <div className="flex items-center justify-between gap-3 px-5 py-5 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <img src="/rva-logo.svg" alt="Rose Valley Academy" className="w-10 h-10" />
+            <img src="/logo/logo.png" alt="Rose Valley Academy" className="w-10 h-10 object-contain" />
             <div>
               <h1 className="font-bold text-lg text-white tracking-tight whitespace-nowrap">Rose Valley Academy</h1>
               <p className="text-[10px] text-emerald-200 uppercase tracking-wider font-medium">Teacher Portal</p>

@@ -12,7 +12,7 @@ export default function Footer() {
           
           <div className="lg:col-span-1">
             <Link to="/" className="flex items-center gap-3 mb-6 inline-block">
-              <img src="/rva-logo.svg" alt="Rose Valley Academy" className="w-10 h-10" />
+              <img src="/logo/logo.png" alt="Rose Valley Academy" className="w-10 h-10 object-contain" />
               <div>
                 <span className="font-display font-bold text-xl leading-tight block text-background tracking-tight">Rose Valley</span>
                 <span className="text-[10px] text-muted-foreground font-semibold tracking-widest uppercase text-primary">Academy</span>

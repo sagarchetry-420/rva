@@ -13,8 +13,8 @@ export default function HeroSection() {
 
       {/* Hero Image / Overlay */}
       <div
-        className="absolute right-0 top-0 w-full lg:w-[60%] h-full bg-cover bg-center bg-no-repeat opacity-[0.05] dark:opacity-10 lg:mask-image-hero transition-all"
-        style={{ backgroundImage: "url('/school_image/school image1.jpg')", maskImage: 'linear-gradient(to right, transparent, black)' }}
+        className="absolute right-0 top-0 w-full lg:w-[80%] h-full bg-cover bg-right-bottom bg-no-repeat opacity-30 dark:opacity-40 transition-all"
+        style={{ backgroundImage: "url('/school_image/school image1.jpg')", maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 0%, rgba(0,0,0,0.5) 30%, transparent 70%)' }}
       />
 
       {/* Abstract Glowing Orbs */}

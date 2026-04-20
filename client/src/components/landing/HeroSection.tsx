@@ -37,17 +37,20 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="flex flex-col gap-6 sm:gap-8 pt-10 sm:pt-0"
+            className="lg:col-span-8 flex flex-col gap-6 sm:gap-8 pt-10 sm:pt-0"
           >
             <h1 className="font-display text-5xl sm:text-6xl lg:text-[5.5rem] font-extrabold leading-[1.1] tracking-tight text-foreground">
-              Experience <br />
+              A Small <span className="block">School for a</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">
-                Limitless
-              </span>{" "}
-              Learning.
+                Big Change
+              </span>
+              <span className="block">With Endless</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">
+                Possibilities
+              </span>
             </h1>
             
-            <p className="text-lg sm:text-xl text-foreground/80 lg:text-lg max-w-xl lg:max-w-2xl leading-relaxed font-medium">
+            <p className="text-lg sm:text-xl text-foreground/80 lg:text-lg leading-relaxed font-medium">
               We cultivate a dynamic environment where passion meets purpose. Join Rose Valley Academy to discover your true potential and shape tomorrow.
             </p>
             

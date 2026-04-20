@@ -23,6 +23,44 @@ noticesRouter.get('/public', async (_req, res) => {
   }
 });
 
+// GET /api/notices/teacher — for teachers, returns notices for 'All' or 'Staff'
+noticesRouter.get('/teacher', requireAuth, async (req, res) => {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('notices')
+      .select('id, title, content, publish_date')
+      .in('target_audience', ['All', 'Staff'])
+      .lte('publish_date', new Date().toISOString())
+      .order('publish_date', { ascending: false })
+      .limit(6);
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch notices' });
+  }
+});
+
+// GET /api/notices/student — for students, returns notices for 'All' or 'Students'
+noticesRouter.get('/student', requireAuth, async (req, res) => {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('notices')
+      .select('id, title, content, publish_date')
+      .in('target_audience', ['All', 'Students'])
+      .lte('publish_date', new Date().toISOString())
+      .order('publish_date', { ascending: false })
+      .limit(6);
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch notices' });
+  }
+});
+
 // GET /api/notices (admin only - for management)
 noticesRouter.get('/', requireAuth, async (req, res) => {
   try {

@@ -47,7 +47,7 @@ export default function HeroSection() {
               Learning.
             </h1>
             
-            <p className="text-lg sm:text-xl text-muted-foreground/90 max-w-xl leading-relaxed font-medium">
+            <p className="text-lg sm:text-xl text-foreground/80 lg:text-lg max-w-xl lg:max-w-2xl leading-relaxed font-medium">
               We cultivate a dynamic environment where passion meets purpose. Join Rose Valley Academy to discover your true potential and shape tomorrow.
             </p>
             

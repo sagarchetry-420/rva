@@ -71,24 +71,6 @@ export default function HeroSection() {
                 Take a Tour
               </a>
             </motion.div>
-
-            {/* Quick Stats below CTA */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-              className="flex items-center gap-8 sm:gap-12 mt-8 pt-8 border-t border-border/50"
-            >
-              <div>
-                <p className="font-display text-3xl font-bold text-foreground">98%</p>
-                <p className="text-sm font-medium text-muted-foreground">College Acceptance</p>
-              </div>
-              <div className="w-px h-12 bg-border/50"></div>
-              <div>
-                <p className="font-display text-3xl font-bold text-foreground">15:1</p>
-                <p className="text-sm font-medium text-muted-foreground">Student-Teacher Ratio</p>
-              </div>
-            </motion.div>
           </motion.div>
 
           {/* Floating Stat Cards (Desktop Right Side) */}

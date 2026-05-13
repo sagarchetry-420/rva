@@ -77,7 +77,7 @@ export default function NoticeManagement() {
       case "All":
         return "bg-blue-100 text-blue-700 border-blue-200";
       case "Staff":
-        return "bg-purple-100 text-purple-700 border-purple-200";
+        return "bg-orange-100 text-orange-700 border-orange-200";
       case "Students":
         return "bg-amber-100 text-amber-700 border-amber-200";
       default:

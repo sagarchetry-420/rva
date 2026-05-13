@@ -54,9 +54,6 @@ export default function NoticesBanner() {
                 repeat: Infinity,
                 ease: "linear",
               }}
-              onHoverCapture={() => {
-                // You can add pause on hover here
-              }}
             >
               {duplicatedNotices.map((notice, idx) => (
                 <div

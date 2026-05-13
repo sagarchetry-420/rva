@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
+import { generateStudentPDF } from "@/lib/pdfGenerator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,8 @@ import {
   GraduationCap,
   CheckCircle2,
   XCircle,
-  Clock
+  Clock,
+  Download
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -111,6 +113,7 @@ export default function StudentManagement() {
   const [selectedStudent, setSelectedStudent] = useState<StudentDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const classRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchInitialData();
@@ -288,7 +291,7 @@ export default function StudentManagement() {
 
   // Brand colors: Purple (#8B5CF6), Gold (#EAB308), Green (#16A34A)
   const brandColors = {
-    purple: { bg: 'bg-violet-100', text: 'text-violet-600', border: 'border-violet-200', solid: 'bg-violet-500' },
+    purple: { bg: 'bg-orange-100', text: 'text-orange-600', border: 'border-orange-200', solid: 'bg-orange-500' },
     gold: { bg: 'bg-amber-100', text: 'text-amber-600', border: 'border-amber-200', solid: 'bg-amber-500' },
     green: { bg: 'bg-green-100', text: 'text-green-600', border: 'border-green-200', solid: 'bg-green-500' },
   };
@@ -299,7 +302,7 @@ export default function StudentManagement() {
   };
 
   const getAvatarColor = (index: number) => {
-    const colors = ['bg-violet-500', 'bg-amber-500', 'bg-green-500'];
+    const colors = ['bg-orange-500', 'bg-amber-500', 'bg-green-500'];
     return colors[index % 3];
   };
 
@@ -312,7 +315,7 @@ export default function StudentManagement() {
           <p className="text-gray-500 mt-1 text-sm sm:text-base">Manage and view all enrolled students by class.</p>
         </div>
 
-        <Button asChild className="gap-2 bg-violet-600 hover:bg-violet-700 shadow-sm rounded-xl h-10 sm:h-11 w-full sm:w-auto sm:self-start">
+        <Button asChild className="gap-2 bg-orange-600 hover:bg-orange-700 shadow-sm rounded-xl h-10 sm:h-11 w-full sm:w-auto sm:self-start">
           <Link to="/dashboard/students/add">
             <UserPlus className="w-4 h-4" /> Add Student
           </Link>
@@ -321,8 +324,8 @@ export default function StudentManagement() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <Card className="bg-violet-50/80 border border-black/5 hover:shadow-md transition-all duration-300 overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 rounded-full bg-violet-100 mix-blend-multiply opacity-50 blur-2xl -translate-y-1/2 translate-x-1/3"></div>
+          <Card className="bg-orange-50/80 border border-black/5 hover:shadow-md transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 rounded-full bg-orange-100 mix-blend-multiply opacity-50 blur-2xl -translate-y-1/2 translate-x-1/3"></div>
             <CardContent className="p-4 sm:p-5 md:p-6 flex items-center justify-between relative z-10">
               <div>
                 <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Total Students</p>
@@ -334,8 +337,8 @@ export default function StudentManagement() {
                   )}
                 </p>
               </div>
-              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-2xl bg-violet-100 flex items-center justify-center shadow-sm">
-                <Users className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-violet-500" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-2xl bg-orange-100 flex items-center justify-center shadow-sm">
+                <Users className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-orange-500" />
               </div>
             </CardContent>
           </Card>
@@ -386,10 +389,10 @@ export default function StudentManagement() {
           <CardContent className="p-3 sm:p-4">
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
               <div className="relative w-full sm:w-80 md:w-96 group">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-violet-500 transition-colors" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-orange-500 transition-colors" />
                 <Input
                   placeholder="Search by name or class..."
-                  className="pl-10 bg-gray-50/80 hover:bg-gray-100/80 border-transparent rounded-xl focus:bg-white focus:border-violet-200 focus:ring-4 focus:ring-violet-500/10 transition-all h-10 sm:h-11"
+                  className="pl-10 bg-gray-50/80 hover:bg-gray-100/80 border-transparent rounded-xl focus:bg-white focus:border-orange-200 focus:ring-4 focus:ring-orange-500/10 transition-all h-10 sm:h-11"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -408,7 +411,7 @@ export default function StudentManagement() {
                   variant="outline"
                   size="sm"
                   onClick={expandAll}
-                  className="rounded-xl border-gray-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 text-xs sm:text-sm px-3"
+                  className="rounded-xl border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 text-xs sm:text-sm px-3"
                 >
                   Expand All
                 </Button>
@@ -416,7 +419,7 @@ export default function StudentManagement() {
                   variant="outline"
                   size="sm"
                   onClick={collapseAll}
-                  className="rounded-xl border-gray-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 text-xs sm:text-sm px-3"
+                  className="rounded-xl border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 text-xs sm:text-sm px-3"
                 >
                   Collapse All
                 </Button>
@@ -426,7 +429,7 @@ export default function StudentManagement() {
             {/* Search results count */}
             {searchQuery && (
               <p className="text-sm text-gray-500 mt-3">
-                Found <span className="font-semibold text-violet-600">{totalStudents}</span> student{totalStudents !== 1 ? 's' : ''} matching "{searchQuery}"
+                Found <span className="font-semibold text-orange-600">{totalStudents}</span> student{totalStudents !== 1 ? 's' : ''} matching "{searchQuery}"
               </p>
             )}
           </CardContent>
@@ -436,7 +439,7 @@ export default function StudentManagement() {
         {loading ? (
           <Card className="border-0 shadow-sm rounded-2xl bg-white">
             <CardContent className="p-8 sm:p-12 flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-violet-500 mb-4" />
+              <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-orange-500 mb-4" />
               <p className="text-gray-500 font-medium">Loading students...</p>
             </CardContent>
           </Card>
@@ -449,7 +452,7 @@ export default function StudentManagement() {
                 {searchQuery ? "Try adjusting your search query." : "Add new students to get started."}
               </p>
               {!searchQuery && (
-                <Button asChild className="mt-4 bg-violet-600 hover:bg-violet-700 rounded-xl">
+                <Button asChild className="mt-4 bg-orange-600 hover:bg-orange-700 rounded-xl">
                   <Link to="/dashboard/students/add">
                     <UserPlus className="w-4 h-4 mr-2" /> Add Student
                   </Link>
@@ -461,7 +464,6 @@ export default function StudentManagement() {
           <div className="space-y-3 sm:space-y-4">
             {classGroups.map((group, index) => {
               const colors = getColorForIndex(index);
-              const isExpanded = expandedClasses.has(group.id);
 
               return (
                 <Card
@@ -472,11 +474,8 @@ export default function StudentManagement() {
                   }}
                   className="border-0 shadow-sm rounded-2xl bg-white overflow-hidden hover:shadow-md transition-shadow"
                 >
-                  {/* Class Header */}
-                  <button
-                    onClick={() => toggleClass(group.id)}
-                    className="w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-gray-50/50 border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                  >
+                  {/* Class Header - No expand/collapse */}
+                  <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-gray-50/50 border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-3 sm:gap-4">
                       <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${colors.bg} flex items-center justify-center shadow-sm`}>
                         <School className={`w-5 h-5 sm:w-6 sm:h-6 ${colors.text}`} />
@@ -487,68 +486,21 @@ export default function StudentManagement() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg border-orange-200 text-orange-600 hover:bg-orange-50 text-xs sm:text-sm"
+                        onClick={() => {
+                          navigate(`/dashboard/students/class/${group.id}`);
+                        }}
+                      >
+                        View Class
+                      </Button>
                       <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-bold ${colors.bg} ${colors.text}`}>
                         {group.students.length}
                       </span>
-                      {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                      )}
                     </div>
-                  </button>
-
-                  {/* Student List */}
-                  {isExpanded && (
-                    <CardContent className="p-0">
-                      <div className="divide-y divide-gray-50">
-                        {group.students.map((student, sIndex) => (
-                          <div
-                            key={student.id}
-                            onClick={() => handleStudentClick(student.id)}
-                            className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between hover:bg-violet-50/30 transition-colors group cursor-pointer"
-                          >
-                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold text-white shadow-sm shrink-0 ${getAvatarColor(sIndex)}`}>
-                                {getInitials(student.profiles?.first_name, student.profiles?.last_name)}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-semibold text-gray-800 text-sm sm:text-base truncate">
-                                  {student.profiles?.first_name} {student.profiles?.last_name}
-                                </p>
-                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                                  <Calendar className="w-3 h-3 shrink-0" />
-                                  <span className="truncate">
-                                    {new Date(student.enrollment_date).toLocaleDateString(undefined, {
-                                      year: 'numeric',
-                                      month: 'short',
-                                      day: 'numeric'
-                                    })}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="hidden sm:inline-flex text-xs text-violet-600 font-medium bg-violet-50 px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                                View Details
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all rounded-xl w-8 h-8 sm:w-9 sm:h-9"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(student.id);
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  )}
+                  </div>
                 </Card>
               );
             })}
@@ -574,13 +526,13 @@ export default function StudentManagement() {
           >
             {detailLoading ? (
               <div className="p-8 sm:p-12 flex flex-col items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-violet-500 mb-4" />
+                <Loader2 className="w-8 h-8 animate-spin text-orange-500 mb-4" />
                 <p className="text-gray-500 font-medium">Loading student details...</p>
               </div>
             ) : selectedStudent && (
               <>
                 {/* Modal Header */}
-                <div className="relative bg-gradient-to-r from-violet-600 to-violet-700 p-6 sm:p-8 text-white">
+                <div className="relative bg-gradient-to-r from-orange-600 to-orange-700 p-6 sm:p-8 text-white">
                   <button
                     onClick={() => setSelectedStudent(null)}
                     className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
@@ -596,7 +548,7 @@ export default function StudentManagement() {
                       <h2 className="text-xl sm:text-2xl font-bold">
                         {selectedStudent.firstName} {selectedStudent.lastName}
                       </h2>
-                      <p className="text-violet-200 mt-1">{selectedStudent.className}</p>
+                      <p className="text-orange-200 mt-1">{selectedStudent.className}</p>
                     </div>
                   </div>
                 </div>
@@ -608,7 +560,7 @@ export default function StudentManagement() {
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Contact Information</h3>
                     <div className="space-y-2">
                       <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                        <Mail className="w-5 h-5 text-violet-500" />
+                        <Mail className="w-5 h-5 text-orange-500" />
                         <span className="text-gray-700 text-sm sm:text-base truncate">{selectedStudent.email || 'Not available'}</span>
                       </div>
                     </div>
@@ -617,16 +569,12 @@ export default function StudentManagement() {
                   {/* Academic Info */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Academic Details</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-violet-50 rounded-xl">
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="p-3 bg-orange-50 rounded-xl">
                         <p className="text-xs text-gray-500 mb-1">Class</p>
-                        <p className="font-semibold text-violet-700">{selectedStudent.className}</p>
+                        <p className="font-semibold text-orange-700">{selectedStudent.className}</p>
                       </div>
-                      <div className="p-3 bg-amber-50 rounded-xl">
-                        <p className="text-xs text-gray-500 mb-1">Roll Number</p>
-                        <p className="font-semibold text-amber-700">{selectedStudent.rollNumber || 'N/A'}</p>
-                      </div>
-                      <div className="p-3 bg-green-50 rounded-xl col-span-2">
+                      <div className="p-3 bg-green-50 rounded-xl">
                         <p className="text-xs text-gray-500 mb-1">Enrollment Date</p>
                         <p className="font-semibold text-green-700">
                           {new Date(selectedStudent.enrollmentDate).toLocaleDateString(undefined, {
@@ -671,7 +619,7 @@ export default function StudentManagement() {
                     </div>
 
                     {/* Attendance Progress */}
-                    <div className="p-4 bg-gradient-to-r from-violet-50 to-green-50 rounded-xl">
+                    <div className="p-4 bg-gradient-to-r from-orange-50 to-green-50 rounded-xl">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-gray-600">Attendance Rate</span>
                         <span className={`text-lg font-bold ${
@@ -694,7 +642,7 @@ export default function StudentManagement() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex gap-3 pt-4 border-t border-gray-100">
                     <Button
                       variant="outline"
                       className="flex-1 rounded-xl border-gray-200 hover:bg-gray-50"
@@ -703,10 +651,23 @@ export default function StudentManagement() {
                       Close
                     </Button>
                     <Button
-                      variant="destructive"
-                      className="rounded-xl"
+                      variant="outline"
+                      className="flex-1 rounded-xl border-orange-200 hover:bg-orange-50 hover:text-orange-600"
                       onClick={() => {
-                        handleDelete(selectedStudent.id);
+                        if (selectedStudent) {
+                          generateStudentPDF(selectedStudent, "");
+                          toast.success("PDF downloaded successfully");
+                          toast.info("Tip: Original credentials were provided at enrollment time");
+                        }
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-2" /> Download PDF
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1 rounded-xl"
+                      onClick={() => {
+                        handleDelete(selectedStudent!.id);
                       }}
                     >
                       <Trash2 className="w-4 h-4 mr-2" /> Remove

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -46,8 +47,9 @@ interface RoutineEntry {
   end_time: string;
   room: string | null;
   class_id: string;
-  subject_id: string;
+  subject_id: string | null;
   teacher_id: string | null;
+  type?: 'period' | 'break';
   classes: { id: string; name: string } | null;
   subjects: { id: string; name: string; code: string } | null;
   teacher_name: string | null;
@@ -56,25 +58,32 @@ interface RoutineEntry {
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const SCHOOL_DAYS = [1, 2, 3, 4, 5, 6]; // Monday to Saturday
 
+// Sort classes serially
+const sortClasses = (a: ClassItem, b: ClassItem) => {
+  const aName = a.name.toLowerCase().trim();
+  const bName = b.name.toLowerCase().trim();
+
+  const aNumMatch = aName.match(/\d+/);
+  const bNumMatch = bName.match(/\d+/);
+
+  const aNum = aNumMatch ? parseInt(aNumMatch[0]) : null;
+  const bNum = bNumMatch ? parseInt(bNumMatch[0]) : null;
+
+  if (aNum !== null && bNum !== null) return aNum - bNum;
+  if (aNum !== null) return -1;
+  if (bNum !== null) return 1;
+
+  return aName.localeCompare(bName);
+};
+
 export default function RoutineManagement() {
+  const navigate = useNavigate();
   const [routines, setRoutines] = useState<RoutineEntry[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-
-  const [newRoutine, setNewRoutine] = useState({
-    classId: "",
-    subjectId: "",
-    teacherId: "",
-    dayOfWeek: "",
-    startTime: "",
-    endTime: "",
-    room: ""
-  });
 
   useEffect(() => {
     fetchInitialData();
@@ -93,12 +102,10 @@ export default function RoutineManagement() {
         api.get<Subject[]>('/api/classes/subjects'),
         api.get<Teacher[]>('/api/teachers')
       ]);
-      setClasses(classesData);
+      const sortedClasses = classesData.sort(sortClasses);
+      setClasses(sortedClasses);
       setSubjects(subjectsData);
       setTeachers(teachersData);
-      if (classesData.length > 0) {
-        setSelectedClassId(classesData[0].id);
-      }
     } catch (error: any) {
       toast.error("Failed to load data");
     } finally {
@@ -109,50 +116,16 @@ export default function RoutineManagement() {
   const fetchRoutines = async (classId: string) => {
     try {
       const data = await api.get<RoutineEntry[]>(`/api/routines?class_id=${classId}`);
-      setRoutines(data);
+      // Sort by day and then by start time
+      const sorted = data.sort((a, b) => {
+        if (a.day_of_week !== b.day_of_week) {
+          return a.day_of_week - b.day_of_week;
+        }
+        return a.start_time.localeCompare(b.start_time);
+      });
+      setRoutines(sorted);
     } catch (error: any) {
       toast.error("Failed to load routines");
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!newRoutine.classId || !newRoutine.subjectId || !newRoutine.dayOfWeek || !newRoutine.startTime || !newRoutine.endTime) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await api.post('/api/routines', {
-        classId: newRoutine.classId,
-        subjectId: newRoutine.subjectId,
-        teacherId: newRoutine.teacherId || null,
-        dayOfWeek: parseInt(newRoutine.dayOfWeek),
-        startTime: newRoutine.startTime,
-        endTime: newRoutine.endTime,
-        room: newRoutine.room || null
-      });
-
-      toast.success("Routine entry added successfully");
-      setNewRoutine({
-        classId: selectedClassId,
-        subjectId: "",
-        teacherId: "",
-        dayOfWeek: "",
-        startTime: "",
-        endTime: "",
-        room: ""
-      });
-      setShowForm(false);
-      if (selectedClassId) {
-        fetchRoutines(selectedClassId);
-      }
-    } catch (error: any) {
-      toast.error("Failed to add routine: " + error.message);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -166,6 +139,25 @@ export default function RoutineManagement() {
     } catch (error: any) {
       toast.error("Failed to delete routine");
     }
+  };
+
+  const getTimeSlots = () => {
+    const timeSlots = new Set<string>();
+    routines.forEach(r => {
+      timeSlots.add(`${r.start_time}|${r.end_time}`);
+    });
+    return Array.from(timeSlots)
+      .map(slot => {
+        const [start, end] = slot.split('|');
+        return { start, end };
+      })
+      .sort((a, b) => a.start.localeCompare(b.start));
+  };
+
+  const getRoutineForSlot = (dayOfWeek: number, startTime: string, endTime: string) => {
+    return routines.find(
+      r => r.day_of_week === dayOfWeek && r.start_time === startTime && r.end_time === endTime
+    );
   };
 
   const formatTime = (timeStr: string) => {
@@ -183,13 +175,6 @@ export default function RoutineManagement() {
     return 'Unknown Teacher';
   };
 
-  // Group routines by day
-  const routinesByDay = SCHOOL_DAYS.map(dayIndex => ({
-    dayIndex,
-    dayName: DAYS[dayIndex],
-    entries: routines.filter(r => r.day_of_week === dayIndex).sort((a, b) => a.start_time.localeCompare(b.start_time))
-  }));
-
   const selectedClass = classes.find(c => c.id === selectedClassId);
   const totalPeriods = routines.length;
   const daysWithClasses = new Set(routines.map(r => r.day_of_week)).size;
@@ -197,7 +182,7 @@ export default function RoutineManagement() {
   const getDayColor = (dayIndex: number) => {
     const colors = [
       { bg: 'bg-red-100', text: 'text-red-600', badge: 'bg-red-50' }, // Sunday
-      { bg: 'bg-violet-100', text: 'text-violet-600', badge: 'bg-violet-50' }, // Monday
+      { bg: 'bg-orange-100', text: 'text-orange-600', badge: 'bg-orange-50' }, // Monday
       { bg: 'bg-blue-100', text: 'text-blue-600', badge: 'bg-blue-50' }, // Tuesday
       { bg: 'bg-green-100', text: 'text-green-600', badge: 'bg-green-50' }, // Wednesday
       { bg: 'bg-amber-100', text: 'text-amber-600', badge: 'bg-amber-50' }, // Thursday
@@ -208,102 +193,54 @@ export default function RoutineManagement() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6">
       {/* Header Section */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-violet-100 rounded-xl shadow-sm">
-              <CalendarDays className="w-6 h-6 text-violet-600" />
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <div className="p-1.5 sm:p-2.5 bg-orange-100 rounded-lg sm:rounded-xl shadow-sm">
+              <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
             </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+            <h1 className="text-lg sm:text-xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
               Routine Management
             </h1>
           </div>
-          <p className="text-gray-500 text-sm sm:text-base ml-[3.25rem]">
+          <p className="text-gray-500 text-xs sm:text-sm ml-[2.75rem] sm:ml-[3.25rem]">
             Create and manage class timetables and schedules.
           </p>
         </div>
 
         <Button
-          onClick={() => {
-            setNewRoutine({ ...newRoutine, classId: selectedClassId });
-            setShowForm(!showForm);
-          }}
-          className="gap-2 bg-violet-600 hover:bg-violet-700 shadow-sm rounded-xl h-10 sm:h-11 w-full sm:w-auto sm:self-start"
+          onClick={() => navigate("/dashboard/routines/create")}
+          className="gap-1.5 sm:gap-2 bg-orange-600 hover:bg-orange-700 shadow-sm rounded-lg sm:rounded-xl h-9 sm:h-10 md:h-11 w-full sm:w-auto sm:self-start text-xs sm:text-sm"
         >
-          <Plus className="w-4 h-4" /> {showForm ? 'Hide Form' : 'Add Period'}
+          <Plus className="w-4 h-4" /> Create Routine
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-        <Card className="bg-violet-50/80 border border-black/5 hover:shadow-md transition-all">
-          <CardContent className="p-3 sm:p-4 md:p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Total Periods</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-violet-600">
-                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : totalPeriods}
-              </p>
-            </div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-violet-100 flex items-center justify-center">
-              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-violet-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-amber-50/80 border border-black/5 hover:shadow-md transition-all">
-          <CardContent className="p-3 sm:p-4 md:p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">School Days</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-amber-600">
-                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : daysWithClasses}
-              </p>
-            </div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-              <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-green-50/80 border border-black/5 hover:shadow-md transition-all col-span-2 sm:col-span-1">
-          <CardContent className="p-3 sm:p-4 md:p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Subjects</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-green-600">
-                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : new Set(routines.map(r => r.subject_id)).size}
-              </p>
-            </div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-100 flex items-center justify-center">
-              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Class Selector */}
-      <Card className="border-0 shadow-sm rounded-2xl bg-white">
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+      <Card className="border-0 shadow-sm rounded-lg sm:rounded-2xl bg-white">
+        <CardContent className="p-3 sm:p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="flex-1 space-y-2">
-              <Label className="text-sm font-medium">Select Class</Label>
+              <Label className="text-xs sm:text-sm font-medium">Select Class</Label>
               <Select value={selectedClassId} onValueChange={setSelectedClassId} disabled={loading}>
-                <SelectTrigger className="bg-gray-50 rounded-xl h-11">
-                  <SelectValue placeholder="Select a class to view routine" />
+                <SelectTrigger className="bg-gray-50 rounded-lg sm:rounded-xl h-9 sm:h-11 text-sm">
+                  <SelectValue placeholder="Choose class" />
                 </SelectTrigger>
                 <SelectContent>
-                  {classes.map((cls) => (
+                  {classes.sort(sortClasses).map((cls) => (
                     <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             {selectedClass && (
-              <div className="flex items-center gap-3 px-4 py-3 bg-violet-50 rounded-xl">
-                <School className="w-5 h-5 text-violet-600" />
-                <div>
-                  <p className="font-semibold text-gray-800">{selectedClass.name}</p>
-                  <p className="text-xs text-gray-500">{totalPeriods} periods scheduled</p>
+              <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 md:px-4 py-2.5 sm:py-3 bg-orange-50 rounded-lg sm:rounded-xl flex-shrink-0">
+                <School className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm sm:text-base text-gray-800 truncate">{selectedClass.name}</p>
+                  <p className="text-xs text-gray-500">{totalPeriods} periods</p>
                 </div>
               </div>
             )}
@@ -311,264 +248,119 @@ export default function RoutineManagement() {
         </CardContent>
       </Card>
 
-      {/* Add Period Form */}
-      {showForm && (
-        <Card className="border-0 shadow-sm rounded-2xl bg-white">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Plus className="w-5 h-5" /> Add New Period
-            </CardTitle>
-            <CardDescription>Add a period to the class timetable</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Class *</Label>
-                  <Select
-                    value={newRoutine.classId}
-                    onValueChange={(val) => setNewRoutine({ ...newRoutine, classId: val })}
-                  >
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Select class" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {classes.map((cls) => (
-                        <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Subject *</Label>
-                  <Select
-                    value={newRoutine.subjectId}
-                    onValueChange={(val) => setNewRoutine({ ...newRoutine, subjectId: val })}
-                  >
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Select subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjects.map((subj) => (
-                        <SelectItem key={subj.id} value={subj.id}>
-                          {subj.name} ({subj.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Teacher (Optional)</Label>
-                  <Select
-                    value={newRoutine.teacherId}
-                    onValueChange={(val) => setNewRoutine({ ...newRoutine, teacherId: val })}
-                  >
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Select teacher" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No teacher assigned</SelectItem>
-                      {teachers.map((teacher) => (
-                        <SelectItem key={teacher.id} value={teacher.id}>
-                          {getTeacherName(teacher)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Day *</Label>
-                  <Select
-                    value={newRoutine.dayOfWeek}
-                    onValueChange={(val) => setNewRoutine({ ...newRoutine, dayOfWeek: val })}
-                  >
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Select day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SCHOOL_DAYS.map((dayIndex) => (
-                        <SelectItem key={dayIndex} value={dayIndex.toString()}>
-                          {DAYS[dayIndex]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Start Time *</Label>
-                  <Input
-                    type="time"
-                    value={newRoutine.startTime}
-                    onChange={(e) => setNewRoutine({ ...newRoutine, startTime: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>End Time *</Label>
-                  <Input
-                    type="time"
-                    value={newRoutine.endTime}
-                    onChange={(e) => setNewRoutine({ ...newRoutine, endTime: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Room (Optional)</Label>
-                  <Input
-                    placeholder="e.g. Room 101"
-                    value={newRoutine.room}
-                    onChange={(e) => setNewRoutine({ ...newRoutine, room: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowForm(false)}
-                  className="rounded-xl"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="rounded-xl bg-violet-600 hover:bg-violet-700"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4 mr-2" />
-                  )}
-                  Add Period
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Timetable View */}
       {loading ? (
-        <Card className="border-0 shadow-sm rounded-2xl bg-white">
-          <CardContent className="p-8 flex flex-col items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-violet-500 mb-4" />
-            <p className="text-gray-500">Loading timetable...</p>
+        <Card className="border-0 shadow-sm rounded-lg sm:rounded-2xl bg-white">
+          <CardContent className="p-6 sm:p-8 flex flex-col items-center justify-center">
+            <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-orange-500 mb-2 sm:mb-4" />
+            <p className="text-xs sm:text-sm text-gray-500">Loading timetable...</p>
           </CardContent>
         </Card>
       ) : !selectedClassId ? (
-        <Card className="border-0 shadow-sm rounded-2xl bg-white">
-          <CardContent className="p-8 flex flex-col items-center justify-center">
-            <School className="w-12 h-12 text-gray-200 mb-4" />
-            <p className="text-lg font-semibold text-gray-700">Select a class</p>
-            <p className="text-gray-500 mt-1">Choose a class to view its timetable</p>
+        <Card className="border-0 shadow-sm rounded-lg sm:rounded-2xl bg-white">
+          <CardContent className="p-6 sm:p-8 flex flex-col items-center justify-center">
+            <School className="w-10 h-10 sm:w-12 sm:h-12 text-gray-200 mb-3 sm:mb-4" />
+            <p className="text-base sm:text-lg font-semibold text-gray-700">Select a class</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">Choose a class to view its timetable</p>
           </CardContent>
         </Card>
       ) : routines.length === 0 ? (
-        <Card className="border-0 shadow-sm rounded-2xl bg-white">
-          <CardContent className="p-8 flex flex-col items-center justify-center">
-            <CalendarDays className="w-12 h-12 text-gray-200 mb-4" />
-            <p className="text-lg font-semibold text-gray-700">No routine set</p>
-            <p className="text-gray-500 mt-1 text-center">
-              Click "Add Period" to start building the timetable.
+        <Card className="border-0 shadow-sm rounded-lg sm:rounded-2xl bg-white">
+          <CardContent className="p-6 sm:p-8 flex flex-col items-center justify-center">
+            <CalendarDays className="w-10 h-10 sm:w-12 sm:h-12 text-gray-200 mb-3 sm:mb-4" />
+            <p className="text-base sm:text-lg font-semibold text-gray-700">No routine set</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 text-center">
+              Click "Create Routine" to start building the timetable.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3 sm:space-y-4">
-          {routinesByDay.map(({ dayIndex, dayName, entries }) => {
-            if (entries.length === 0) return null;
-            const colors = getDayColor(dayIndex);
-
-            return (
-              <Card key={dayIndex} className="border-0 shadow-sm rounded-2xl bg-white overflow-hidden hover:shadow-md transition-shadow">
-                {/* Day Header */}
-                <div className={`px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between ${colors.badge} border-b border-gray-100`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${colors.bg} flex items-center justify-center`}>
-                      <CalendarDays className={`w-5 h-5 sm:w-6 sm:h-6 ${colors.text}`} />
-                    </div>
-                    <div>
-                      <h3 className="text-base sm:text-lg font-bold text-gray-800">{dayName}</h3>
-                      <p className="text-xs sm:text-sm text-gray-500">
-                        {entries.length} period{entries.length !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge className={`${colors.bg} ${colors.text}`}>
-                    {entries.length}
-                  </Badge>
-                </div>
-
-                {/* Periods List */}
-                <CardContent className="p-0">
-                  <div className="divide-y divide-gray-50">
-                    {entries.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50/50 transition-colors"
+        <Card className="border-0 shadow-sm rounded-lg sm:rounded-2xl bg-white overflow-hidden">
+          <CardHeader className="pb-3 sm:pb-4 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-base sm:text-lg">Weekly Timetable</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              {selectedClass?.name}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 border-b border-gray-200">
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 bg-gray-50 sticky left-0 z-10 border-r border-gray-200">
+                      Day
+                    </th>
+                    {getTimeSlots().map((slot, idx) => (
+                      <th
+                        key={`${slot.start}-${slot.end}`}
+                        className="px-2 sm:px-3 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 border-r border-gray-200 min-w-max"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className="text-xs font-mono">
-                                {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
-                              </Badge>
-                              <h4 className="font-semibold text-gray-800 truncate">
-                                {entry.subjects?.name || 'Unknown'}
-                              </h4>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
-                              {entry.teacher_name && (
-                                <span className="flex items-center gap-1">
-                                  <User className="w-3 h-3" />
-                                  {entry.teacher_name}
-                                </span>
-                              )}
-                              {entry.room && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  {entry.room}
-                                </span>
-                              )}
-                              <span className="flex items-center gap-1">
-                                <BookOpen className="w-3 h-3" />
-                                {entry.subjects?.code || '-'}
-                              </span>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl shrink-0"
-                            onClick={() => handleDelete(entry.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
+                        {formatTime(slot.start)} - {formatTime(slot.end)}
+                      </th>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Footer */}
-      {!loading && routines.length > 0 && (
-        <div className="text-center text-xs sm:text-sm text-gray-500 py-3">
-          {selectedClass?.name}: {totalPeriods} periods across {daysWithClasses} day{daysWithClasses !== 1 ? 's' : ''}
-        </div>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {SCHOOL_DAYS.map((dayIndex) => {
+                    const colors = getDayColor(dayIndex);
+                    return (
+                      <tr key={dayIndex} className="hover:bg-gray-50/30 transition-colors border-b border-gray-100">
+                        <td
+                          className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold ${colors.text} bg-gray-50 sticky left-0 z-10 border-r border-gray-200`}
+                        >
+                          {DAYS[dayIndex]}
+                        </td>
+                        {getTimeSlots().map((slot) => {
+                          const routine = getRoutineForSlot(dayIndex, slot.start, slot.end);
+                          return (
+                            <td
+                              key={`${dayIndex}-${slot.start}-${slot.end}`}
+                              className="px-1 sm:px-2 py-2 sm:py-3 border-r border-gray-200 min-w-[120px]"
+                            >
+                              {routine ? (
+                                <div
+                                  className={`p-1.5 sm:p-2 rounded-lg border-2 relative group ${
+                                    routine.type === 'break'
+                                      ? 'bg-amber-50 border-amber-200'
+                                      : 'bg-orange-50 border-orange-200'
+                                  }`}
+                                >
+                                  <div className="text-xs sm:text-sm font-semibold text-gray-800 truncate">
+                                    {routine.type === 'break' ? '🕐 Break' : routine.subjects?.name || 'Unknown'}
+                                  </div>
+                                  {routine.type !== 'break' && routine.teacher_name && (
+                                    <div className="text-xs text-gray-600 truncate">
+                                      {routine.teacher_name}
+                                    </div>
+                                  )}
+                                  {routine.type !== 'break' && routine.room && (
+                                    <div className="text-xs text-gray-600 truncate">
+                                      Room: {routine.room}
+                                    </div>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute -top-2 -right-2 h-6 w-6 text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity rounded"
+                                    onClick={() => handleDelete(routine.id)}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="h-12 sm:h-16 bg-gray-50 rounded border border-dashed border-gray-200"></div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

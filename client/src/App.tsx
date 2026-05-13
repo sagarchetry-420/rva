@@ -18,6 +18,7 @@ import StudentManagement from "./pages/StudentManagement"
 import AddStudent from "./pages/AddStudent"
 import TeacherManagement from "./pages/TeacherManagement"
 import AddTeacher from "./pages/AddTeacher"
+import TeacherDetails from "./pages/teachers/TeacherDetails"
 import ClassManagement from "./pages/ClassManagement"
 import SubjectManagement from "./pages/SubjectManagement"
 import CreateNotice from "./pages/CreateNotice"
@@ -25,6 +26,8 @@ import NoticeManagement from "./pages/NoticeManagement"
 import AttendanceManagement from "./pages/AttendanceManagement"
 import ExamManagement from "./pages/ExamManagement"
 import RoutineManagement from "./pages/RoutineManagement"
+import CreateRoutine from "./pages/CreateRoutine"
+import ClassDetail from "./pages/classes/ClassDetail"
 
 // Teacher Pages
 import TeacherDashboard from "./pages/TeacherDashboard"
@@ -66,8 +69,10 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="students" element={<StudentManagement />} />
               <Route path="students/add" element={<AddStudent />} />
+              <Route path="students/class/:classId" element={<ClassDetail />} />
               <Route path="teachers" element={<TeacherManagement />} />
               <Route path="teachers/add" element={<AddTeacher />} />
+              <Route path="teachers/:id" element={<TeacherDetails />} />
               <Route path="classes" element={<ClassManagement />} />
               <Route path="subjects" element={<SubjectManagement />} />
               <Route path="notices" element={<NoticeManagement />} />
@@ -75,6 +80,7 @@ function App() {
               <Route path="attendance" element={<AttendanceManagement />} />
               <Route path="exams" element={<ExamManagement />} />
               <Route path="routines" element={<RoutineManagement />} />
+              <Route path="routines/create" element={<CreateRoutine />} />
             </Route>
 
             {/* Teacher Dashboard Route */}

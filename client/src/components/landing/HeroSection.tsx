@@ -1,81 +1,212 @@
-import { motion } from "framer-motion";
-import { ArrowRight, PlayCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { useRef, useState, useEffect, useCallback } from "react";
+
+const images = [
+  "/school_images/img1.jpg",
+  "/school_images/img2.jpg",
+  "/school_images/img3.jpg",
+];
 
 export default function HeroSection() {
+  const [[currentImageIndex, direction], setPage] = useState([0, 0]);
+  const containerRef = useRef<HTMLElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"]
+  });
+
+  // Parallax effect for the background images
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
+
+  const paginate = useCallback((newDirection: number) => {
+    setPage(([prevIndex]) => {
+      let nextIndex = prevIndex + newDirection;
+      if (nextIndex < 0) nextIndex = images.length - 1;
+      if (nextIndex >= images.length) nextIndex = 0;
+      return [nextIndex, newDirection];
+    });
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      paginate(1);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [paginate]);
+
+  // Magnetic Button Effect state
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!buttonRef.current) return;
+    const { left, top, width, height } = buttonRef.current.getBoundingClientRect();
+    const x = (e.clientX - left - width / 2) * 0.2;
+    const y = (e.clientY - top - height / 2) * 0.2;
+    setMousePosition({ x, y });
+  };
+
+  const resetMousePosition = () => {
+    setMousePosition({ x: 0, y: 0 });
+  };
+
+  const textVariants = {
+    hidden: { opacity: 0, y: 40, filter: "blur(10px)" },
+    visible: (custom: number) => ({
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: { 
+        delay: custom * 0.15,
+        duration: 0.8,
+        ease: [0.215, 0.61, 0.355, 1], // premium easing
+      }
+    })
+  };
+
+  const slideVariants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? "100%" : "-100%",
+    }),
+    center: {
+      zIndex: 1,
+      x: 0,
+    },
+    exit: (direction: number) => ({
+      zIndex: 0,
+      x: direction < 0 ? "100%" : "-100%",
+    })
+  };
+
   return (
-    <section id="home" className="relative min-h-[100vh] flex items-center pt-40 overflow-hidden bg-background">
-      {/* Dynamic Background Elements */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-secondary/10" />
-      
-      {/* Sophisticated Pattern */}
-      <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
-
-      {/* Hero Image / Overlay */}
-      <div
-        className="absolute right-0 top-0 w-full lg:w-[80%] h-full bg-cover bg-right-bottom bg-no-repeat opacity-30 dark:opacity-40 transition-all"
-        style={{ backgroundImage: "url('/school_image/school image1.jpg')", maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 0%, rgba(0,0,0,0.5) 30%, transparent 70%)' }}
-      />
-
-      {/* Abstract Glowing Orbs */}
-      <motion.div 
-        animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-[-10%] sm:top-[20%] right-[-5%] sm:right-[10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary/20 rounded-full blur-[80px] sm:blur-[120px] pointer-events-none" 
-      />
-      <motion.div 
-        animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        className="absolute bottom-[-10%] sm:bottom-[10%] left-[-5%] sm:left-[5%] w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-secondary/20 rounded-full blur-[80px] sm:blur-[100px] pointer-events-none" 
-      />
-
-      <div className="container mx-auto px-4 relative z-10 flex flex-col justify-center h-full">
-        <div className="grid lg:grid-cols-12 gap-12 items-center">
-          
-          {/* Main Hero Content */}
+    <section 
+      ref={containerRef}
+      id="home" 
+      className="relative min-h-[100vh] w-full flex items-center overflow-hidden bg-black text-white"
+    >
+      {/* Background Visual Area Slider (Full Width & Height) */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <AnimatePresence initial={false} custom={direction}>
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="lg:col-span-8 flex flex-col gap-6 sm:gap-8 pt-10 sm:pt-0"
+            key={currentImageIndex}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: "tween", duration: 0.8, ease: "easeOut" }
+            }}
+            style={{ y }}
+            className="absolute inset-0 w-full h-[120%] -top-[10%]"
           >
-            <h1 className="font-display text-5xl sm:text-6xl lg:text-[5.5rem] font-extrabold leading-[1.1] tracking-tight text-foreground">
-              A Small <span className="block">School for a</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">
-                Big Change
+            <img
+              src={images[currentImageIndex]}
+              alt={`School image ${currentImageIndex + 1}`}
+              loading={currentImageIndex === 0 ? "eager" : "lazy"}
+              decoding="async"
+              className="w-full h-full object-cover object-center"
+            />
+          </motion.div>
+        </AnimatePresence>
+        
+        {/* Dark overlays for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent z-10 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 z-10 pointer-events-none" />
+      </div>
+
+      <div className="container mx-auto px-6 md:px-12 relative z-20 flex flex-col justify-center h-full pt-28 pb-10 pointer-events-none">
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-0 items-center h-full">
+          
+          {/* Left - Main Content */}
+          <div className="lg:col-span-8 xl:col-span-7 flex flex-col items-start text-left z-30 pt-10 lg:pt-0 relative pr-0 lg:pr-10 pointer-events-auto">
+            <motion.div
+              custom={1}
+              initial="hidden"
+              animate="visible"
+              variants={textVariants}
+              className="inline-block"
+            >
+              <span className="text-xs md:text-sm font-semibold tracking-[0.2em] uppercase text-white/80 mb-6 block border-l-2 border-orange-500 pl-4">
+                Inspiring Futures
               </span>
-              <span className="block">With Endless</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">
-                Possibilities
-              </span>
-            </h1>
+            </motion.div>
+
+            <motion.h1 
+              className="font-sans font-extrabold leading-[0.95] tracking-tight text-white mb-8"
+              style={{ fontSize: "clamp(3.5rem, 7vw, 6.5rem)" }}
+            >
+              <motion.span 
+                custom={2} initial="hidden" animate="visible" variants={textVariants}
+                className="block"
+              >
+                Visionary
+              </motion.span>
+              <motion.span 
+                custom={3} initial="hidden" animate="visible" variants={textVariants}
+                className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500 pb-2"
+              >
+                Education.
+              </motion.span>
+            </motion.h1>
             
-            <p className="text-lg sm:text-xl text-foreground/80 lg:text-lg leading-relaxed font-medium">
-              We cultivate a dynamic environment where passion meets purpose. Join Rose Valley Academy to discover your true potential and shape tomorrow.
-            </p>
+            <motion.p 
+              custom={4} initial="hidden" animate="visible" variants={textVariants}
+              className="text-lg md:text-xl text-white/80 leading-relaxed font-light max-w-lg mb-12"
+            >
+              Empowering the next generation with a world-class environment, innovative learning, and a premium educational experience designed for excellence.
+            </motion.p>
             
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-              className="flex flex-wrap gap-4 sm:gap-6 items-center mt-2"
+              custom={5} initial="hidden" animate="visible" variants={textVariants}
+              className="flex flex-wrap gap-8 items-center"
             >
-              <a href="#about">
-                <Button size="lg" className="rounded-full h-14 px-8 text-base font-semibold shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/40 transition-all hover:-translate-y-1">
-                  Discover RVA
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </a>
-              <a href="#gallery" className="flex items-center gap-2.5 text-foreground/80 hover:text-primary font-semibold transition-colors group">
-                <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <PlayCircle className="w-6 h-6 text-secondary" />
-                </div>
-                Take a Tour
+              <motion.button
+                ref={buttonRef}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={resetMousePosition}
+                animate={{ x: mousePosition.x, y: mousePosition.y }}
+                transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
+                className="relative group overflow-hidden rounded-full px-8 py-4 bg-white text-slate-900 font-semibold text-sm tracking-wide transition-all duration-300 hover:scale-105 shadow-xl hover:shadow-white/20"
+              >
+                <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
+                  Discover More
+                  <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                </span>
+                <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-orange-500 to-amber-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500 ease-out z-0" />
+              </motion.button>
+
+              <a 
+                href="#about" 
+                className="text-sm font-medium tracking-wide text-white/80 hover:text-white transition-colors relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-px after:bg-white/30 hover:after:bg-white after:transition-colors"
+              >
+                View Gallery
               </a>
             </motion.div>
-          </motion.div>
+          </div>
         </div>
       </div>
+
+      {/* Navigation Arrows */}
+      <div className="absolute bottom-10 right-6 md:right-12 z-20 flex gap-4">
+        <button 
+          onClick={() => paginate(-1)}
+          className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-110 transition-all shadow-lg"
+          aria-label="Previous image"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <button 
+          onClick={() => paginate(1)}
+          className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-110 transition-all shadow-lg"
+          aria-label="Next image"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+      </div>
+
     </section>
   );
 }

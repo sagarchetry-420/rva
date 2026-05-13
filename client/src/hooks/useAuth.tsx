@@ -53,7 +53,6 @@ export function useAuth() {
       
       if (mounted) {
         setRole(userRole);
-        console.log("useAuth Sync -> User:", currentSession.user.email, "| Role:", userRole);
         setLoading(false);
       }
     };
@@ -65,8 +64,6 @@ export function useAuth() {
 
     // 2. Listen for Auth Changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log("Auth Event Fired:", event);
-      
       if (event === 'SIGNED_OUT') {
         syncAuthState(null);
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {

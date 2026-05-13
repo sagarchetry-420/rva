@@ -4,45 +4,8 @@ import { createAdminClient, isUserAdmin } from '../lib/supabase.js';
 
 export const studentsRouter = Router();
 
-// GET /api/students?class_id=xxx (admin only)
-studentsRouter.get('/', requireAuth, async (req, res) => {
-  try {
-    // Verify user is admin
-    const isAdmin = await isUserAdmin(req.userId!);
-    if (!isAdmin) {
-      return res.status(403).json({ error: 'Access denied. Admin only.' });
-    }
-
-    // Use admin client to fetch all students
-    const supabase = createAdminClient();
-    let query = supabase.from('students').select(`
-      id,
-      user_id,
-      enrollment_date,
-      profiles (
-        first_name,
-        last_name,
-        avatar_url
-      ),
-      classes (
-        id,
-        name
-      )
-    `);
-
-    if (req.query.class_id && req.query.class_id !== 'all') {
-      query = query.eq('class_id', req.query.class_id as string);
-    }
-
-    const { data, error } = await query;
-    if (error) return res.status(400).json({ error: error.message });
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch students' });
-  }
-});
-
 // GET /api/students/me — get the logged-in student's profile
+// IMPORTANT: This must come BEFORE the /:id route to match properly
 studentsRouter.get('/me', requireAuth, async (req, res) => {
   try {
     const supabase = createAdminClient();
@@ -55,7 +18,6 @@ studentsRouter.get('/me', requireAuth, async (req, res) => {
         user_id,
         class_id,
         enrollment_date,
-        roll_number,
         classes (
           id,
           name
@@ -88,7 +50,6 @@ studentsRouter.get('/me', requireAuth, async (req, res) => {
       email: authUser?.user?.email ?? '',
       className: classInfo?.name ?? 'Not assigned',
       classId: classInfo?.id ?? null,
-      rollNumber: (studentData as any).roll_number,
       admissionDate: studentData.enrollment_date,
     });
   } catch (err) {
@@ -173,43 +134,15 @@ studentsRouter.get('/me/attendance', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/students — admin creates a student account
-studentsRouter.post('/', requireAuth, async (req, res) => {
-  try {
-    // Verify user is admin
-    const isAdmin = await isUserAdmin(req.userId!);
-    if (!isAdmin) {
-      return res.status(403).json({ error: 'Access denied. Admin only.' });
-    }
-
-    const admin = createAdminClient();
-    const { email, password, firstName, lastName, classId, dob } = req.body;
-
-    const { data: userData, error: authError } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName,
-        role: 'student',
-        class_id: classId,
-        dob
-      }
-    });
-
-    if (authError) return res.status(400).json({ error: authError.message });
-    res.json({ user: userData.user });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to create student' });
-  }
-});
-
 // GET /api/students/:id — get a single student's full details (admin only)
 studentsRouter.get('/:id', requireAuth, async (req, res) => {
   try {
+    const studentId = req.params.id;
+    console.log(`[GET /api/students/:id] Fetching student: ${studentId}`);
+
     const isAdmin = await isUserAdmin(req.userId!);
     if (!isAdmin) {
+      console.log(`[GET /api/students/:id] Access denied: user ${req.userId} is not admin`);
       return res.status(403).json({ error: 'Access denied. Admin only.' });
     }
 
@@ -235,20 +168,34 @@ studentsRouter.get('/:id', requireAuth, async (req, res) => {
           name
         )
       `)
-      .eq('id', req.params.id)
+      .eq('id', studentId)
       .maybeSingle();
 
-    if (studentError) return res.status(400).json({ error: studentError.message });
-    if (!studentData) return res.status(404).json({ error: 'Student not found' });
+    if (studentError) {
+      console.error(`[GET /api/students/:id] Error fetching student: ${studentError.message}`);
+      return res.status(400).json({ error: studentError.message });
+    }
+
+    if (!studentData) {
+      console.log(`[GET /api/students/:id] Student not found: ${studentId}`);
+      return res.status(404).json({ error: 'Student not found' });
+    }
 
     // Get user email from auth
     const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(studentData.user_id);
+    if (authError) {
+      console.error(`[GET /api/students/:id] Error fetching auth user: ${authError.message}`);
+    }
 
     // Get attendance stats
-    const { data: attendanceData } = await supabase
+    const { data: attendanceData, error: attendanceError } = await supabase
       .from('student_attendance')
       .select('status')
       .eq('student_id', studentData.id);
+
+    if (attendanceError) {
+      console.error(`[GET /api/students/:id] Error fetching attendance: ${attendanceError.message}`);
+    }
 
     const records = attendanceData || [];
     const totalDays = records.length;
@@ -260,7 +207,7 @@ studentsRouter.get('/:id', requireAuth, async (req, res) => {
     const profile = studentData.profiles as any;
     const classInfo = studentData.classes as any;
 
-    res.json({
+    const response = {
       id: studentData.id,
       userId: studentData.user_id,
       firstName: profile?.first_name ?? '',
@@ -268,9 +215,9 @@ studentsRouter.get('/:id', requireAuth, async (req, res) => {
       email: authUser?.user?.email ?? '',
       avatarUrl: profile?.avatar_url,
       dob: profile?.dob,
+      rollNumber: studentData.roll_number || 'N/A',
       className: classInfo?.name ?? 'Not assigned',
       classId: classInfo?.id ?? null,
-      rollNumber: (studentData as any).roll_number,
       enrollmentDate: studentData.enrollment_date,
       attendance: {
         totalDays,
@@ -279,7 +226,10 @@ studentsRouter.get('/:id', requireAuth, async (req, res) => {
         lateDays,
         attendancePercentage,
       }
-    });
+    };
+
+    console.log(`[GET /api/students/:id] Successfully fetched student: ${studentId}`);
+    res.json(response);
   } catch (err) {
     console.error('Get student details error:', err);
     res.status(500).json({ error: 'Failed to fetch student details' });
@@ -301,5 +251,159 @@ studentsRouter.delete('/:id', requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete student' });
+  }
+});
+
+// POST /api/students — admin creates a student account
+studentsRouter.post('/', requireAuth, async (req, res) => {
+  try {
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const admin = createAdminClient();
+    const { email, password, firstName, lastName, classId, dob } = req.body;
+
+    console.log('[POST /api/students] Creating student:', { email, firstName, lastName, classId });
+
+    const { data: userData, error: authError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName,
+        role: 'student',
+        class_id: classId,
+        dob
+      }
+    });
+
+    if (authError) {
+      console.error('[POST /api/students] Auth error:', authError);
+      return res.status(400).json({ error: authError.message });
+    }
+
+    // Wait a moment for the profile and user_role to be created by the trigger
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Now manually create the student record in the students table
+    const { data: studentData, error: studentError } = await admin
+      .from('students')
+      .insert([{
+        user_id: userData.user!.id,
+        class_id: classId || null,
+        dob: dob || null,
+        enrollment_date: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (studentError) {
+      console.error('[POST /api/students] Student record creation error:', studentError);
+      // Clean up auth user if student creation fails
+      await admin.auth.admin.deleteUser(userData.user!.id);
+      return res.status(400).json({ error: 'Failed to create student record: ' + studentError.message });
+    }
+
+    console.log('[POST /api/students] Student record created:', studentData.id);
+
+    // Assign roll number if class is provided
+    if (classId) {
+      try {
+        // Get the highest roll number for this class
+        const { data: allRolls } = await admin
+          .from('students')
+          .select('roll_number')
+          .eq('class_id', classId)
+          .not('roll_number', 'is', null)
+          .order('roll_number', { ascending: false });
+
+        const nextRollNumber = (allRolls && allRolls.length > 0 && allRolls[0].roll_number)
+          ? (allRolls[0].roll_number as number) + 1
+          : 1;
+
+        // Update the student with the assigned roll number
+        const { error: updateError } = await admin
+          .from('students')
+          .update({ roll_number: nextRollNumber })
+          .eq('id', studentData.id);
+
+        if (updateError) {
+          console.warn('[POST /api/students] Warning updating roll number:', updateError);
+        } else {
+          console.log('[POST /api/students] Roll number assigned:', nextRollNumber);
+        }
+      } catch (rollError: any) {
+        console.warn('[POST /api/students] Warning assigning roll number:', rollError.message);
+      }
+    }
+
+    console.log('[POST /api/students] Student created successfully:', userData.user?.id);
+    res.json({ user: userData.user });
+  } catch (err: any) {
+    console.error('[POST /api/students] Error:', err);
+    res.status(500).json({ error: err.message || 'Failed to create student' });
+  }
+});
+
+// GET /api/students?class_id=xxx (admin only)
+// IMPORTANT: This must be LAST so it doesn't match /me, /me/attendance, etc.
+studentsRouter.get('/', requireAuth, async (req, res) => {
+  try {
+    // Verify user is admin
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    // Use admin client to fetch all students
+    const supabase = createAdminClient();
+    let query = supabase.from('students').select(`
+      id,
+      user_id,
+      enrollment_date,
+      roll_number,
+      profiles (
+        first_name,
+        last_name,
+        avatar_url
+      ),
+      classes (
+        id,
+        name
+      )
+    `);
+
+    if (req.query.class_id && req.query.class_id !== 'all') {
+      query = query.eq('class_id', req.query.class_id as string);
+    }
+
+    const { data, error } = await query;
+    if (error) return res.status(400).json({ error: error.message });
+
+    // Fetch emails for all students in parallel
+    const studentsWithEmails = await Promise.all(
+      (data || []).map(async (student: any) => {
+        try {
+          const { data: authUser } = await supabase.auth.admin.getUserById(student.user_id);
+          return {
+            ...student,
+            email: authUser?.user?.email ?? ''
+          };
+        } catch (err) {
+          return {
+            ...student,
+            email: ''
+          };
+        }
+      })
+    );
+
+    res.json(studentsWithEmails);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch students' });
   }
 });

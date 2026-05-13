@@ -41,7 +41,7 @@ BEGIN
   -- Insert into role-specific table based on user role
   IF user_role = 'teacher' THEN
     INSERT INTO public.teachers (user_id, department, hire_date)
-    VALUES (NEW.id, user_department, user_hire_date)
+    VALUES (NEW.id, COALESCE(user_department, 'Unassigned'), user_hire_date)
     RETURNING id INTO new_teacher_id;
 
     -- Also create teacher_subjects mapping if class_id and subject_id are provided

@@ -10,21 +10,28 @@ const galleryItems = [
 
 export default function GallerySection() {
   return (
-    <section id="gallery" className="py-24 bg-background">
-      <div className="container mx-auto px-4">
+    <section id="gallery" className="py-24 bg-gradient-to-b from-amber-50 to-white relative overflow-hidden">
+      {/* Decorative shapes */}
+      <motion.div 
+        animate={{ scale: [1, 1.1, 1] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-10 right-20 w-48 h-48 rounded-full bg-yellow-200 opacity-20"
+      />
+
+      <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
+          <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
             Campus Life
           </div>
-          <h2 className="font-display text-4xl lg:text-5xl font-extrabold mb-4 text-foreground tracking-tight">
-            Photo <span className="text-primary">Gallery</span>
+          <h2 className="font-display text-4xl lg:text-5xl font-extrabold mb-4 text-gray-900 tracking-tight">
+            Photo <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-orange-500">Gallery</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto font-medium">
+          <p className="text-gray-700 text-lg max-w-2xl mx-auto font-medium">
             Glimpses of life, learning, and unforgettable moments at Rose Valley Academy.
           </p>
         </motion.div>
@@ -37,7 +44,7 @@ export default function GallerySection() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true, margin: "-50px" }}
               transition={{ delay: i * 0.1, duration: 0.5 }}
-              className={`group relative rounded-3xl overflow-hidden bg-muted border border-border cursor-pointer shadow-sm hover:shadow-2xl hover:shadow-primary/20 transition-all duration-500 ${item.span}`}
+              className={`group relative rounded-3xl overflow-hidden bg-amber-100 border-2 border-amber-200 cursor-pointer shadow-sm hover:shadow-2xl hover:shadow-orange-300/20 transition-all duration-500 ${item.span}`}
             >
               <div
                 className="absolute inset-0 bg-cover bg-center transform group-hover:scale-110 transition-transform duration-700 ease-out saturate-50 group-hover:saturate-100"

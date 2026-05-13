@@ -76,6 +76,21 @@ const SubjectManagement: React.FC = () => {
       return;
     }
 
+    // Validate that subject with same name doesn't already exist in this class
+    const subjectExists = subjects.some(
+      (s) => s.class_id === newSubject.classId &&
+             s.name.toLowerCase() === newSubject.name.toLowerCase()
+    );
+
+    if (subjectExists) {
+      toast({
+        title: "Duplicate Subject",
+        description: "A subject with this name already exists in the selected class.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -106,11 +121,101 @@ const SubjectManagement: React.FC = () => {
     }
   };
 
-  // Group classes by school level
-  const classesByLevel = levels.map(level => ({
-    level,
-    classes: classes.filter(cls => cls.school_level_id === level.id)
-  })).filter(group => group.classes.length > 0);
+  // Sort levels and classes serially
+  const sortClasses = (a: ClassRecord, b: ClassRecord) => {
+    const aName = a.name.toLowerCase().trim();
+    const bName = b.name.toLowerCase().trim();
+
+    // Extract numeric values from class names
+    const aNumMatch = aName.match(/\d+/);
+    const bNumMatch = bName.match(/\d+/);
+
+    const aNum = aNumMatch ? parseInt(aNumMatch[0]) : null;
+    const bNum = bNumMatch ? parseInt(bNumMatch[0]) : null;
+
+    // If both have numeric parts, sort by number
+    if (aNum !== null && bNum !== null) {
+      return aNum - bNum;
+    }
+
+    // If only one has a numeric part, number comes first
+    if (aNum !== null) return -1;
+    if (bNum !== null) return 1;
+
+    // Otherwise sort alphabetically
+    return aName.localeCompare(bName);
+  };
+
+  const sortLevels = (a: SchoolLevel, b: SchoolLevel) => {
+    const levelOrder: { [key: string]: number } = {
+      'nursery': 1,
+      'play': 1,
+      'pre-primary': 2,
+      'kg': 2,
+      'lkg': 2,
+      'ukg': 2,
+      'primary': 3,
+      'middle': 4,
+      'upper primary': 4,
+      'middle school': 4,
+      'secondary': 5,
+      'senior secondary': 6,
+      'higher secondary': 6,
+    };
+
+    const aKey = a.name.toLowerCase().trim();
+    const bKey = b.name.toLowerCase().trim();
+
+    // Check if the full level name matches
+    const aOrder = levelOrder[aKey];
+    const bOrder = levelOrder[bKey];
+
+    if (aOrder && bOrder) return aOrder - bOrder;
+    if (aOrder) return -1;
+    if (bOrder) return 1;
+
+    // Try to match partial strings for compound names
+    for (const [key, order] of Object.entries(levelOrder)) {
+      if (aKey.includes(key)) {
+        const bNumMatch = bKey.match(/\d+/);
+        const bNum = bNumMatch ? parseInt(bNumMatch[0]) : null;
+        if (bNum !== null) {
+          return order <= 3 ? -1 : 1;
+        }
+        return -1;
+      }
+      if (bKey.includes(key)) {
+        const aNumMatch = aKey.match(/\d+/);
+        const aNum = aNumMatch ? parseInt(aNumMatch[0]) : null;
+        if (aNum !== null) {
+          return order <= 3 ? 1 : -1;
+        }
+        return 1;
+      }
+    }
+
+    // Otherwise, try to parse as numbers
+    const aNum = parseInt(aKey.match(/\d+/)?.[0] || '');
+    const bNum = parseInt(bKey.match(/\d+/)?.[0] || '');
+
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return aNum - bNum;
+    }
+
+    if (!isNaN(aNum)) return -1;
+    if (!isNaN(bNum)) return 1;
+
+    return aKey.localeCompare(bKey);
+  };
+
+  // Group classes by school level (sorted)
+  const classesByLevel = levels
+    .sort(sortLevels)
+    .map(level => ({
+      level,
+      classes: classes.filter(cls => cls.school_level_id === level.id).sort(sortClasses)
+    }))
+    .filter(group => group.classes.length > 0);
 
   // Get class name by ID
   const getClassName = (classId?: string) => {
@@ -124,49 +229,57 @@ const SubjectManagement: React.FC = () => {
     ? subjects
     : subjects.filter(sub => sub.class_id === filterClassId);
 
-  // Group subjects by class for display
-  const subjectsByClass = classes.map(cls => ({
-    class: cls,
-    subjects: subjects.filter(sub => sub.class_id === cls.id)
-  })).filter(group => group.subjects.length > 0);
+  // Group subjects by class for display (sorted serially by level and class)
+  const subjectsByClass = levels
+    .sort(sortLevels)
+    .flatMap(level =>
+      classes
+        .filter(cls => cls.school_level_id === level.id)
+        .sort(sortClasses)
+        .map(cls => ({
+          class: cls,
+          subjects: subjects.filter(sub => sub.class_id === cls.id)
+        }))
+    )
+    .filter(group => group.subjects.length > 0);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-8 lg:p-12">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-50/50 p-3 sm:p-4 md:p-8 lg:p-12">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
 
         {/* Page Header */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary/10 rounded-xl shadow-sm border border-primary/10">
-              <BookOpen className="w-6 h-6 text-primary" />
+        <div className="flex flex-col gap-1 sm:gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2.5 bg-primary/10 rounded-lg sm:rounded-xl shadow-sm border border-primary/10">
+              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Subject Management</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Subject Management</h1>
           </div>
-          <p className="text-muted-foreground ml-[3.25rem]">
+          <p className="text-xs sm:text-sm text-muted-foreground ml-11 sm:ml-[3.25rem]">
             Create and manage subjects for each class.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
 
           {/* Left Column - Add Subject Form */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="w-5 h-5" /> Add New Subject
+          <div className="space-y-4 sm:space-y-6">
+            <Card className="shadow-sm">
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> Add New Subject
                 </CardTitle>
-                <CardDescription>Create a subject and assign it to a class</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">Create a subject and assign it to a class</CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmitSubject} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="classSelect">Assign to Class</Label>
+              <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+                <form onSubmit={handleSubmitSubject} className="space-y-3 sm:space-y-4">
+                  <div className="space-y-1 sm:space-y-2">
+                    <Label htmlFor="classSelect" className="text-xs sm:text-sm">Assign to Class</Label>
                     <Select
                       value={newSubject.classId}
                       onValueChange={(val) => setNewSubject({ ...newSubject, classId: val })}
                     >
-                      <SelectTrigger className="bg-white">
+                      <SelectTrigger className="bg-white text-sm">
                         <SelectValue placeholder="Select a class" />
                       </SelectTrigger>
                       <SelectContent>
@@ -176,7 +289,7 @@ const SubjectManagement: React.FC = () => {
                               {level.name}
                             </div>
                             {levelClasses.map((cls) => (
-                              <SelectItem key={cls.id} value={cls.id}>
+                              <SelectItem key={cls.id} value={cls.id} className="text-sm">
                                 {cls.name}
                               </SelectItem>
                             ))}
@@ -186,27 +299,29 @@ const SubjectManagement: React.FC = () => {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="subjectName">Subject Name</Label>
+                  <div className="space-y-1 sm:space-y-2">
+                    <Label htmlFor="subjectName" className="text-xs sm:text-sm">Subject Name</Label>
                     <Input
                       id="subjectName"
                       placeholder="e.g. Advanced Calculus"
                       value={newSubject.name}
                       onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
+                      className="text-sm"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="subjectCode">Subject Code</Label>
+                  <div className="space-y-1 sm:space-y-2">
+                    <Label htmlFor="subjectCode" className="text-xs sm:text-sm">Subject Code</Label>
                     <Input
                       id="subjectCode"
                       placeholder="e.g. MATH-401"
                       value={newSubject.code}
                       onChange={(e) => setNewSubject({ ...newSubject, code: e.target.value })}
+                      className="text-sm"
                     />
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  <Button type="submit" className="w-full text-sm" disabled={isSubmitting}>
                     {isSubmitting ? (
                       <Loader2 className="animate-spin mr-2 w-4 h-4" />
                     ) : (
@@ -220,29 +335,29 @@ const SubjectManagement: React.FC = () => {
           </div>
 
           {/* Right Column - Subjects organized by Class */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <Card className="lg:col-span-2 shadow-sm">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col gap-3 sm:gap-4">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="w-5 h-5" /> Subjects by Class
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" /> Subjects by Class
                   </CardTitle>
-                  <CardDescription>All subjects organized by their assigned class</CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">All subjects organized by their assigned class</CardDescription>
                 </div>
-                <div className="w-full sm:w-48">
+                <div className="w-full">
                   <Select value={filterClassId} onValueChange={setFilterClassId}>
-                    <SelectTrigger className="bg-white">
+                    <SelectTrigger className="bg-white text-sm">
                       <SelectValue placeholder="Filter by class" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Classes</SelectItem>
+                      <SelectItem value="all" className="text-sm">All Classes</SelectItem>
                       {classesByLevel.map(({ level, classes: levelClasses }) => (
                         <React.Fragment key={level.id}>
                           <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-slate-50">
                             {level.name}
                           </div>
                           {levelClasses.map((cls) => (
-                            <SelectItem key={cls.id} value={cls.id}>
+                            <SelectItem key={cls.id} value={cls.id} className="text-sm">
                               {cls.name}
                             </SelectItem>
                           ))}
@@ -253,7 +368,7 @@ const SubjectManagement: React.FC = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
               {loading ? (
                 <div className="flex justify-center p-8">
                   <Loader2 className="animate-spin" />
@@ -261,92 +376,146 @@ const SubjectManagement: React.FC = () => {
               ) : filterClassId === "all" ? (
                 // Show grouped by class
                 subjectsByClass.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
+                  <p className="text-center text-muted-foreground py-8 text-sm">
                     No subjects found. Add a subject to get started.
                   </p>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     {subjectsByClass.map(({ class: cls, subjects: classSubjects }) => (
-                      <div key={cls.id} className="space-y-3">
+                      <div key={cls.id} className="space-y-2 sm:space-y-3">
                         <div className="flex items-center gap-2 border-b pb-2">
-                          <School className="w-4 h-4 text-muted-foreground" />
-                          <h4 className="font-semibold text-slate-700">{cls.name}</h4>
-                          <Badge variant="secondary" className="ml-auto">
-                            {classSubjects.length} subject{classSubjects.length !== 1 ? "s" : ""}
+                          <School className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                          <h4 className="font-semibold text-sm sm:text-base text-slate-700 truncate">{cls.name}</h4>
+                          <Badge variant="secondary" className="ml-auto text-xs">
+                            {classSubjects.length}
                           </Badge>
                         </div>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Subject Name</TableHead>
-                              <TableHead>Code</TableHead>
-                              <TableHead className="text-right w-20">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {classSubjects.map((sub) => (
-                              <TableRow key={sub.id}>
-                                <TableCell className="font-medium">{sub.name}</TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{sub.code}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    onClick={() => handleDeleteSubject(sub.id)}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </TableCell>
+
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-2">
+                          {classSubjects.map((sub) => (
+                            <div key={sub.id} className="p-3 bg-slate-50 rounded-lg flex items-center justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm text-slate-900 truncate">{sub.name}</p>
+                                <Badge variant="outline" className="text-xs mt-1 w-fit">{sub.code}</Badge>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0 h-8 w-8"
+                                onClick={() => handleDeleteSubject(sub.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-xs">Subject Name</TableHead>
+                                <TableHead className="text-xs">Code</TableHead>
+                                <TableHead className="text-right w-20 text-xs">Actions</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {classSubjects.map((sub) => (
+                                <TableRow key={sub.id}>
+                                  <TableCell className="font-medium text-sm">{sub.name}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="text-xs">{sub.code}</Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={() => handleDeleteSubject(sub.id)}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )
               ) : (
-                // Show filtered table
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Subject Name</TableHead>
-                      <TableHead>Code</TableHead>
-                      <TableHead className="text-right w-20">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSubjects.length === 0 ? (
+                // Show filtered table/cards
+                <div className="md:hidden space-y-2">
+                  {filteredSubjects.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8 text-sm">
+                      No subjects found for this class.
+                    </p>
+                  ) : (
+                    filteredSubjects.map((sub) => (
+                      <div key={sub.id} className="p-3 bg-slate-50 rounded-lg flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm text-slate-900 truncate">{sub.name}</p>
+                          <Badge variant="outline" className="text-xs mt-1 w-fit">{sub.code}</Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0 h-8 w-8"
+                          onClick={() => handleDeleteSubject(sub.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Desktop Table for Filtered View */}
+              {filterClassId !== "all" && (
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                          No subjects found for this class.
-                        </TableCell>
+                        <TableHead className="text-xs">Subject Name</TableHead>
+                        <TableHead className="text-xs">Code</TableHead>
+                        <TableHead className="text-right w-20 text-xs">Actions</TableHead>
                       </TableRow>
-                    ) : (
-                      filteredSubjects.map((sub) => (
-                        <TableRow key={sub.id}>
-                          <TableCell className="font-medium">{sub.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{sub.code}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteSubject(sub.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSubjects.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8 text-sm">
+                            No subjects found for this class.
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        filteredSubjects.map((sub) => (
+                          <TableRow key={sub.id}>
+                            <TableCell className="font-medium text-sm">{sub.name}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">{sub.code}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteSubject(sub.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>

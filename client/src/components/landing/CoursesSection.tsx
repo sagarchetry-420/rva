@@ -14,17 +14,29 @@ const courses = [
 
 export default function CoursesSection() {
   return (
-    <section id="courses" className="py-24">
-      <div className="container mx-auto px-4">
+    <section id="courses" className="py-24 relative overflow-hidden bg-gradient-to-b from-amber-50 to-white">
+      {/* Decorative shapes */}
+      <motion.div 
+        animate={{ y: [0, -30, 0] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-20 right-10 w-40 h-40 rounded-full bg-orange-300 opacity-20"
+      />
+      <motion.div 
+        animate={{ scale: [1, 1.1, 1] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute bottom-20 left-20 w-32 h-32 rounded-full bg-teal-200 opacity-15"
+      />
+
+      <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="font-display text-4xl font-bold mb-4 text-foreground">Our Courses</h2>
-          <div className="w-16 h-1 bg-primary rounded mx-auto mb-4" />
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <h2 className="font-display text-4xl font-bold mb-4 text-gray-900">Our Courses</h2>
+          <div className="w-16 h-1 bg-gradient-to-r from-teal-500 to-orange-500 rounded mx-auto mb-4" />
+          <p className="text-gray-700 max-w-2xl mx-auto">
             A comprehensive curriculum designed to develop well-rounded individuals ready for the future.
           </p>
         </motion.div>
@@ -37,13 +49,13 @@ export default function CoursesSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
-              className="group bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:border-primary/30 transition-all duration-300"
+              className="group bg-white border-2 border-amber-100 rounded-2xl p-6 hover:shadow-lg hover:border-teal-300 hover:bg-amber-50 transition-all duration-300"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center mb-4 group-hover:bg-teal-100 group-hover:text-teal-600 transition-colors">
                 <course.icon className="w-6 h-6" />
               </div>
-              <h3 className="font-display font-semibold text-lg mb-2 text-card-foreground">{course.title}</h3>
-              <p className="text-sm text-muted-foreground">{course.desc}</p>
+              <h3 className="font-display font-semibold text-lg mb-2 text-gray-900">{course.title}</h3>
+              <p className="text-sm text-gray-600">{course.desc}</p>
             </motion.div>
           ))}
         </div>

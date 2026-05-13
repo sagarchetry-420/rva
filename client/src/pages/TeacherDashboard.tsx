@@ -533,7 +533,7 @@ export default function TeacherDashboard() {
                                 notice.target_audience === "All"
                                   ? "bg-blue-100 text-blue-700"
                                   : notice.target_audience === "Staff"
-                                    ? "bg-purple-100 text-purple-700"
+                                    ? "bg-orange-100 text-orange-700"
                                     : "bg-amber-100 text-amber-700"
                               }`}
                             >
@@ -857,7 +857,7 @@ export default function TeacherDashboard() {
                               notice.target_audience === "All"
                                 ? "bg-blue-100 text-blue-700"
                                 : notice.target_audience === "Staff"
-                                  ? "bg-purple-100 text-purple-700"
+                                  ? "bg-orange-100 text-orange-700"
                                   : "bg-amber-100 text-amber-700"
                             }`}
                           >

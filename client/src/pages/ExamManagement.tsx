@@ -183,7 +183,7 @@ export default function ExamManagement() {
 
   const getColorForIndex = (index: number) => {
     const colors = [
-      { bg: 'bg-violet-100', text: 'text-violet-600', badge: 'bg-violet-50 text-violet-700' },
+      { bg: 'bg-orange-100', text: 'text-orange-600', badge: 'bg-orange-50 text-orange-700' },
       { bg: 'bg-amber-100', text: 'text-amber-600', badge: 'bg-amber-50 text-amber-700' },
       { bg: 'bg-green-100', text: 'text-green-600', badge: 'bg-green-50 text-green-700' }
     ];
@@ -196,8 +196,8 @@ export default function ExamManagement() {
       <div className="flex flex-col gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-violet-100 rounded-xl shadow-sm">
-              <FileText className="w-6 h-6 text-violet-600" />
+            <div className="p-2.5 bg-orange-100 rounded-xl shadow-sm">
+              <FileText className="w-6 h-6 text-orange-600" />
             </div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
               Exam Management
@@ -210,7 +210,7 @@ export default function ExamManagement() {
 
         <Button
           onClick={() => setShowForm(!showForm)}
-          className="gap-2 bg-violet-600 hover:bg-violet-700 shadow-sm rounded-xl h-10 sm:h-11 w-full sm:w-auto sm:self-start"
+          className="gap-2 bg-orange-600 hover:bg-orange-700 shadow-sm rounded-xl h-10 sm:h-11 w-full sm:w-auto sm:self-start"
         >
           <Plus className="w-4 h-4" /> {showForm ? 'Hide Form' : 'Schedule Exam'}
         </Button>
@@ -218,16 +218,16 @@ export default function ExamManagement() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-        <Card className="bg-violet-50/80 border border-black/5 hover:shadow-md transition-all">
+        <Card className="bg-orange-50/80 border border-black/5 hover:shadow-md transition-all">
           <CardContent className="p-3 sm:p-4 md:p-5 flex items-center justify-between">
             <div>
               <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Total Exams</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-violet-600">
+              <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-orange-600">
                 {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : totalExams}
               </p>
             </div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-violet-100 flex items-center justify-center">
-              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-violet-500" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />
             </div>
           </CardContent>
         </Card>
@@ -383,7 +383,7 @@ export default function ExamManagement() {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-xl bg-violet-600 hover:bg-violet-700"
+                  className="rounded-xl bg-orange-600 hover:bg-orange-700"
                 >
                   {isSubmitting ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -402,7 +402,7 @@ export default function ExamManagement() {
       {loading ? (
         <Card className="border-0 shadow-sm rounded-2xl bg-white">
           <CardContent className="p-8 flex flex-col items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-violet-500 mb-4" />
+            <Loader2 className="w-8 h-8 animate-spin text-orange-500 mb-4" />
             <p className="text-gray-500">Loading exams...</p>
           </CardContent>
         </Card>

@@ -12,11 +12,19 @@ const toppers = [
 
 export default function ToppersSection() {
   return (
-    <section id="toppers" className="py-24 relative overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-primary">
+    <section id="toppers" className="py-24 relative overflow-hidden bg-gradient-to-br from-orange-400 via-amber-300 to-yellow-300">
       {/* Decorative Background Patterns */}
-      <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-secondary/20 rounded-full blur-[120px] pointer-events-none translate-x-1/3 -translate-y-1/3" />
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-accent/20 rounded-full blur-[120px] pointer-events-none -translate-x-1/3 translate-y-1/3" />
+      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+      <motion.div 
+        animate={{ scale: [1, 1.1, 1] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/20 rounded-full blur-[120px] pointer-events-none translate-x-1/3 -translate-y-1/3" 
+      />
+      <motion.div 
+        animate={{ rotate: 360 }}
+        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+        className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-teal-400/10 rounded-full blur-[120px] pointer-events-none -translate-x-1/3 translate-y-1/3" 
+      />
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
@@ -25,13 +33,13 @@ export default function ToppersSection() {
           viewport={{ once: true }}
           className="text-center mb-20"
         >
-          <div className="inline-flex items-center justify-center p-4 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 mb-6 shadow-xl">
-            <Trophy className="w-10 h-10 text-secondary" />
+          <div className="inline-flex items-center justify-center p-4 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30 mb-6 shadow-xl">
+            <Trophy className="w-10 h-10 text-white" />
           </div>
           <h2 className="font-display text-4xl lg:text-5xl font-extrabold mb-6 text-white tracking-tight">
-            Hall of <span className="text-secondary">Fame</span>
+            Hall of <span className="text-teal-700">Fame</span>
           </h2>
-          <p className="text-primary-foreground/80 max-w-2xl mx-auto text-lg leading-relaxed font-medium">
+          <p className="text-white/80 max-w-2xl mx-auto text-lg leading-relaxed font-medium">
             Celebrating academic excellence. Meet the brilliant minds who have set new benchmarks and made our academy proud.
           </p>
         </motion.div>
@@ -46,20 +54,20 @@ export default function ToppersSection() {
               transition={{ delay: i * 0.1, duration: 0.5 }}
               className="group relative"
             >
-              <div className="absolute inset-0 bg-secondary/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-white/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 text-center hover:-translate-y-2 transition-transform duration-300 overflow-hidden shadow-2xl">
                 
                 {/* Ranking Badge */}
-                <div className="absolute top-0 right-6 w-10 h-12 bg-secondary text-secondary-foreground flex flex-col items-center justify-center rounded-b-lg shadow-lg font-bold text-lg border border-secondary/50">
-                  <Star className="w-3 h-3 absolute -top-1 fill-white/50 text-white/50" />
+                <div className="absolute top-0 right-6 w-10 h-12 bg-teal-700 text-white flex flex-col items-center justify-center rounded-b-lg shadow-lg font-bold text-lg border border-teal-600/50">
+                  <Star className="w-3 h-3 absolute -top-1 fill-yellow-300/50 text-yellow-300/50" />
                   #{i + 1}
                 </div>
 
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-white/20 to-white/5 mx-auto mb-6 flex items-center justify-center border-4 border-white/10 shadow-inner group-hover:scale-110 group-hover:border-secondary/50 transition-all duration-300">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-white/20 to-white/5 mx-auto mb-6 flex items-center justify-center border-4 border-white/10 shadow-inner group-hover:scale-110 group-hover:border-white/50 transition-all duration-300">
                   <span className="font-display font-bold text-4xl text-white">{t.image}</span>
                 </div>
                 
-                <h3 className="font-display font-bold text-2xl mb-1 text-white group-hover:text-secondary transition-colors">{t.name}</h3>
+                <h3 className="font-display font-bold text-2xl mb-1 text-white group-hover:text-yellow-200 transition-colors">{t.name}</h3>
                 <p className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/10 text-sm font-medium text-white/90 mb-6 mt-2 tracking-wide backdrop-blur-sm">
                   {t.stream} • Class of {t.year}
                 </p>

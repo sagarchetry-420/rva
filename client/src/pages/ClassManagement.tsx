@@ -92,11 +92,99 @@ const ClassManagement: React.FC = () => {
     }
   };
 
-  // Group classes by school level
-  const classesByLevel = levels.map(level => ({
-    level,
-    classes: classes.filter(cls => cls.school_level_id === level.id)
-  }));
+  // Sort levels and classes serially
+  const sortClasses = (a: ClassRecord, b: ClassRecord) => {
+    const aName = a.name.toLowerCase().trim();
+    const bName = b.name.toLowerCase().trim();
+
+    // Extract numeric values from class names
+    const aNumMatch = aName.match(/\d+/);
+    const bNumMatch = bName.match(/\d+/);
+
+    const aNum = aNumMatch ? parseInt(aNumMatch[0]) : null;
+    const bNum = bNumMatch ? parseInt(bNumMatch[0]) : null;
+
+    // If both have numeric parts, sort by number
+    if (aNum !== null && bNum !== null) {
+      return aNum - bNum;
+    }
+
+    // If only one has a numeric part, number comes first
+    if (aNum !== null) return -1;
+    if (bNum !== null) return 1;
+
+    // Otherwise sort alphabetically
+    return aName.localeCompare(bName);
+  };
+
+  const sortLevels = (a: SchoolLevel, b: SchoolLevel) => {
+    const levelOrder: { [key: string]: number } = {
+      'nursery': 1,
+      'play': 1,
+      'pre-primary': 2,
+      'kg': 2,
+      'lkg': 2,
+      'ukg': 2,
+      'primary': 3,
+      'middle': 4,
+      'upper primary': 4,
+      'middle school': 4,
+      'secondary': 5,
+      'senior secondary': 6,
+      'higher secondary': 6,
+    };
+
+    const aKey = a.name.toLowerCase().trim();
+    const bKey = b.name.toLowerCase().trim();
+
+    // Check if the full level name matches
+    const aOrder = levelOrder[aKey];
+    const bOrder = levelOrder[bKey];
+
+    if (aOrder && bOrder) return aOrder - bOrder;
+    if (aOrder) return -1;
+    if (bOrder) return 1;
+
+    // Try to match partial strings for compound names
+    for (const [key, order] of Object.entries(levelOrder)) {
+      if (aKey.includes(key)) {
+        const bNumMatch = bKey.match(/\d+/);
+        const bNum = bNumMatch ? parseInt(bNumMatch[0]) : null;
+        if (bNum !== null) {
+          return order <= 3 ? -1 : 1;
+        }
+        return -1;
+      }
+      if (bKey.includes(key)) {
+        const aNumMatch = aKey.match(/\d+/);
+        const aNum = aNumMatch ? parseInt(aNumMatch[0]) : null;
+        if (aNum !== null) {
+          return order <= 3 ? 1 : -1;
+        }
+        return 1;
+      }
+    }
+
+    // Otherwise, try to parse as numbers
+    const aNum = parseInt(aKey.match(/\d+/)?.[0] || '');
+    const bNum = parseInt(bKey.match(/\d+/)?.[0] || '');
+
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return aNum - bNum;
+    }
+
+    if (!isNaN(aNum)) return -1;
+    if (!isNaN(bNum)) return 1;
+
+    return aKey.localeCompare(bKey);
+  };
+
+  const classesByLevel = levels
+    .sort(sortLevels)
+    .map(level => ({
+      level,
+      classes: classes.filter(cls => cls.school_level_id === level.id)
+    }));
 
   // Count total classes
   const totalClasses = classes.length;
@@ -237,13 +325,15 @@ const ClassManagement: React.FC = () => {
                         <Table>
                           <TableHeader>
                             <TableRow>
+                              <TableHead className="w-12">S.No</TableHead>
                               <TableHead>Class Name</TableHead>
                               <TableHead className="text-right w-20">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {levelClasses.map((cls) => (
+                            {levelClasses.map((cls, index) => (
                               <TableRow key={cls.id}>
+                                <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                                 <TableCell className="font-medium">{cls.name}</TableCell>
                                 <TableCell className="text-right">
                                   <Button

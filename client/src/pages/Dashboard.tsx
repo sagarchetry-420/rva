@@ -148,19 +148,19 @@ export default function Dashboard() {
     return '📚';
   };
 
-  // Brand colors: Purple, Gold/Amber, Green
-  const subjectColors = ['bg-violet-100', 'bg-amber-100', 'bg-green-100', 'bg-violet-100', 'bg-amber-100', 'bg-green-100'];
+  // Brand colors: Gray tones instead of vibrant colors
+  const subjectColors = ['bg-gray-200', 'bg-gray-200', 'bg-gray-200', 'bg-gray-200', 'bg-gray-200', 'bg-gray-200'];
 
-  // Brand stat cards (Purple, Gold/Amber, Green)
+  // Brand stat cards - using gray tones to match navbar
   const statCards = [
     {
       icon: Users,
       label: "Students",
       value: stats.totalStudents > 1000 ? `${(stats.totalStudents / 1000).toFixed(1)}K` : stats.totalStudents.toString(),
       rawValue: stats.totalStudents,
-      color: "bg-violet-50/80",
-      iconBg: "bg-violet-100",
-      iconColor: "text-violet-500",
+      color: "bg-gray-100/80",
+      iconBg: "bg-gray-200",
+      iconColor: "text-gray-700",
       path: "/dashboard/students",
     },
     {
@@ -168,9 +168,9 @@ export default function Dashboard() {
       label: "Teachers",
       value: stats.totalTeachers.toString(),
       rawValue: stats.totalTeachers,
-      color: "bg-amber-50/80",
-      iconBg: "bg-amber-100",
-      iconColor: "text-amber-500",
+      color: "bg-gray-100/80",
+      iconBg: "bg-gray-200",
+      iconColor: "text-gray-700",
       path: "/dashboard/teachers",
     },
     {
@@ -178,16 +178,16 @@ export default function Dashboard() {
       label: "Classes",
       value: stats.totalClasses.toString(),
       rawValue: stats.totalClasses,
-      color: "bg-green-50/80",
-      iconBg: "bg-green-100",
-      iconColor: "text-green-500",
+      color: "bg-gray-100/80",
+      iconBg: "bg-gray-200",
+      iconColor: "text-gray-700",
       path: "/dashboard/classes",
     },
   ];
 
   const totalStudentsInClasses = classStats.reduce((acc, c) => acc + c.studentCount, 0);
-  // Brand colors: Purple, Amber/Gold, Green
-  const brandChartColors = ['#8B5CF6', '#F59E0B', '#16A34A'];
+  // Gray chart colors instead of brand colors
+  const brandChartColors = ['#6B7280', '#9CA3AF', '#D1D5DB'];
   const classDistribution = classStats.slice(0, 4).map((c, i) => ({
     name: c.name,
     value: c.studentCount,
@@ -238,7 +238,7 @@ export default function Dashboard() {
             <CardHeader className="pb-4 bg-gray-50/50 border-b border-gray-50">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-bold text-gray-800">Class Overview</CardTitle>
-                <Link to="/dashboard/classes" className="text-sm text-violet-600 font-semibold hover:text-violet-700 flex items-center gap-1 group">
+                <Link to="/dashboard/classes" className="text-sm text-gray-600 font-semibold hover:text-gray-800 flex items-center gap-1 group">
                   View All <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
@@ -246,23 +246,23 @@ export default function Dashboard() {
             <CardContent className="pt-6">
               {statsLoading ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
                 </div>
               ) : classStats.length === 0 ? (
                 <div className="text-center py-10 text-gray-500">
                   <School className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                   <p className="font-medium text-gray-600">No classes found</p>
-                  <Button size="sm" className="mt-4 bg-violet-600 hover:bg-violet-700 rounded-xl" asChild>
+                  <Button size="sm" className="mt-4 bg-gray-700 hover:bg-gray-800 rounded-xl" asChild>
                     <Link to="/dashboard/classes">Add Class</Link>
                   </Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4">
                   {classStats.slice(0, 4).map((cls, i) => (
-                    <div key={cls.id} className="border border-gray-100 rounded-2xl p-4 md:p-5 hover:border-violet-200 hover:bg-violet-50/30 transition-colors group">
+                    <div key={cls.id} className="border border-gray-200 rounded-2xl p-4 md:p-5 hover:border-gray-300 hover:bg-gray-50 transition-colors group">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className={`w-10 h-10 rounded-xl ${['bg-violet-100', 'bg-amber-100', 'bg-green-100', 'bg-violet-100'][i % 3]} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                          <School className={`w-5 h-5 ${['text-violet-600', 'text-amber-600', 'text-green-600', 'text-violet-600'][i % 3]}`} />
+                        <div className={`w-10 h-10 rounded-xl ${ ['bg-gray-200', 'bg-gray-200', 'bg-gray-200', 'bg-gray-200'][i % 3]} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                          <School className={`w-5 h-5 ${ ['text-gray-700', 'text-gray-700', 'text-gray-700', 'text-gray-700'][i % 3]}`} />
                         </div>
                       </div>
                       <p className="font-bold text-gray-800">{cls.name}</p>
@@ -280,7 +280,7 @@ export default function Dashboard() {
             <CardHeader className="pb-4 bg-gray-50/50 border-b border-gray-50">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-bold text-gray-800">Top Students</CardTitle>
-                <Link to="/dashboard/students" className="text-sm text-violet-600 font-semibold hover:text-violet-700 flex items-center gap-1 group">
+                <Link to="/dashboard/students" className="text-sm text-orange-600 font-semibold hover:text-orange-700 flex items-center gap-1 group">
                   View All <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
@@ -288,13 +288,13 @@ export default function Dashboard() {
             <CardContent className="pt-0 px-0">
               {statsLoading ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
                 </div>
               ) : topStudents.length === 0 ? (
                 <div className="text-center py-10 text-gray-500 px-6">
                   <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                   <p className="font-medium text-gray-600">No students found</p>
-                  <Button size="sm" className="mt-4 bg-violet-600 hover:bg-violet-700 rounded-xl" asChild>
+                  <Button size="sm" className="mt-4 bg-gray-700 hover:bg-gray-800 rounded-xl" asChild>
                     <Link to="/dashboard/students/add">Add Student</Link>
                   </Button>
                 </div>
@@ -313,7 +313,7 @@ export default function Dashboard() {
                         <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="py-4 px-6 whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${['bg-violet-500', 'bg-amber-500', 'bg-green-500'][i % 3]}`}>
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${['bg-gray-700', 'bg-gray-700', 'bg-gray-700'][i % 3]}`}>
                                 {getInitials(student.name)}
                               </div>
                               <span className="font-semibold text-gray-800">{student.name}</span>
@@ -321,7 +321,7 @@ export default function Dashboard() {
                           </td>
                           <td className="py-4 px-6 whitespace-nowrap text-gray-600 font-medium">{student.className}</td>
                           <td className="py-4 px-6 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${student.attendancePercent >= 80 ? 'bg-green-100 text-green-700' : student.attendancePercent >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${student.attendancePercent >= 80 ? 'bg-gray-100 text-gray-700' : student.attendancePercent >= 60 ? 'bg-gray-100 text-gray-700' : 'bg-gray-100 text-gray-700'}`}>
                               {student.attendancePercent}%
                             </span>
                           </td>
@@ -339,7 +339,7 @@ export default function Dashboard() {
             <CardHeader className="pb-4 bg-gray-50/50 border-b border-gray-50">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-bold text-gray-800">Recent Notices</CardTitle>
-                <Link to="/dashboard/notices" className="text-sm text-violet-600 font-semibold hover:text-violet-700 flex items-center gap-1 group">
+                <Link to="/dashboard/notices" className="text-sm text-orange-600 font-semibold hover:text-orange-700 flex items-center gap-1 group">
                   View All <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
@@ -347,20 +347,20 @@ export default function Dashboard() {
             <CardContent className="pt-6 space-y-5">
               {statsLoading ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
                 </div>
               ) : recentNotices.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                   <p className="font-medium">No notices yet</p>
-                  <Button size="sm" className="mt-4 bg-violet-600 hover:bg-violet-700 rounded-xl" asChild>
+                  <Button size="sm" className="mt-4 bg-gray-700 hover:bg-gray-800 rounded-xl" asChild>
                     <Link to="/dashboard/notices/create">Create Notice</Link>
                   </Button>
                 </div>
               ) : (
                 recentNotices.map((notice, i) => (
                   <div key={notice.id} className="flex items-start gap-4 group">
-                    <div className={`shrink-0 w-12 h-12 rounded-2xl ${['bg-violet-100 text-violet-600', 'bg-amber-100 text-amber-600', 'bg-green-100 text-green-600'][i % 3]} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <div className={`shrink-0 w-12 h-12 rounded-2xl ${['bg-gray-200 text-gray-700', 'bg-gray-200 text-gray-700', 'bg-gray-200 text-gray-700'][i % 3]} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                       <Bell className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0 pt-0.5">
@@ -375,9 +375,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
-                      notice.target_audience === 'All' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
-                      notice.target_audience === 'Students' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                      'bg-purple-50 text-purple-700 border border-purple-100'
+                      notice.target_audience === 'All' ? 'bg-gray-100 text-gray-700 border border-gray-200' :
+                      notice.target_audience === 'Students' ? 'bg-gray-100 text-gray-700 border border-gray-200' :
+                      'bg-gray-100 text-gray-700 border border-gray-200'
                     }`}>
                       {notice.target_audience}
                     </span>
@@ -392,16 +392,37 @@ export default function Dashboard() {
         <div className="md:col-span-12 xl:col-span-4 space-y-6">
           {/* Subjects / Library */}
           <Card className="border-0 shadow-sm rounded-2xl bg-white hover:shadow-md transition-shadow">
-            <CardHeader className="pb-4">
+            <CardHeader className="bg-gray-900 text-white rounded-t-2xl">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-bold text-gray-800">Subjects</CardTitle>
-                <Link to="/dashboard/classes" className="text-sm text-violet-600 font-semibold hover:text-violet-700">View All</Link>
+                <CardTitle className="text-lg font-bold text-white">Total Notices</CardTitle>
               </div>
             </CardHeader>
+            <CardContent className="bg-gray-800 text-white rounded-b-2xl p-6 relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/3"></div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
+                  <Megaphone className="w-5 h-5 text-white" />
+                </div>
+                {stats.totalNotices > 0 && (
+                  <span className="text-xs font-bold bg-white/20 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                    <TrendingUp className="w-3.5 h-3.5" /> Active
+                  </span>
+                )}
+              </div>
+              <p className="text-5xl font-extrabold mb-2 tracking-tight">
+                {statsLoading ? <Loader2 className="w-8 h-8 animate-spin text-white/70" /> : stats.totalNotices}
+              </p>
+              <p className="text-sm text-white/80 font-medium mb-4">
+                Total announcements active in the system.
+              </p>
+              <Link to="/dashboard/notices" className="text-sm font-bold text-white flex items-center gap-1 group w-max">
+                Manage notices <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </CardContent>
             <CardContent className="space-y-2">
               {statsLoading ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
                 </div>
               ) : subjects.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -423,7 +444,7 @@ export default function Dashboard() {
                         <p className="text-xs text-gray-500 font-medium mt-0.5">Code: {subject.code}</p>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-violet-500 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-orange-500 transition-colors" />
                   </div>
                 ))
               )}
@@ -431,11 +452,11 @@ export default function Dashboard() {
           </Card>
 
           {/* Total Stats Summary */}
-          <Card className="border-0 shadow-sm rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 text-white overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/3"></div>
+          <Card className="border-0 shadow-sm rounded-2xl bg-gray-900 text-white overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/3"></div>
             <CardContent className="p-6 relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
                   <Megaphone className="w-5 h-5 text-white" />
                 </div>
                 {stats.totalNotices > 0 && (
@@ -457,13 +478,13 @@ export default function Dashboard() {
           </Card>
 
           {/* Quick Actions Card */}
-          <Card className="border-0 shadow-sm rounded-2xl overflow-hidden bg-[#1e293b] text-white">
+          <Card className="border-0 shadow-sm rounded-2xl overflow-hidden bg-gray-800 text-white">
             <CardContent className="p-6 relative">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 rounded-full blur-xl -translate-y-1/2 translate-x-1/2"></div>
-              <span className="text-xs font-bold bg-indigo-500/30 text-indigo-200 px-2.5 py-1 rounded-full mb-4 inline-block">Quick Actions</span>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-y-1/2 translate-x-1/2"></div>
+              <span className="text-xs font-bold bg-white/10 text-gray-300 px-2.5 py-1 rounded-full mb-4 inline-block">Quick Actions</span>
               <h3 className="text-xl font-bold mb-5">Manage your school</h3>
               <div className="space-y-3 relative z-10">
-                <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 w-full justify-start rounded-xl h-11" asChild>
+                <Button size="sm" className="bg-gray-700 hover:bg-gray-600 w-full justify-start rounded-xl h-11" asChild>
                   <Link to="/dashboard/students/add">
                     <UserPlus className="w-4 h-4 mr-3" /> Add Student
                   </Link>
@@ -498,7 +519,7 @@ export default function Dashboard() {
             <CardContent>
               {statsLoading ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
                 </div>
               ) : classDistribution.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 font-medium">
@@ -554,7 +575,7 @@ export default function Dashboard() {
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-bold text-gray-800">Capacity</CardTitle>
-                <select className="text-xs border-gray-200 rounded-lg px-2.5 py-1.5 bg-gray-50 font-medium text-gray-600 focus:ring-violet-500 focus:border-violet-500 outline-none">
+                <select className="text-xs border-gray-200 rounded-lg px-2.5 py-1.5 bg-gray-50 font-medium text-gray-600 focus:ring-orange-500 focus:border-orange-500 outline-none">
                   <option>All Classes</option>
                 </select>
               </div>
@@ -562,7 +583,7 @@ export default function Dashboard() {
             <CardContent className="space-y-5">
               {statsLoading ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
                 </div>
               ) : classStats.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -580,7 +601,7 @@ export default function Dashboard() {
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                         <div
-                          className={`h-full rounded-full ${['bg-violet-500', 'bg-amber-500', 'bg-green-500'][i % 3]} group-hover:opacity-80 transition-all duration-500 ease-out`}
+                          className={`h-full rounded-full ${ ['bg-gray-700', 'bg-gray-700', 'bg-gray-700'][i % 3]} group-hover:opacity-80 transition-all duration-500 ease-out`}
                           style={{ width: `${percent}%` }}
                         ></div>
                       </div>
@@ -597,26 +618,26 @@ export default function Dashboard() {
               <CardTitle className="text-lg font-bold text-gray-800">Quick Stats</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between p-3.5 bg-violet-50/80 rounded-xl border border-violet-100">
-                <div className="flex items-center gap-2 text-violet-700">
+              <div className="flex items-center justify-between p-3.5 bg-gray-100 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2 text-gray-700">
                   <BookOpen className="w-4 h-4" />
                   <span className="text-sm font-bold">Subjects</span>
                 </div>
-                <span className="font-extrabold text-violet-700 text-base">{stats.totalSubjects}</span>
+                <span className="font-extrabold text-gray-700 text-base">{stats.totalSubjects}</span>
               </div>
-              <div className="flex items-center justify-between p-3.5 bg-emerald-50/80 rounded-xl border border-emerald-100">
-                <div className="flex items-center gap-2 text-emerald-700">
+              <div className="flex items-center justify-between p-3.5 bg-gray-100 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2 text-gray-700">
                   <CheckSquare className="w-4 h-4" />
                   <span className="text-sm font-bold">Records</span>
                 </div>
-                <span className="font-extrabold text-emerald-700 text-base">{stats.totalAttendanceRecords}</span>
+                <span className="font-extrabold text-gray-700 text-base">{stats.totalAttendanceRecords}</span>
               </div>
-              <div className="flex items-center justify-between p-3.5 bg-amber-50/80 rounded-xl border border-amber-100">
-                <div className="flex items-center gap-2 text-amber-700">
+              <div className="flex items-center justify-between p-3.5 bg-gray-100 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2 text-gray-700">
                   <School className="w-4 h-4" />
                   <span className="text-sm font-bold">Rooms</span>
                 </div>
-                <span className="font-extrabold text-amber-700 text-base">{stats.totalClasses}</span>
+                <span className="font-extrabold text-gray-700 text-base">{stats.totalClasses}</span>
               </div>
             </CardContent>
           </Card>

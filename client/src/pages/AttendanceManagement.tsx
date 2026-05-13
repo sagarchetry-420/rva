@@ -158,7 +158,7 @@ export default function AttendanceManagement() {
   };
 
   const getAvatarColor = (index: number) => {
-    const colors = ['bg-violet-500', 'bg-amber-500', 'bg-green-500', 'bg-blue-500', 'bg-pink-500'];
+    const colors = ['bg-orange-500', 'bg-amber-500', 'bg-green-500', 'bg-blue-500', 'bg-pink-500'];
     return colors[index % 5];
   };
 
@@ -168,8 +168,8 @@ export default function AttendanceManagement() {
       <div className="flex flex-col gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-violet-100 rounded-xl shadow-sm">
-              <ClipboardCheck className="w-6 h-6 text-violet-600" />
+            <div className="p-2.5 bg-orange-100 rounded-xl shadow-sm">
+              <ClipboardCheck className="w-6 h-6 text-orange-600" />
             </div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
               Attendance Management
@@ -247,7 +247,7 @@ export default function AttendanceManagement() {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full h-11 px-3 bg-gray-50 border border-input rounded-xl text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
+                  className="w-full h-11 px-3 bg-gray-50 border border-input rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                 />
               </div>
             </div>
@@ -277,7 +277,7 @@ export default function AttendanceManagement() {
                 <Button
                   onClick={handleSave}
                   disabled={saving || students.length === 0}
-                  className="rounded-xl bg-violet-600 hover:bg-violet-700 ml-auto"
+                  className="rounded-xl bg-orange-600 hover:bg-orange-700 ml-auto"
                 >
                   {saving ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -299,8 +299,8 @@ export default function AttendanceManagement() {
           className="w-full px-4 sm:px-6 py-4 flex items-center justify-between bg-gray-50/50 border-b border-gray-100 hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-violet-100 flex items-center justify-center">
-              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-violet-600" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
             </div>
             <div className="text-left">
               <h3 className="text-base sm:text-lg font-bold text-gray-800">
@@ -312,7 +312,7 @@ export default function AttendanceManagement() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-violet-100 text-violet-700">
+            <Badge variant="secondary" className="bg-orange-100 text-orange-700">
               {selectedDate}
             </Badge>
             {showStudents ? (
@@ -327,7 +327,7 @@ export default function AttendanceManagement() {
           <CardContent className="p-0">
             {loading || studentsLoading ? (
               <div className="p-8 flex flex-col items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-violet-500 mb-4" />
+                <Loader2 className="w-8 h-8 animate-spin text-orange-500 mb-4" />
                 <p className="text-gray-500">Loading students...</p>
               </div>
             ) : students.length === 0 ? (

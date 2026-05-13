@@ -35,7 +35,7 @@ export default function Navbar() {
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/50 shadow-sm py-4"
+      className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm py-4"
     >
       <div className="container mx-auto flex items-center justify-between px-6 md:px-12">
         {/* LOGO */}
@@ -47,7 +47,7 @@ export default function Navbar() {
           />
           <div>
             <span className="font-display font-bold leading-tight block text-slate-900 tracking-tight text-base md:text-lg">Rose Valley Academy</span>
-            <span className="text-[9px] md:text-[10px] text-amber-600 font-semibold tracking-widest uppercase block">Excellence Hub</span>
+            <span className="text-[9px] md:text-[10px] text-orange-600 font-semibold tracking-widest uppercase block">Excellence Hub</span>
           </div>
         </Link>
 
@@ -59,30 +59,30 @@ export default function Navbar() {
               href={l.href}
               className={`text-sm font-medium px-4 py-2 rounded-full transition-all relative group ${
                 activeSection === l.href
-                  ? "text-amber-700 bg-amber-50"
+                  ? "text-orange-700 bg-orange-50"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               {l.label}
-              <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 h-0.5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all duration-300 ${
-                activeSection === l.href ? "w-5" : "w-0 group-hover:w-4"
-              }`} />
+               <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 h-0.5 bg-gradient-to-r from-orange-400 to-amber-500 rounded-full transition-all duration-300 ${
+                  activeSection === l.href ? "w-5" : "w-0 group-hover:w-4"
+                }`} />
             </a>
           ))}
         </div>
 
-        {/* Desktop CTA — Login Portal */}
+        {/* Desktop CTA */}
         <div className="hidden lg:flex items-center gap-4">
-          <Link to="/login">
-            <button className="rounded-full bg-slate-900 text-white hover:bg-slate-800 shadow-lg hover:shadow-slate-900/20 transition-all font-semibold text-sm px-5 py-2.5">
-              Admin Portal
+          <a href="#portals">
+            <button className="rounded-full border border-slate-300 bg-white text-slate-700 hover:text-orange-600 hover:border-orange-300 hover:bg-orange-50 transition-all font-semibold text-sm px-5 py-2.5">
+              Portals
             </button>
-          </Link>
+          </a>
         </div>
 
         {/* Mobile toggle */}
         <button
-          className="lg:hidden p-2 text-slate-900 hover:text-amber-600 hover:bg-slate-100 rounded-full transition-colors"
+          className="lg:hidden p-2 text-slate-900 hover:text-orange-600 hover:bg-slate-100 rounded-full transition-colors"
           onClick={() => setOpen(!open)}
         >
           {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -109,7 +109,7 @@ export default function Navbar() {
                   onClick={() => setOpen(false)}
                   className={`text-base font-semibold py-2 transition-colors inline-block ${
                     activeSection === l.href
-                      ? "text-amber-700"
+                      ? "text-orange-700"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
@@ -123,20 +123,20 @@ export default function Navbar() {
                 className="pt-4 border-t border-slate-100 space-y-3"
               >
                 <Link to="/studentlogin" onClick={() => setOpen(false)}>
-                  <button className="w-full rounded-full py-3 text-base font-semibold bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors">
+                  <button className="w-full rounded-full py-3 text-base font-semibold border border-slate-300 text-slate-700 hover:text-orange-600 hover:border-orange-300 hover:bg-orange-50 transition-colors">
                     Student Portal
                   </button>
                 </Link>
                 <Link to="/teacherlogin" onClick={() => setOpen(false)}>
-                  <button className="w-full rounded-full py-3 text-base font-semibold bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition-colors">
+                  <button className="w-full rounded-full py-3 text-base font-semibold border border-slate-300 text-slate-700 hover:text-orange-600 hover:border-orange-300 hover:bg-orange-50 transition-colors">
                     Teacher Portal
                   </button>
                 </Link>
-                <Link to="/login" onClick={() => setOpen(false)}>
-                  <button className="w-full rounded-full py-3 text-base font-semibold bg-slate-900 text-white shadow-lg hover:bg-slate-800 transition-colors">
-                    Admin Portal
+                <a href="#portals" onClick={() => setOpen(false)}>
+                  <button className="w-full rounded-full py-3 text-base font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors">
+                    Portals
                   </button>
-                </Link>
+                </a>
               </motion.div>
             </div>
           </motion.div>

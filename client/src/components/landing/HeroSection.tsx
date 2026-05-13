@@ -4,7 +4,6 @@ import { useRef, useState, useEffect, useCallback } from "react";
 
 const images = [
   "/school_images/img1.jpg",
-  "/school_images/img2.jpg",
   "/school_images/img3.jpg",
 ];
 
@@ -14,10 +13,9 @@ export default function HeroSection() {
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start start", "end start"]
+    offset: ["start start", "end start"],
   });
 
-  // Parallax effect for the background images
   const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
 
   const paginate = useCallback((newDirection: number) => {
@@ -36,7 +34,6 @@ export default function HeroSection() {
     return () => clearInterval(interval);
   }, [paginate]);
 
-  // Magnetic Button Effect state
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -44,12 +41,19 @@ export default function HeroSection() {
     if (!buttonRef.current) return;
     const { left, top, width, height } = buttonRef.current.getBoundingClientRect();
     const x = (e.clientX - left - width / 2) * 0.2;
-    const y = (e.clientY - top - height / 2) * 0.2;
-    setMousePosition({ x, y });
+    const yPos = (e.clientY - top - height / 2) * 0.2;
+    setMousePosition({ x, y: yPos });
   };
 
   const resetMousePosition = () => {
     setMousePosition({ x: 0, y: 0 });
+  };
+
+  const scrollToSection = (sectionId: string) => {
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   const textVariants = {
@@ -58,35 +62,34 @@ export default function HeroSection() {
       opacity: 1,
       y: 0,
       filter: "blur(0px)",
-      transition: { 
+      transition: {
         delay: custom * 0.15,
         duration: 0.8,
-        ease: [0.215, 0.61, 0.355, 1], // premium easing
-      }
-    })
+        ease: [0.215, 0.61, 0.355, 1],
+      },
+    }),
   };
 
   const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? "100%" : "-100%",
+    enter: (customDirection: number) => ({
+      x: customDirection > 0 ? "100%" : "-100%",
     }),
     center: {
       zIndex: 1,
       x: 0,
     },
-    exit: (direction: number) => ({
+    exit: (customDirection: number) => ({
       zIndex: 0,
-      x: direction < 0 ? "100%" : "-100%",
-    })
+      x: customDirection < 0 ? "100%" : "-100%",
+    }),
   };
 
   return (
-    <section 
+    <section
       ref={containerRef}
-      id="home" 
+      id="home"
       className="relative min-h-[100vh] w-full flex items-center overflow-hidden bg-black text-white"
     >
-      {/* Background Visual Area Slider (Full Width & Height) */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
@@ -97,7 +100,7 @@ export default function HeroSection() {
             animate="center"
             exit="exit"
             transition={{
-              x: { type: "tween", duration: 0.8, ease: "easeOut" }
+              x: { type: "tween", duration: 0.8, ease: "easeOut" },
             }}
             style={{ y }}
             className="absolute inset-0 w-full h-[120%] -top-[10%]"
@@ -111,16 +114,13 @@ export default function HeroSection() {
             />
           </motion.div>
         </AnimatePresence>
-        
-        {/* Dark overlays for text readability */}
+
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent z-10 pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 z-10 pointer-events-none" />
       </div>
 
       <div className="container mx-auto px-6 md:px-12 relative z-20 flex flex-col justify-center h-full pt-28 pb-10 pointer-events-none">
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-0 items-center h-full">
-          
-          {/* Left - Main Content */}
           <div className="lg:col-span-8 xl:col-span-7 flex flex-col items-start text-left z-30 pt-10 lg:pt-0 relative pr-0 lg:pr-10 pointer-events-auto">
             <motion.div
               custom={1}
@@ -134,39 +134,41 @@ export default function HeroSection() {
               </span>
             </motion.div>
 
-            <motion.h1 
+            <motion.h1
               className="font-sans font-extrabold leading-[0.95] tracking-tight text-white mb-8"
               style={{ fontSize: "clamp(3.5rem, 7vw, 6.5rem)" }}
             >
-              <motion.span 
-                custom={2} initial="hidden" animate="visible" variants={textVariants}
-                className="block"
-              >
+              <motion.span custom={2} initial="hidden" animate="visible" variants={textVariants} className="block">
                 Visionary
               </motion.span>
-              <motion.span 
-                custom={3} initial="hidden" animate="visible" variants={textVariants}
+              <motion.span
+                custom={3}
+                initial="hidden"
+                animate="visible"
+                variants={textVariants}
                 className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500 pb-2"
               >
                 Education.
               </motion.span>
             </motion.h1>
-            
-            <motion.p 
-              custom={4} initial="hidden" animate="visible" variants={textVariants}
+
+            <motion.p
+              custom={4}
+              initial="hidden"
+              animate="visible"
+              variants={textVariants}
               className="text-lg md:text-xl text-white/80 leading-relaxed font-light max-w-lg mb-12"
             >
               Empowering the next generation with a world-class environment, innovative learning, and a premium educational experience designed for excellence.
             </motion.p>
-            
-            <motion.div 
-              custom={5} initial="hidden" animate="visible" variants={textVariants}
-              className="flex flex-wrap gap-8 items-center"
-            >
+
+            <motion.div custom={5} initial="hidden" animate="visible" variants={textVariants} className="flex flex-wrap gap-4 items-center">
               <motion.button
+                type="button"
                 ref={buttonRef}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={resetMousePosition}
+                onClick={() => scrollToSection("about")}
                 animate={{ x: mousePosition.x, y: mousePosition.y }}
                 transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
                 className="relative group overflow-hidden rounded-full px-8 py-4 bg-white text-slate-900 font-semibold text-sm tracking-wide transition-all duration-300 hover:scale-105 shadow-xl hover:shadow-white/20"
@@ -178,19 +180,16 @@ export default function HeroSection() {
                 <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-orange-500 to-amber-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500 ease-out z-0" />
               </motion.button>
 
-              <a 
-                href="#about" 
-                className="text-sm font-medium tracking-wide text-white/80 hover:text-white transition-colors relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-px after:bg-white/30 hover:after:bg-white after:transition-colors"
+              <button
+                type="button"
+                onClick={() => scrollToSection("gallery")}
+                className="rounded-full px-7 py-3 border border-white/35 text-white/85 hover:text-white hover:bg-white/10 transition-all text-sm font-semibold tracking-wide"
               >
                 View Gallery
-              </a>
+              </button>
             </motion.div>
 
-            {/* Stat Counter Bar */}
-            <motion.div 
-              custom={6} initial="hidden" animate="visible" variants={textVariants}
-              className="flex flex-wrap gap-8 mt-12 pt-8 border-t border-white/15"
-            >
+            <motion.div custom={6} initial="hidden" animate="visible" variants={textVariants} className="flex flex-wrap gap-8 mt-12 pt-8 border-t border-white/15">
               {[{ value: "750+", label: "Students" }, { value: "40+", label: "Faculty" }, { value: "15+", label: "Years" }].map((stat) => (
                 <div key={stat.label} className="flex flex-col">
                   <span className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">{stat.value}</span>
@@ -202,31 +201,27 @@ export default function HeroSection() {
         </div>
       </div>
 
-      {/* Navigation Arrows + Slide Indicators */}
       <div className="absolute bottom-10 right-6 md:right-12 z-20 flex items-center gap-4">
-        {/* Slide Indicators */}
         <div className="flex items-center gap-2 mr-2">
           {images.map((_, i) => (
             <button
               key={i}
               onClick={() => setPage([i, i > currentImageIndex ? 1 : -1])}
               className={`rounded-full transition-all duration-300 ${
-                i === currentImageIndex
-                  ? "w-8 h-2 bg-white"
-                  : "w-2 h-2 bg-white/40 hover:bg-white/60"
+                i === currentImageIndex ? "w-8 h-2 bg-white" : "w-2 h-2 bg-white/40 hover:bg-white/60"
               }`}
               aria-label={`Go to slide ${i + 1}`}
             />
           ))}
         </div>
-        <button 
+        <button
           onClick={() => paginate(-1)}
           className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-110 transition-all shadow-lg"
           aria-label="Previous image"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <button 
+        <button
           onClick={() => paginate(1)}
           className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-110 transition-all shadow-lg"
           aria-label="Next image"
@@ -234,7 +229,6 @@ export default function HeroSection() {
           <ChevronRight className="w-6 h-6" />
         </button>
       </div>
-
     </section>
   );
 }

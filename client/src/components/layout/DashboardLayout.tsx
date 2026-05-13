@@ -39,7 +39,7 @@ export default function DashboardLayout() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="animate-spin w-8 h-8 text-orange-600" />
+        <Loader2 className="animate-spin w-8 h-8 text-orange-500" />
       </div>
     );
   }
@@ -71,7 +71,7 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex font-sans">
+    <div className="admin-dashboard-theme min-h-screen bg-white flex font-sans text-slate-900">
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
         <div
@@ -82,23 +82,26 @@ export default function DashboardLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-gradient-to-b from-[#F77A46] via-[#F77A46] to-[#E86A30] transform transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col shadow-2xl lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 transform transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col shadow-2xl lg:shadow-none ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between gap-3 px-6 py-6 border-b border-white/20">
+        <div className="flex items-center justify-between gap-3 px-6 py-6 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/25 shadow-inner flex items-center justify-center backdrop-blur-md overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden">
               <img src="/logo/logo.png" alt="RVA" className="w-8 h-8 object-contain" />
             </div>
-            <h1 className="font-bold text-xl text-white tracking-tight">Rose Valley Academy</h1>
+            <div>
+              <h1 className="font-bold text-lg text-white tracking-tight">Rose Valley Academy</h1>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Admin Portal</p>
+            </div>
           </div>
           {/* Mobile Close Button */}
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden text-white/70 hover:text-white hover:bg-white/20"
+            className="lg:hidden text-white/70 hover:text-white hover:bg-white/10"
             onClick={() => setIsMobileMenuOpen(false)}
           >
             <X className="w-5 h-5" />
@@ -106,15 +109,15 @@ export default function DashboardLayout() {
         </div>
 
         {/* Nav Links */}
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+        <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
           {sidebarLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
               className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group ${
                 isActive(link.path)
-                  ? "bg-white/20 text-white shadow-lg scale-[1.02]"
-                  : "text-white/70 hover:bg-white/15 hover:text-white"
+                  ? "bg-white text-slate-900 shadow-lg scale-[1.02]"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
               }`}
             >
               <div className="flex items-center gap-3.5">
@@ -130,21 +133,21 @@ export default function DashboardLayout() {
         </nav>
 
         {/* Sidebar Footer — User Profile & Logout */}
-        <div className="px-4 py-5 border-t border-white/20">
+        <div className="px-3 py-5 border-t border-white/10">
           <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-10 h-10 rounded-full bg-white/25 flex items-center justify-center shadow-inner border border-white/30 backdrop-blur-sm shrink-0">
+            <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center border border-white/10 shrink-0">
               <span className="text-sm font-bold text-white">
                 {user.email?.charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white truncate">{role === 'admin' ? 'Administrator' : role || 'User'}</p>
-              <p className="text-xs text-white/60 truncate">{user.email}</p>
+              <p className="text-xs text-slate-400 truncate">{user.email}</p>
             </div>
           </div>
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-white/70 hover:bg-white/15 hover:text-white transition-all duration-200 group"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-white/70 hover:bg-red-500/20 hover:text-white border border-white/10 hover:border-red-500/30 transition-all duration-200 group"
           >
             <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
             Sign Out
@@ -153,17 +156,17 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen lg:ml-72 transition-all duration-300">
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-72 transition-all duration-300 bg-white">
         {/* Mobile Menu Toggle — floating button */}
         <button
-          className="lg:hidden fixed top-4 left-4 z-30 w-11 h-11 rounded-xl bg-gradient-to-br from-[#F77A46] to-[#E86A30] text-white shadow-lg flex items-center justify-center hover:shadow-xl hover:scale-105 transition-all"
+          className="lg:hidden fixed top-4 left-4 z-30 w-11 h-11 rounded-xl bg-slate-900 text-white border border-slate-700 shadow-lg flex items-center justify-center hover:bg-slate-800 transition-all"
           onClick={() => setIsMobileMenuOpen(true)}
         >
           <Menu className="w-5 h-5" />
         </button>
 
         {/* Page Content - Outlet renders child routes */}
-        <main className="p-4 sm:p-6 lg:p-8 overflow-x-hidden flex-1">
+        <main className="admin-dashboard-content p-4 sm:p-6 lg:p-8 overflow-x-hidden flex-1">
           <Outlet />
         </main>
       </div>

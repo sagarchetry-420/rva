@@ -119,6 +119,90 @@
   }
 }
 
+/* ===== ADMIN DASHBOARD THEME ===== */
+.admin-dashboard-theme {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 24 95% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 24 95% 53%;
+  --accent-foreground: 0 0% 100%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 24 95% 53%;
+}
+
+.admin-dashboard-theme h1,
+.admin-dashboard-theme h2,
+.admin-dashboard-theme h3,
+.admin-dashboard-theme h4,
+.admin-dashboard-theme h5,
+.admin-dashboard-theme h6 {
+  font-family: 'DM Sans', sans-serif;
+}
+
+.admin-dashboard-theme .admin-dashboard-content {
+  position: relative;
+  background: linear-gradient(to bottom, #ffffff, #fffdf9);
+}
+
+.admin-dashboard-theme .admin-dashboard-content::before,
+.admin-dashboard-theme .admin-dashboard-content::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.admin-dashboard-theme .admin-dashboard-content::before {
+  width: 12rem;
+  height: 12rem;
+  top: 2rem;
+  right: 2rem;
+  background: rgba(241, 245, 249, 0.8);
+}
+
+.admin-dashboard-theme .admin-dashboard-content::after {
+  width: 10rem;
+  height: 10rem;
+  bottom: 2rem;
+  left: 2rem;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.admin-dashboard-theme .admin-dashboard-content > * {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-dashboard-theme table thead th {
+  background: rgba(248, 250, 252, 0.8);
+  color: rgb(100 116 139);
+  font-weight: 600;
+}
+
+.admin-dashboard-theme table tbody tr:hover {
+  background: rgba(248, 250, 252, 0.7);
+}
+
+.admin-dashboard-theme .shadow-sm {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.admin-dashboard-theme .shadow-md,
+.admin-dashboard-theme .shadow-lg {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
 /* ===== LANDING PAGE DESIGN SYSTEM ===== */
 
 /* Grain overlay texture */

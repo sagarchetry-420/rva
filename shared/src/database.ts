@@ -153,6 +153,7 @@ export type Database = {
           marked_by: string | null
           status: Database["public"]["Enums"]["attendance_status"]
           student_id: string
+          leave_application_url: string | null
         }
         Insert: {
           created_at?: string
@@ -161,6 +162,7 @@ export type Database = {
           marked_by?: string | null
           status?: Database["public"]["Enums"]["attendance_status"]
           student_id: string
+          leave_application_url?: string | null
         }
         Update: {
           created_at?: string
@@ -169,6 +171,7 @@ export type Database = {
           marked_by?: string | null
           status?: Database["public"]["Enums"]["attendance_status"]
           student_id?: string
+          leave_application_url?: string | null
         }
         Relationships: [
           {
@@ -340,7 +343,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "teacher" | "student" | "staff"
-      attendance_status: "Present" | "Absent" | "Late"
+      attendance_status: "Present" | "Absent" | "Late" | "Half Leave" | "Full Leave"
       notice_audience: "All" | "Staff" | "Students"
     }
     CompositeTypes: {
@@ -470,7 +473,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "teacher", "student", "staff"],
-      attendance_status: ["Present", "Absent", "Late"],
+      attendance_status: ["Present", "Absent", "Late", "Half Leave", "Full Leave"],
       notice_audience: ["All", "Staff", "Students"],
     },
   },

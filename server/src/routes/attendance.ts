@@ -250,3 +250,112 @@ attendanceRouter.post('/', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Failed to save attendance' });
   }
 });
+
+// GET /api/attendance/admin/class-date — get attendance for a specific class on a date
+attendanceRouter.get('/admin/class-date', requireAuth, async (req, res) => {
+  try {
+    const supabase = createAdminClient();
+    const classId = req.query.class_id as string;
+    const date = req.query.date as string;
+
+    if (!classId || !date) {
+      return res.status(400).json({ error: 'class_id and date are required' });
+    }
+
+    // First fetch all students in the class
+    const { data: students, error: studentsError } = await supabase
+      .from('students')
+      .select('id, user_id, profiles!user_id(first_name, last_name)')
+      .eq('class_id', classId)
+      .order('id');
+
+    if (studentsError) return res.status(400).json({ error: studentsError.message });
+    if (!students || students.length === 0) return res.json([]);
+
+    const studentIds = students.map((s: any) => s.id);
+
+    // Fetch attendance for these students on the given date
+    const { data: attendance, error: attendanceError } = await supabase
+      .from('student_attendance')
+      .select('student_id, status, leave_application_url')
+      .eq('date', date)
+      .in('student_id', studentIds);
+
+    if (attendanceError) return res.status(400).json({ error: attendanceError.message });
+
+    // Map attendance back to students
+    const attendanceMap = new Map((attendance || []).map((a: any) => [a.student_id, a]));
+
+    const result = students.map((s: any) => ({
+      id: s.id,
+      user_id: s.user_id,
+      profiles: s.profiles,
+      attendance: attendanceMap.get(s.id) || null,
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error('Fetch admin attendance error:', err);
+    res.status(500).json({ error: 'Failed to fetch attendance' });
+  }
+});
+
+// POST /api/attendance/admin-leave — mark half/full leave for a student
+attendanceRouter.post('/admin-leave', requireAuth, async (req, res) => {
+  try {
+    const supabase = createAdminClient();
+    const { studentId, date, status, leaveApplicationUrl } = req.body;
+
+    if (!studentId || !date || !status) {
+      return res.status(400).json({ error: 'studentId, date, and status are required' });
+    }
+
+    if (status !== 'Half Leave' && status !== 'Full Leave') {
+      return res.status(400).json({ error: 'Invalid leave status' });
+    }
+
+    // Check if a record already exists
+    const { data: existingRecord } = await supabase
+      .from('student_attendance')
+      .select('id')
+      .eq('student_id', studentId)
+      .eq('date', date)
+      .maybeSingle();
+
+    let error;
+
+    if (existingRecord) {
+      // Update existing record
+      const result = await supabase
+        .from('student_attendance')
+        .update({
+          status,
+          leave_application_url: leaveApplicationUrl || null,
+          marked_by: req.userId,
+        })
+        .eq('id', existingRecord.id);
+      error = result.error;
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from('student_attendance')
+        .insert({
+          student_id: studentId,
+          date,
+          status,
+          leave_application_url: leaveApplicationUrl || null,
+          marked_by: req.userId,
+        });
+      error = result.error;
+    }
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Save admin leave error:', err);
+    res.status(500).json({ error: 'Failed to save leave' });
+  }
+});

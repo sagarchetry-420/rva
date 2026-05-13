@@ -148,19 +148,19 @@ export default function Dashboard() {
     return '📚';
   };
 
-  // Brand colors: Gray tones instead of vibrant colors
-  const subjectColors = ['bg-gray-200', 'bg-gray-200', 'bg-gray-200', 'bg-gray-200', 'bg-gray-200', 'bg-gray-200'];
+  // Brand colors: diversified for visual scanning
+  const subjectColors = ['bg-amber-100', 'bg-teal-100', 'bg-blue-100', 'bg-rose-100', 'bg-violet-100', 'bg-emerald-100'];
 
-  // Brand stat cards - using gray tones to match navbar
+  // Brand stat cards — color-coded for instant scanning
   const statCards = [
     {
       icon: Users,
       label: "Students",
       value: stats.totalStudents > 1000 ? `${(stats.totalStudents / 1000).toFixed(1)}K` : stats.totalStudents.toString(),
       rawValue: stats.totalStudents,
-      color: "bg-gray-100/80",
-      iconBg: "bg-gray-200",
-      iconColor: "text-gray-700",
+      color: "bg-amber-50/80",
+      iconBg: "bg-amber-100",
+      iconColor: "text-amber-700",
       path: "/dashboard/students",
     },
     {
@@ -168,9 +168,9 @@ export default function Dashboard() {
       label: "Teachers",
       value: stats.totalTeachers.toString(),
       rawValue: stats.totalTeachers,
-      color: "bg-gray-100/80",
-      iconBg: "bg-gray-200",
-      iconColor: "text-gray-700",
+      color: "bg-teal-50/80",
+      iconBg: "bg-teal-100",
+      iconColor: "text-teal-700",
       path: "/dashboard/teachers",
     },
     {
@@ -178,16 +178,16 @@ export default function Dashboard() {
       label: "Classes",
       value: stats.totalClasses.toString(),
       rawValue: stats.totalClasses,
-      color: "bg-gray-100/80",
-      iconBg: "bg-gray-200",
-      iconColor: "text-gray-700",
+      color: "bg-blue-50/80",
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-700",
       path: "/dashboard/classes",
     },
   ];
 
   const totalStudentsInClasses = classStats.reduce((acc, c) => acc + c.studentCount, 0);
-  // Gray chart colors instead of brand colors
-  const brandChartColors = ['#6B7280', '#9CA3AF', '#D1D5DB'];
+  // Distinct chart colors for visual differentiation
+  const brandChartColors = ['#F59E0B', '#14B8A6', '#3B82F6', '#F43F5E'];
   const classDistribution = classStats.slice(0, 4).map((c, i) => ({
     name: c.name,
     value: c.studentCount,
@@ -261,8 +261,8 @@ export default function Dashboard() {
                   {classStats.slice(0, 4).map((cls, i) => (
                     <div key={cls.id} className="border border-gray-200 rounded-2xl p-4 md:p-5 hover:border-gray-300 hover:bg-gray-50 transition-colors group">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className={`w-10 h-10 rounded-xl ${ ['bg-gray-200', 'bg-gray-200', 'bg-gray-200', 'bg-gray-200'][i % 3]} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                          <School className={`w-5 h-5 ${ ['text-gray-700', 'text-gray-700', 'text-gray-700', 'text-gray-700'][i % 3]}`} />
+                        <div className={`w-10 h-10 rounded-xl ${ ['bg-amber-100', 'bg-teal-100', 'bg-blue-100', 'bg-rose-100'][i % 4]} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                          <School className={`w-5 h-5 ${ ['text-amber-700', 'text-teal-700', 'text-blue-700', 'text-rose-700'][i % 4]}`} />
                         </div>
                       </div>
                       <p className="font-bold text-gray-800">{cls.name}</p>
@@ -313,7 +313,7 @@ export default function Dashboard() {
                         <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="py-4 px-6 whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${['bg-gray-700', 'bg-gray-700', 'bg-gray-700'][i % 3]}`}>
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${['bg-amber-600', 'bg-teal-600', 'bg-blue-600'][i % 3]}`}>
                                 {getInitials(student.name)}
                               </div>
                               <span className="font-semibold text-gray-800">{student.name}</span>
@@ -321,7 +321,7 @@ export default function Dashboard() {
                           </td>
                           <td className="py-4 px-6 whitespace-nowrap text-gray-600 font-medium">{student.className}</td>
                           <td className="py-4 px-6 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${student.attendancePercent >= 80 ? 'bg-gray-100 text-gray-700' : student.attendancePercent >= 60 ? 'bg-gray-100 text-gray-700' : 'bg-gray-100 text-gray-700'}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${student.attendancePercent >= 80 ? 'bg-emerald-100 text-emerald-700' : student.attendancePercent >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
                               {student.attendancePercent}%
                             </span>
                           </td>
@@ -360,7 +360,7 @@ export default function Dashboard() {
               ) : (
                 recentNotices.map((notice, i) => (
                   <div key={notice.id} className="flex items-start gap-4 group">
-                    <div className={`shrink-0 w-12 h-12 rounded-2xl ${['bg-gray-200 text-gray-700', 'bg-gray-200 text-gray-700', 'bg-gray-200 text-gray-700'][i % 3]} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <div className={`shrink-0 w-12 h-12 rounded-2xl ${['bg-amber-100 text-amber-700', 'bg-teal-100 text-teal-700', 'bg-blue-100 text-blue-700'][i % 3]} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                       <Bell className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0 pt-0.5">
@@ -375,9 +375,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
-                      notice.target_audience === 'All' ? 'bg-gray-100 text-gray-700 border border-gray-200' :
-                      notice.target_audience === 'Students' ? 'bg-gray-100 text-gray-700 border border-gray-200' :
-                      'bg-gray-100 text-gray-700 border border-gray-200'
+                      notice.target_audience === 'All' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                      notice.target_audience === 'Students' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+                      'bg-teal-100 text-teal-700 border border-teal-200'
                     }`}>
                       {notice.target_audience}
                     </span>
@@ -451,31 +451,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Total Stats Summary */}
-          <Card className="border-0 shadow-sm rounded-2xl bg-gray-900 text-white overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/3"></div>
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                  <Megaphone className="w-5 h-5 text-white" />
-                </div>
-                {stats.totalNotices > 0 && (
-                  <span className="text-xs font-bold bg-white/20 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
-                    <TrendingUp className="w-3.5 h-3.5" /> Active
-                  </span>
-                )}
-              </div>
-              <p className="text-5xl font-extrabold mb-2 tracking-tight">
-                {statsLoading ? <Loader2 className="w-8 h-8 animate-spin text-white/70" /> : stats.totalNotices}
-              </p>
-              <p className="text-sm text-white/80 font-medium mb-4">
-                Total announcements active in the system across all classes.
-              </p>
-              <Link to="/dashboard/notices" className="text-sm font-bold text-white flex items-center gap-1 group w-max">
-                Manage notices <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </CardContent>
-          </Card>
 
           {/* Quick Actions Card */}
           <Card className="border-0 shadow-sm rounded-2xl overflow-hidden bg-gray-800 text-white">
@@ -601,7 +576,7 @@ export default function Dashboard() {
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                         <div
-                          className={`h-full rounded-full ${ ['bg-gray-700', 'bg-gray-700', 'bg-gray-700'][i % 3]} group-hover:opacity-80 transition-all duration-500 ease-out`}
+                          className={`h-full rounded-full ${ ['bg-amber-500', 'bg-teal-500', 'bg-blue-500'][i % 3]} group-hover:opacity-80 transition-all duration-500 ease-out`}
                           style={{ width: `${percent}%` }}
                         ></div>
                       </div>

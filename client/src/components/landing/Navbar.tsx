@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const navLinks = [
@@ -14,6 +13,25 @@ const navLinks = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("#home");
+
+  // Scroll-based active section tracking
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY + 120; // offset for sticky nav height
+      for (const link of [...navLinks].reverse()) {
+        const sectionId = link.href.replace("#", "");
+        const el = document.getElementById(sectionId);
+        if (el && el.offsetTop <= scrollY) {
+          setActiveSection(link.href);
+          break;
+        }
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <nav
@@ -34,27 +52,32 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Menu */}
-        <div className="hidden lg:flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-1">
           {navLinks.map((l) => (
             <a
               key={l.href}
               href={l.href}
-              className="text-sm font-medium text-slate-700 hover:text-slate-900 px-3 py-2 transition-all relative group"
+              className={`text-sm font-medium px-4 py-2 rounded-full transition-all relative group ${
+                activeSection === l.href
+                  ? "text-amber-700 bg-amber-50"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
             >
               {l.label}
-              <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full group-hover:w-4 transition-all duration-300" />
+              <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 h-0.5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all duration-300 ${
+                activeSection === l.href ? "w-5" : "w-0 group-hover:w-4"
+              }`} />
             </a>
           ))}
         </div>
 
-        {/* Desktop CTA */}
+        {/* Desktop CTA — Login Portal */}
         <div className="hidden lg:flex items-center gap-4">
-          <a href="#portals">
-            <Button className="rounded-full bg-slate-900 text-white hover:bg-slate-800 shadow-lg hover:shadow-slate-900/20 transition-all group font-semibold">
-              Portals
-              <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </a>
+          <Link to="/login">
+            <button className="rounded-full bg-slate-900 text-white hover:bg-slate-800 shadow-lg hover:shadow-slate-900/20 transition-all font-semibold text-sm px-5 py-2.5">
+              Admin Portal
+            </button>
+          </Link>
         </div>
 
         {/* Mobile toggle */}
@@ -84,7 +107,11 @@ export default function Navbar() {
                   key={l.href}
                   href={l.href}
                   onClick={() => setOpen(false)}
-                  className="text-base font-semibold text-slate-600 hover:text-slate-900 py-2 transition-colors inline-block"
+                  className={`text-base font-semibold py-2 transition-colors inline-block ${
+                    activeSection === l.href
+                      ? "text-amber-700"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
                 >
                   {l.label}
                 </motion.a>
@@ -93,13 +120,23 @@ export default function Navbar() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: navLinks.length * 0.05 }}
-                className="pt-4 border-t border-slate-100"
+                className="pt-4 border-t border-slate-100 space-y-3"
               >
-                <a href="#portals" onClick={() => setOpen(false)}>
-                  <Button className="w-full rounded-full py-6 text-lg font-semibold bg-slate-900 text-white shadow-lg hover:bg-slate-800 transition-colors">
-                    Portals
-                  </Button>
-                </a>
+                <Link to="/studentlogin" onClick={() => setOpen(false)}>
+                  <button className="w-full rounded-full py-3 text-base font-semibold bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors">
+                    Student Portal
+                  </button>
+                </Link>
+                <Link to="/teacherlogin" onClick={() => setOpen(false)}>
+                  <button className="w-full rounded-full py-3 text-base font-semibold bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition-colors">
+                    Teacher Portal
+                  </button>
+                </Link>
+                <Link to="/login" onClick={() => setOpen(false)}>
+                  <button className="w-full rounded-full py-3 text-base font-semibold bg-slate-900 text-white shadow-lg hover:bg-slate-800 transition-colors">
+                    Admin Portal
+                  </button>
+                </Link>
               </motion.div>
             </div>
           </motion.div>

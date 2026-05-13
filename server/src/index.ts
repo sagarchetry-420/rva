@@ -11,7 +11,18 @@ import { examsRouter } from './routes/exams.js';
 import { routinesRouter } from './routes/routines.js';
 import { adminRouter } from './routes/admin.js';
 
+import { globalErrorHandler } from './middleware/errorHandler.js';
+
 dotenv.config();
+
+// Validate critical env vars at startup
+const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+for (const key of requiredEnvVars) {
+  if (!process.env[key]) {
+    console.error(`[FATAL] Missing required environment variable: ${key}`);
+    process.exit(1);
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -39,6 +50,9 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/exams', examsRouter);
 app.use('/api/routines', routinesRouter);
 app.use('/api/admin', adminRouter);
+
+// Global error handler — must be LAST
+app.use(globalErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`[server] running on http://localhost:${PORT}`);

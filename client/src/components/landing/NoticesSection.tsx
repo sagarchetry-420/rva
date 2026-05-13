@@ -51,11 +51,14 @@ export default function NoticesSection() {
           className="text-center mb-12"
         >
           <motion.div
-            className="inline-block mb-4"
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="inline-flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full text-sm font-semibold mb-6"
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
           >
-            <Megaphone className="w-10 h-10 text-orange-500 drop-shadow-sm" />
+            <Megaphone className="w-4 h-4" />
+            Latest Updates
           </motion.div>
           <h2 className="font-sans font-extrabold tracking-tight text-4xl lg:text-5xl mb-4 text-slate-900">
             Notices <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500">&amp; Announcements</span>

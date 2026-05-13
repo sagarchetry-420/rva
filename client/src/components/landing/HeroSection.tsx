@@ -185,12 +185,40 @@ export default function HeroSection() {
                 View Gallery
               </a>
             </motion.div>
+
+            {/* Stat Counter Bar */}
+            <motion.div 
+              custom={6} initial="hidden" animate="visible" variants={textVariants}
+              className="flex flex-wrap gap-8 mt-12 pt-8 border-t border-white/15"
+            >
+              {[{ value: "750+", label: "Students" }, { value: "40+", label: "Faculty" }, { value: "15+", label: "Years" }].map((stat) => (
+                <div key={stat.label} className="flex flex-col">
+                  <span className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">{stat.value}</span>
+                  <span className="text-xs text-white/60 font-medium tracking-widest uppercase mt-1">{stat.label}</span>
+                </div>
+              ))}
+            </motion.div>
           </div>
         </div>
       </div>
 
-      {/* Navigation Arrows */}
-      <div className="absolute bottom-10 right-6 md:right-12 z-20 flex gap-4">
+      {/* Navigation Arrows + Slide Indicators */}
+      <div className="absolute bottom-10 right-6 md:right-12 z-20 flex items-center gap-4">
+        {/* Slide Indicators */}
+        <div className="flex items-center gap-2 mr-2">
+          {images.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage([i, i > currentImageIndex ? 1 : -1])}
+              className={`rounded-full transition-all duration-300 ${
+                i === currentImageIndex
+                  ? "w-8 h-2 bg-white"
+                  : "w-2 h-2 bg-white/40 hover:bg-white/60"
+              }`}
+              aria-label={`Go to slide ${i + 1}`}
+            />
+          ))}
+        </div>
         <button 
           onClick={() => paginate(-1)}
           className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-110 transition-all shadow-lg"

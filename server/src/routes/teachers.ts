@@ -131,8 +131,20 @@ teachersRouter.post('/', requireAuth, async (req, res) => {
 
     console.log('[Teachers POST] Auth user created:', userData.user.id);
 
-    // Wait for trigger to create profile and user_role
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for DB trigger to create profile and user_role (retry-based, not setTimeout)
+    const maxRetries = 5;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const { data: profileCheck } = await admin
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', userData.user.id)
+        .maybeSingle();
+      if (profileCheck) break;
+      if (attempt === maxRetries) {
+        console.warn('[Teachers POST] Profile trigger did not fire after retries — proceeding anyway');
+      }
+      await new Promise(resolve => setTimeout(resolve, 400));
+    }
 
     // Now manually create the teacher record
     const { data: teacherData, error: teacherError } = await admin

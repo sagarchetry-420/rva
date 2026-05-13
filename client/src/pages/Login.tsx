@@ -27,7 +27,7 @@ export default function Login() {
     if (error) {
       toast({ title: "Login failed", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Welcome Admin", description: "Loading dashboard..." });
+      toast({ title: "Welcome back", description: "Loading your dashboard..." });
       navigate("/dashboard");
     }
   };

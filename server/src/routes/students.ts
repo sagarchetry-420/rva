@@ -286,8 +286,20 @@ studentsRouter.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: authError.message });
     }
 
-    // Wait a moment for the profile and user_role to be created by the trigger
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for the DB trigger to create profile and user_role (retry-based, not setTimeout)
+    const maxRetries = 5;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const { data: profileCheck } = await admin
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', userData.user!.id)
+        .maybeSingle();
+      if (profileCheck) break;
+      if (attempt === maxRetries) {
+        console.warn('[POST /api/students] Profile trigger did not fire after retries — proceeding anyway');
+      }
+      await new Promise(resolve => setTimeout(resolve, 400));
+    }
 
     // Now manually create the student record in the students table
     const { data: studentData, error: studentError } = await admin

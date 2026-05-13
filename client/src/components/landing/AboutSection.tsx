@@ -81,7 +81,7 @@ export default function AboutSection() {
             {/* Main Image Placeholder (Styled well) */}
             <div className="relative aspect-square md:aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl">
               <img
-                src="/school_image/school image1.jpg"
+                src="/school_image/school%20image1.jpg"
                 alt="Rose Valley Academy Campus"
                 className="w-full h-full object-cover"
               />

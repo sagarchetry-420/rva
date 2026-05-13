@@ -9,9 +9,7 @@ import {
   LogOut,
   Loader2,
   School,
-  RefreshCw,
   LayoutDashboard,
-  ChevronDown,
   Calendar,
   Award,
   FileText,
@@ -20,12 +18,7 @@ import {
   X,
 } from "lucide-react";
 
-interface DashboardLayoutProps {
-  onRefresh?: () => void;
-  isLoading?: boolean;
-}
-
-export default function DashboardLayout({ onRefresh, isLoading = false }: DashboardLayoutProps) {
+export default function DashboardLayout() {
   const { user, role, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,15 +52,15 @@ export default function DashboardLayout({ onRefresh, isLoading = false }: Dashbo
   };
 
   const sidebarLinks = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", expandable: true },
-    { icon: Users, label: "Students", path: "/dashboard/students", expandable: true },
-    { icon: GraduationCap, label: "Teachers", path: "/dashboard/teachers", expandable: true },
-    { icon: School, label: "Class", path: "/dashboard/classes", expandable: true },
-    { icon: FileText, label: "Subject", path: "/dashboard/subjects", expandable: true },
-    { icon: Calendar, label: "Routine", path: "/dashboard/routines", expandable: false },
-    { icon: CheckSquare, label: "Attendance", path: "/dashboard/attendance", expandable: false },
-    { icon: Award, label: "Exam", path: "/dashboard/exams", expandable: true },
-    { icon: Bell, label: "Notice", path: "/dashboard/notices", expandable: false },
+    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+    { icon: Users, label: "Students", path: "/dashboard/students" },
+    { icon: GraduationCap, label: "Teachers", path: "/dashboard/teachers" },
+    { icon: School, label: "Class", path: "/dashboard/classes" },
+    { icon: FileText, label: "Subject", path: "/dashboard/subjects" },
+    { icon: Calendar, label: "Routine", path: "/dashboard/routines" },
+    { icon: CheckSquare, label: "Attendance", path: "/dashboard/attendance" },
+    { icon: Award, label: "Exam", path: "/dashboard/exams" },
+    { icon: Bell, label: "Notice", path: "/dashboard/notices" },
   ];
 
   const isActive = (path: string) => {
@@ -96,8 +89,8 @@ export default function DashboardLayout({ onRefresh, isLoading = false }: Dashbo
         {/* Logo */}
         <div className="flex items-center justify-between gap-3 px-6 py-6 border-b border-white/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/25 shadow-inner flex items-center justify-center backdrop-blur-md">
-              <GraduationCap className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-white/25 shadow-inner flex items-center justify-center backdrop-blur-md overflow-hidden">
+              <img src="/logo/logo.png" alt="RVA" className="w-8 h-8 object-contain" />
             </div>
             <h1 className="font-bold text-xl text-white tracking-tight">Rose Valley Academy</h1>
           </div>
@@ -132,64 +125,42 @@ export default function DashboardLayout({ onRefresh, isLoading = false }: Dashbo
                 />
                 {link.label}
               </div>
-              {link.expandable && (
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${
-                    isActive(link.path) ? "text-white" : "text-white/50 group-hover:text-white/70"
-                  }`}
-                />
-              )}
             </Link>
           ))}
         </nav>
+
+        {/* Sidebar Footer — User Profile & Logout */}
+        <div className="px-4 py-5 border-t border-white/20">
+          <div className="flex items-center gap-3 mb-4 px-2">
+            <div className="w-10 h-10 rounded-full bg-white/25 flex items-center justify-center shadow-inner border border-white/30 backdrop-blur-sm shrink-0">
+              <span className="text-sm font-bold text-white">
+                {user.email?.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white truncate">{role === 'admin' ? 'Administrator' : role || 'User'}</p>
+              <p className="text-xs text-white/60 truncate">{user.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-white/70 hover:bg-white/15 hover:text-white transition-all duration-200 group"
+          >
+            <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            Sign Out
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen lg:ml-72 transition-all duration-300">
-        {/* Top Header */}
-        <header className="bg-gradient-to-r from-[#F77A46] to-[#E86A30] backdrop-blur-md border-b border-white/10 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
-          <div className="flex items-center gap-2 sm:gap-4 flex-1">
-            {/* Mobile Menu Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden text-white/70 hover:bg-white/20 hover:text-white"
-              onClick={() => setIsMobileMenuOpen(true)}
-            >
-              <Menu className="w-6 h-6" />
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-4 ml-2">
-            {onRefresh && (
-              <Button
-                onClick={onRefresh}
-                variant="ghost"
-                size="icon"
-                disabled={isLoading}
-                className="text-white/70 hover:text-white hover:bg-white/20 hidden sm:flex transition-colors"
-              >
-                <RefreshCw className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`} />
-              </Button>
-            )}
-
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/25 flex items-center justify-center shadow-sm border border-white/30 backdrop-blur-sm">
-                <span className="text-sm font-bold text-white">
-                  {user.email?.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSignOut}
-                className="text-white/70 hover:text-white hover:bg-white/20 transition-colors ml-1"
-              >
-                <LogOut className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-        </header>
+        {/* Mobile Menu Toggle — floating button */}
+        <button
+          className="lg:hidden fixed top-4 left-4 z-30 w-11 h-11 rounded-xl bg-gradient-to-br from-[#F77A46] to-[#E86A30] text-white shadow-lg flex items-center justify-center hover:shadow-xl hover:scale-105 transition-all"
+          onClick={() => setIsMobileMenuOpen(true)}
+        >
+          <Menu className="w-5 h-5" />
+        </button>
 
         {/* Page Content - Outlet renders child routes */}
         <main className="p-4 sm:p-6 lg:p-8 overflow-x-hidden flex-1">

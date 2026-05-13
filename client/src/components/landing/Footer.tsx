@@ -21,7 +21,7 @@ export default function Footer() {
               <span className="font-display font-bold text-xl text-white tracking-tight">Rose Valley Academy</span>
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed font-medium mb-6 pe-4">
-              Cultivating dynamic minds since 1995. Education that prepares you for the world, grounded in traditional values.
+              Cultivating dynamic minds since 2008. Education that prepares you for the world, grounded in traditional values.
             </p>
             <div className="flex items-center gap-4">
               <a href="#" className="w-10 h-10 rounded-full bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-300 hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all transform hover:-translate-y-1">

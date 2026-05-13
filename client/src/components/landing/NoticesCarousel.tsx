@@ -54,7 +54,7 @@ export default function NoticesCarousel() {
   const currentNotice = notices[currentIndex];
 
   return (
-    <div className="w-full bg-gradient-to-r from-amber-100/30 via-orange-50/30 to-yellow-100/30 border-b border-teal-200/30 sticky top-20 z-40">
+    <div className="w-full bg-white border-b border-slate-200 shadow-sm sticky top-[72px] md:top-[80px] z-40">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center gap-2 md:gap-4">
           {/* Bell Icon and Title */}

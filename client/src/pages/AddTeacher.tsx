@@ -240,30 +240,7 @@ export default function AddTeacher() {
                 )}
               </div>
 
-              {/* Download PDF Button */}
-              <Button
-                onClick={() => {
-                  const teacherData = {
-                    id: 'temp',
-                    user_id: 'temp',
-                    profiles: {
-                      first_name: enrollmentData.firstName,
-                      last_name: enrollmentData.lastName
-                    },
-                    hire_date: enrollmentData.hireDate,
-                    email: enrollmentData.email,
-                    teacher_subjects: enrollmentData.assignments.map(a => ({
-                      classes: { id: a.classId, name: '' },
-                      subjects: { id: a.subjectId, name: '' }
-                    }))
-                  };
-                  generateTeacherPDF(teacherData, enrollmentData.password);
-                  toast({ description: "PDF downloaded with credentials" });
-                }}
-                className="gap-2 bg-blue-600 hover:bg-blue-700"
-              >
-                <Download className="w-4 h-4" /> Download Credentials PDF
-              </Button>
+
 
               <div className="flex gap-3">
                 <Button

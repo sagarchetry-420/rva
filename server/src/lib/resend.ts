@@ -22,11 +22,20 @@ type EmailSendResult = {
   messageId?: string;
 };
 
+type TeacherNoticeEmailInput = {
+  to: string;
+  firstName: string;
+  lastName: string;
+  noticeStartDate: string;
+  lastWorkingDate: string;
+};
+
 function getEmailJSConfig():
-  | { serviceId: string; templateId: string; publicKey: string; privateKey: string }
+  | { serviceId: string; templateId: string; noticeTemplateId: string | undefined; publicKey: string; privateKey: string }
   | { error: string } {
   const serviceId = process.env.EMAILJS_SERVICE_ID?.replace(/"/g, '').trim();
   const templateId = process.env.EMAILJS_TEMPLATE_ID?.replace(/"/g, '').trim();
+  const noticeTemplateId = process.env.EMAILJS_NOTICE_TEMPLATE_ID?.replace(/"/g, '').trim();
   const publicKey = process.env.EMAILJS_PUBLIC_KEY?.replace(/"/g, '').trim();
   const privateKey = process.env.EMAILJS_PRIVATE_KEY?.replace(/"/g, '').trim();
 
@@ -38,6 +47,7 @@ function getEmailJSConfig():
   return {
     serviceId,
     templateId,
+    noticeTemplateId,
     publicKey,
     privateKey,
   };
@@ -119,6 +129,47 @@ export async function sendTeacherEnrollmentEmail(input: TeacherEnrollmentEmailIn
     return { sent: true, messageId: response.text };
   } catch (err: any) {
     const message = err.text || err.message || 'Failed to send enrollment email via EmailJS';
+    return { sent: false, error: message };
+  }
+}
+
+export async function sendTeacherNoticeEmail(input: TeacherNoticeEmailInput): Promise<EmailSendResult> {
+  const config = getEmailJSConfig();
+  if ('error' in config) {
+    return { sent: false, error: config.error };
+  }
+
+  if (!config.noticeTemplateId) {
+    return { sent: false, error: 'EMAILJS_NOTICE_TEMPLATE_ID is not configured' };
+  }
+
+  const fullName = `${input.firstName} ${input.lastName}`.trim();
+  const recipientEmail = input.to.trim();
+  
+  if (!recipientEmail) {
+    return { sent: false, error: 'Recipient email is required' };
+  }
+
+  try {
+    const response = await emailjs.send(
+      config.serviceId,
+      config.noticeTemplateId,
+      {
+        first_name: input.firstName,
+        last_name: input.lastName,
+        notice_start_date: input.noticeStartDate,
+        last_working_date: input.lastWorkingDate,
+        to_email: recipientEmail,
+      },
+      {
+        publicKey: config.publicKey,
+        privateKey: config.privateKey,
+      }
+    );
+
+    return { sent: true, messageId: response.text };
+  } catch (err: any) {
+    const message = err.text || err.message || 'Failed to send notice email via EmailJS';
     return { sent: false, error: message };
   }
 }

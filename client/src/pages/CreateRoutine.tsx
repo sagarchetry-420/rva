@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -66,19 +66,30 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 const SCHOOL_DAYS = [1, 2, 3, 4, 5, 6]; // Monday to Saturday
 
 const sortClasses = (a: ClassItem, b: ClassItem) => {
+  const classOrder: { [key: string]: number } = {
+    'play': 1,
+    'nursery': 2,
+    'lkg': 3,
+    'kg': 4,
+    'ukg': 5,
+  };
+
   const aName = a.name.toLowerCase().trim();
   const bName = b.name.toLowerCase().trim();
 
-  const aNumMatch = aName.match(/\d+/);
-  const bNumMatch = bName.match(/\d+/);
+  const getOrder = (name: string) => {
+    for (const [key, order] of Object.entries(classOrder)) {
+      if (name.includes(key)) return order;
+    }
+    const numMatch = name.match(/\d+/);
+    if (numMatch) return parseInt(numMatch[0]) + 10;
+    return 100;
+  };
 
-  const aNum = aNumMatch ? parseInt(aNumMatch[0]) : null;
-  const bNum = bNumMatch ? parseInt(bNumMatch[0]) : null;
+  const aOrder = getOrder(aName);
+  const bOrder = getOrder(bName);
 
-  if (aNum !== null && bNum !== null) return aNum - bNum;
-  if (aNum !== null) return -1;
-  if (bNum !== null) return 1;
-
+  if (aOrder !== bOrder) return aOrder - bOrder;
   return aName.localeCompare(bName);
 };
 
@@ -307,6 +318,8 @@ const PeriodCell = ({
 
 export default function CreateRoutine() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editClassId = searchParams.get('classId');
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -322,6 +335,14 @@ export default function CreateRoutine() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (selectedClassId) {
+      fetchExistingRoutine(selectedClassId);
+    } else {
+      setPeriods([]);
+    }
+  }, [selectedClassId]);
+
   const fetchData = async () => {
     try {
       const [classesData, subjectsData, teachersData] = await Promise.all([
@@ -333,10 +354,37 @@ export default function CreateRoutine() {
       setClasses(sortedClasses);
       setSubjects(subjectsData);
       setTeachers(teachersData);
+
+      if (editClassId) {
+        setSelectedClassId(editClassId);
+      }
     } catch (error: any) {
       toast.error("Failed to load data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchExistingRoutine = async (classId: string) => {
+    try {
+      const existingRoutines = await api.get<any[]>(`/api/routines?class_id=${classId}`);
+      if (existingRoutines.length > 0) {
+        const mappedPeriods = existingRoutines.map(r => ({
+          tempId: `temp-${Date.now()}-${Math.random()}`,
+          dayOfWeek: r.day_of_week,
+          startTime: r.start_time.substring(0, 5),
+          endTime: r.end_time.substring(0, 5),
+          subjectId: r.subject_id || "",
+          teacherId: r.teacher_id || "",
+          room: r.room || "",
+          type: r.type || "period"
+        }));
+        setPeriods(mappedPeriods);
+      } else {
+        setPeriods([]);
+      }
+    } catch (error: any) {
+      toast.error("Failed to load existing routine for this class");
     }
   };
 
@@ -611,7 +659,7 @@ export default function CreateRoutine() {
         });
       }
 
-      toast.success("Weekly routine created successfully");
+      toast.success("Weekly routine saved successfully");
       navigate("/dashboard/routines");
     } catch (error: any) {
       toast.error("Failed to create routine: " + error.message);
@@ -636,21 +684,25 @@ export default function CreateRoutine() {
       <div className="max-w-full mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/dashboard/routines")}
-            className="text-gray-400 hover:text-gray-600 shrink-0"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg sm:text-xl md:text-3xl font-extrabold text-gray-900 flex items-center gap-2 flex-wrap">
-              <CalendarDays className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 shrink-0" />
-              Create Weekly Routine
-            </h1>
-            <p className="text-gray-500 text-xs sm:text-sm mt-1">
-              Add all periods for the week (Monday to Saturday)
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/dashboard/routines')}
+                className="h-8 w-8 text-gray-500 hover:text-gray-900 bg-white shadow-sm border border-gray-200"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <div className="p-2.5 bg-orange-100 rounded-xl shadow-sm">
+                <CalendarDays className="w-6 h-6 text-orange-600" />
+              </div>
+              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+                {periods.length > 0 ? "Edit Weekly Routine" : "Create Weekly Routine"}
+              </h1>
+            </div>
+            <p className="text-gray-500 text-sm ml-[4.5rem]">
+              {periods.length > 0 ? "Modify the schedule for the selected class." : "Build a new schedule by adding periods and breaks for each day."}
             </p>
           </div>
         </div>

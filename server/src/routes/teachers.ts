@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { createAdminClient, isUserAdmin } from '../lib/supabase.js';
-import { sendTeacherEnrollmentEmail, isEmailConfigured } from '../lib/resend.js';
+import { sendTeacherEnrollmentEmail, isEmailConfigured, sendTeacherNoticeEmail } from '../lib/resend.js';
 
 export const teachersRouter = Router();
 
@@ -26,6 +26,7 @@ teachersRouter.get('/', requireAuth, async (req, res) => {
         status,
         notice_start_date,
         last_working_date,
+        resignation_document_url,
         profiles (
           first_name,
           last_name
@@ -253,6 +254,7 @@ teachersRouter.get('/:id', requireAuth, async (req, res) => {
         status,
         notice_start_date,
         last_working_date,
+        resignation_document_url,
         profiles (
           first_name,
           last_name
@@ -321,7 +323,7 @@ teachersRouter.patch('/:id/status', requireAuth, async (req, res) => {
     }
 
     const supabase = createAdminClient();
-    const { status, noticeStartDate, lastWorkingDate } = req.body;
+    const { status, noticeStartDate, lastWorkingDate, resignationDocumentUrl } = req.body;
 
     if (!['active', 'on_notice', 'left'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
@@ -338,11 +340,15 @@ teachersRouter.patch('/:id/status', requireAuth, async (req, res) => {
     if (status === 'on_notice') {
       updateData.notice_start_date = noticeStartDate;
       updateData.last_working_date = lastWorkingDate;
+      if (resignationDocumentUrl !== undefined) {
+        updateData.resignation_document_url = resignationDocumentUrl;
+      }
     } else if (status === 'active') {
       updateData.notice_start_date = null;
       updateData.last_working_date = null;
+      updateData.resignation_document_url = null;
     } else if (status === 'left') {
-      // If marked as left without a prior notice period, we might not have these dates, but we keep whatever they had
+      // Keep dates and docs if they exist
     }
 
     // Update teacher record
@@ -354,6 +360,29 @@ teachersRouter.patch('/:id/status', requireAuth, async (req, res) => {
     if (updateError) {
       console.error('[PATCH /api/teachers/:id/status] Error:', updateError);
       return res.status(400).json({ error: updateError.message });
+    }
+
+    // Send email notification to the teacher if status changed to on_notice
+    if (status === 'on_notice' && isEmailConfigured()) {
+      const { data: teacherRecord } = await supabase
+        .from('teachers')
+        .select('user_id, profiles(first_name, last_name)')
+        .eq('id', req.params.id)
+        .single();
+        
+      if (teacherRecord) {
+        const { data: authUser } = await supabase.auth.admin.getUserById(teacherRecord.user_id);
+        if (authUser?.user?.email) {
+          const p: any = teacherRecord.profiles || {};
+          await sendTeacherNoticeEmail({
+            to: authUser.user.email,
+            firstName: p.first_name || 'Teacher',
+            lastName: p.last_name || '',
+            noticeStartDate,
+            lastWorkingDate
+          }).catch(err => console.error("Admin notice email failed to send:", err));
+        }
+      }
     }
 
     // If teacher is marked as left, remove all their class assignments
@@ -373,5 +402,51 @@ teachersRouter.patch('/:id/status', requireAuth, async (req, res) => {
   } catch (err: any) {
     console.error('[PATCH /api/teachers/:id/status] Unexpected error:', err);
     res.status(500).json({ error: 'Failed to update teacher status: ' + err.message });
+  }
+});
+
+// POST /api/teachers/resign (teacher only) - Submit resignation
+teachersRouter.post('/resign', requireAuth, async (req, res) => {
+  try {
+    const supabase = createAdminClient();
+    const { noticeStartDate, lastWorkingDate, resignationDocumentUrl } = req.body;
+
+    if (!noticeStartDate || !lastWorkingDate) {
+      return res.status(400).json({ error: 'noticeStartDate and lastWorkingDate are required' });
+    }
+
+    // Get the teacher record for the current user
+    const { data: teacher, error: fetchError } = await supabase
+      .from('teachers')
+      .select('id, profiles(first_name, last_name)')
+      .eq('user_id', req.userId)
+      .single();
+
+    if (fetchError || !teacher) {
+      return res.status(404).json({ error: 'Teacher record not found' });
+    }
+
+    const updateData: any = {
+      status: 'active', // Leave as active until admin approves
+      notice_start_date: noticeStartDate,
+      last_working_date: lastWorkingDate,
+      resignation_document_url: resignationDocumentUrl || null
+    };
+
+    const { error: updateError } = await supabase
+      .from('teachers')
+      .update(updateData)
+      .eq('id', teacher.id);
+
+    if (updateError) {
+      return res.status(400).json({ error: updateError.message });
+    }
+
+    // Email notification is now handled by the admin approval route (PATCH /api/teachers/:id/status)
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('[POST /api/teachers/resign] Error:', err);
+    res.status(500).json({ error: 'Failed to submit resignation: ' + err.message });
   }
 });

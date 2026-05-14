@@ -146,7 +146,7 @@ attendanceRouter.get('/teacher-stats', requireAuth, async (req, res) => {
 
     const { data: teacherData, error: teacherError } = await supabase
       .from('teachers')
-      .select('id, department, hire_date')
+      .select('id, department, hire_date, status, notice_start_date, last_working_date, resignation_document_url')
       .eq('user_id', req.userId)
       .maybeSingle();
 
@@ -190,6 +190,10 @@ attendanceRouter.get('/teacher-stats', requireAuth, async (req, res) => {
     res.json({
       department: teacherData.department,
       hireDate: teacherData.hire_date,
+      status: teacherData.status,
+      noticeStartDate: teacherData.notice_start_date,
+      lastWorkingDate: teacherData.last_working_date,
+      resignationDocumentUrl: teacherData.resignation_document_url,
       totalClasses: uniqueClasses.size,
       totalSubjects: uniqueSubjects.size,
       totalStudents,

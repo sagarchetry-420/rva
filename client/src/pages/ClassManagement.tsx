@@ -94,26 +94,30 @@ const ClassManagement: React.FC = () => {
 
   // Sort levels and classes serially
   const sortClasses = (a: ClassRecord, b: ClassRecord) => {
+    const classOrder: { [key: string]: number } = {
+      'play': 1,
+      'nursery': 2,
+      'lkg': 3,
+      'kg': 4,
+      'ukg': 5,
+    };
+
     const aName = a.name.toLowerCase().trim();
     const bName = b.name.toLowerCase().trim();
 
-    // Extract numeric values from class names
-    const aNumMatch = aName.match(/\d+/);
-    const bNumMatch = bName.match(/\d+/);
+    const getOrder = (name: string) => {
+      for (const [key, order] of Object.entries(classOrder)) {
+        if (name.includes(key)) return order;
+      }
+      const numMatch = name.match(/\d+/);
+      if (numMatch) return parseInt(numMatch[0]) + 10;
+      return 100;
+    };
 
-    const aNum = aNumMatch ? parseInt(aNumMatch[0]) : null;
-    const bNum = bNumMatch ? parseInt(bNumMatch[0]) : null;
+    const aOrder = getOrder(aName);
+    const bOrder = getOrder(bName);
 
-    // If both have numeric parts, sort by number
-    if (aNum !== null && bNum !== null) {
-      return aNum - bNum;
-    }
-
-    // If only one has a numeric part, number comes first
-    if (aNum !== null) return -1;
-    if (bNum !== null) return 1;
-
-    // Otherwise sort alphabetically
+    if (aOrder !== bOrder) return aOrder - bOrder;
     return aName.localeCompare(bName);
   };
 
@@ -183,7 +187,7 @@ const ClassManagement: React.FC = () => {
     .sort(sortLevels)
     .map(level => ({
       level,
-      classes: classes.filter(cls => cls.school_level_id === level.id)
+      classes: classes.filter(cls => cls.school_level_id === level.id).sort(sortClasses)
     }));
 
   // Count total classes

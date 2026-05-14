@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { compressFile } from "@/lib/fileCompression";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,7 +39,11 @@ import {
   Menu,
   X,
   ChevronRight,
+  Briefcase,
+  Upload,
+  FileText
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TeacherStats {
   department: string;
@@ -47,6 +52,10 @@ interface TeacherStats {
   totalSubjects: number;
   totalStudents: number;
   attendanceMarkedToday: number;
+  status?: string;
+  noticeStartDate?: string;
+  lastWorkingDate?: string;
+  resignationDocumentUrl?: string;
 }
 
 interface Notice {
@@ -89,12 +98,19 @@ export default function TeacherDashboard() {
   // Active tab state for navigation
   const [activeTab, setActiveTab] = useState("dashboard");
 
+  // Employment state
+  const [noticeStartDate, setNoticeStartDate] = useState("");
+  const [lastWorkingDate, setLastWorkingDate] = useState("");
+  const [resignationFile, setResignationFile] = useState<File | null>(null);
+  const [submittingResignation, setSubmittingResignation] = useState(false);
+
   // Sidebar navigation items
   const sidebarLinks = [
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
     { icon: ClipboardCheck, label: "Attendance", id: "attendance" },
     { icon: Bell, label: "Notices", id: "notices" },
     { icon: BookOpen, label: "My Classes", id: "classes" },
+    { icon: Briefcase, label: "Employment", id: "employment" },
   ];
 
   const today = new Date().toISOString().split("T")[0];
@@ -224,6 +240,41 @@ export default function TeacherDashboard() {
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleResignationSubmit = async () => {
+    if (!noticeStartDate || !lastWorkingDate) {
+      toast({ title: "Validation Error", description: "Notice dates are required.", variant: "destructive" });
+      return;
+    }
+    setSubmittingResignation(true);
+    try {
+      let documentUrl = stats?.resignationDocumentUrl || null;
+      if (resignationFile) {
+        const fileToUpload = await compressFile(resignationFile);
+        const fileExt = resignationFile.name.split('.').pop()?.toLowerCase();
+        
+        const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage.from('teacher_documents').upload(fileName, fileToUpload);
+        if (uploadError) throw new Error("Upload failed: " + uploadError.message);
+        const { data: { publicUrl } } = supabase.storage.from('teacher_documents').getPublicUrl(fileName);
+        documentUrl = publicUrl;
+      }
+      
+      await api.post("/api/teachers/resign", {
+        noticeStartDate,
+        lastWorkingDate,
+        resignationDocumentUrl: documentUrl
+      });
+      
+      toast({ title: "Success", description: "Resignation submitted successfully." });
+      setResignationFile(null);
+      fetchTeacherStats();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to submit resignation", variant: "destructive" });
+    } finally {
+      setSubmittingResignation(false);
+    }
   };
 
   const setAllStatus = (status: string) => {
@@ -949,6 +1000,126 @@ export default function TeacherDashboard() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Employment View */}
+          {activeTab === "employment" && (
+            <Card>
+              <CardHeader className="border-b bg-muted/20">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Briefcase className="w-5 h-5 text-indigo-500" />
+                  Employment Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-8">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Current Status</h3>
+                  <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant={stats?.status === 'active' ? 'default' : stats?.status === 'on_notice' ? 'outline' : 'destructive'} 
+                           className={stats?.status === 'on_notice' ? 'text-amber-600 border-amber-200 bg-amber-50' : ''}>
+                      {stats?.status === 'active' ? 'Active' : stats?.status === 'on_notice' ? 'On Notice' : stats?.status === 'left' ? 'Left School' : 'Unknown'}
+                    </Badge>
+                  </div>
+                  {(stats?.status === 'on_notice' || stats?.noticeStartDate) && (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
+                        <p className="text-sm text-amber-700">Notice Start Date {stats?.status === 'active' ? '(Proposed)' : ''}</p>
+                        <p className="text-lg font-medium text-amber-900">
+                          {stats.noticeStartDate ? new Date(stats.noticeStartDate).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
+                        <p className="text-sm text-amber-700">Last Working Date {stats?.status === 'active' ? '(Proposed)' : ''}</p>
+                        <p className="text-lg font-medium text-amber-900">
+                          {stats.lastWorkingDate ? new Date(stats.lastWorkingDate).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {stats?.status === 'active' && !stats?.resignationDocumentUrl && (
+                  <div className="pt-6 border-t">
+                    <h3 className="text-lg font-semibold mb-4">Submit Resignation Application</h3>
+                  <div className="space-y-4 max-w-2xl">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Notice Start Date</label>
+                        <input 
+                          type="date" 
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          value={noticeStartDate} 
+                          min={new Date().toISOString().split('T')[0]}
+                          onChange={(e) => {
+                            setNoticeStartDate(e.target.value);
+                            // Auto-set last working date to 30 days after
+                            if (e.target.value) {
+                              const start = new Date(e.target.value);
+                              start.setDate(start.getDate() + 30);
+                              setLastWorkingDate(start.toISOString().split('T')[0]);
+                            } else {
+                              setLastWorkingDate('');
+                            }
+                          }} 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Last Working Date</label>
+                        <input 
+                          type="date" 
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          value={lastWorkingDate} 
+                          min={noticeStartDate || new Date().toISOString().split('T')[0]}
+                          disabled={!noticeStartDate}
+                          onChange={(e) => setLastWorkingDate(e.target.value)} 
+                        />
+                        {!noticeStartDate && (
+                          <p className="text-xs text-muted-foreground">Select notice start date first</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Application Document (PDF/Image)</label>
+                      <input 
+                        type="file" 
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                        onChange={(e) => setResignationFile(e.target.files?.[0] || null)}
+                      />
+                      {stats?.resignationDocumentUrl && !resignationFile && (
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                          <FileText className="w-3 h-3" /> A document is already uploaded. Uploading a new one will replace it.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-2">
+                      <Button onClick={handleResignationSubmit} disabled={submittingResignation} className="gap-2">
+                        {submittingResignation ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        Submit Application
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                )}
+
+                {stats?.resignationDocumentUrl && (
+                  <div className="pt-6 border-t mt-6">
+                    <h3 className="text-lg font-semibold mb-4">Submitted Application</h3>
+                    <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-indigo-700 font-medium">Resignation Document</p>
+                        <p className="text-xs text-indigo-600/70">View the official resignation document</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => window.open(stats.resignationDocumentUrl, '_blank')} className="gap-2 text-indigo-700 hover:text-indigo-800 hover:bg-indigo-100 border-indigo-200">
+                        <FileText className="w-4 h-4" /> View File
+                      </Button>
+                    </div>
                   </div>
                 )}
               </CardContent>

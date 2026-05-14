@@ -16,7 +16,9 @@ import {
   BookOpen,
   School,
   User,
-  MapPin
+  MapPin,
+  Printer,
+  Edit2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -60,19 +62,30 @@ const SCHOOL_DAYS = [1, 2, 3, 4, 5, 6]; // Monday to Saturday
 
 // Sort classes serially
 const sortClasses = (a: ClassItem, b: ClassItem) => {
+  const classOrder: { [key: string]: number } = {
+    'play': 1,
+    'nursery': 2,
+    'lkg': 3,
+    'kg': 4,
+    'ukg': 5,
+  };
+
   const aName = a.name.toLowerCase().trim();
   const bName = b.name.toLowerCase().trim();
 
-  const aNumMatch = aName.match(/\d+/);
-  const bNumMatch = bName.match(/\d+/);
+  const getOrder = (name: string) => {
+    for (const [key, order] of Object.entries(classOrder)) {
+      if (name.includes(key)) return order;
+    }
+    const numMatch = name.match(/\d+/);
+    if (numMatch) return parseInt(numMatch[0]) + 10;
+    return 100;
+  };
 
-  const aNum = aNumMatch ? parseInt(aNumMatch[0]) : null;
-  const bNum = bNumMatch ? parseInt(bNumMatch[0]) : null;
+  const aOrder = getOrder(aName);
+  const bOrder = getOrder(bName);
 
-  if (aNum !== null && bNum !== null) return aNum - bNum;
-  if (aNum !== null) return -1;
-  if (bNum !== null) return 1;
-
+  if (aOrder !== bOrder) return aOrder - bOrder;
   return aName.localeCompare(bName);
 };
 
@@ -195,7 +208,7 @@ export default function RoutineManagement() {
   return (
     <div className="space-y-3 sm:space-y-4 md:space-y-6">
       {/* Header Section */}
-      <div className="flex flex-col gap-3 sm:gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 print:hidden">
         <div>
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
             <div className="p-1.5 sm:p-2.5 bg-orange-100 rounded-lg sm:rounded-xl shadow-sm">
@@ -210,16 +223,37 @@ export default function RoutineManagement() {
           </p>
         </div>
 
-        <Button
-          onClick={() => navigate("/dashboard/routines/create")}
-          className="gap-1.5 sm:gap-2 bg-orange-600 hover:bg-orange-700 shadow-sm rounded-lg sm:rounded-xl h-9 sm:h-10 md:h-11 w-full sm:w-auto sm:self-start text-xs sm:text-sm"
-        >
-          <Plus className="w-4 h-4" /> Create Routine
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          {selectedClass && totalPeriods > 0 && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => window.print()}
+                className="gap-1.5 sm:gap-2 shadow-sm rounded-lg sm:rounded-xl h-9 sm:h-10 md:h-11 flex-1 sm:flex-none text-xs sm:text-sm"
+              >
+                <Printer className="w-4 h-4" /> Print / Download
+              </Button>
+              <Button
+                onClick={() => navigate(`/dashboard/routines/create?classId=${selectedClassId}`)}
+                className="gap-1.5 sm:gap-2 bg-orange-600 hover:bg-orange-700 shadow-sm rounded-lg sm:rounded-xl h-9 sm:h-10 md:h-11 flex-1 sm:flex-none text-xs sm:text-sm"
+              >
+                <Edit2 className="w-4 h-4" /> Edit Routine
+              </Button>
+            </>
+          )}
+          {(!selectedClass || totalPeriods === 0) && (
+            <Button
+              onClick={() => navigate(selectedClass ? `/dashboard/routines/create?classId=${selectedClassId}` : "/dashboard/routines/create")}
+              className="gap-1.5 sm:gap-2 bg-orange-600 hover:bg-orange-700 shadow-sm rounded-lg sm:rounded-xl h-9 sm:h-10 md:h-11 w-full sm:w-auto sm:self-start text-xs sm:text-sm"
+            >
+              <Plus className="w-4 h-4" /> Create Routine
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Class Selector */}
-      <Card className="border-0 shadow-sm rounded-lg sm:rounded-2xl bg-white">
+      <Card className="border-0 shadow-sm rounded-lg sm:rounded-2xl bg-white print:hidden">
         <CardContent className="p-3 sm:p-4 md:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="flex-1 space-y-2">

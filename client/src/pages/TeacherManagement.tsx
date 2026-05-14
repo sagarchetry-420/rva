@@ -162,6 +162,9 @@ export default function TeacherManagement() {
                     {teacher.status === 'left' && (
                       <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 text-[10px]">Left</Badge>
                     )}
+                    {teacher.status === 'active' && teacher.resignation_document_url && (
+                      <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-[10px]">Pending Resignation</Badge>
+                    )}
                   </div>
 
                 {/* Classes & Subjects */}
@@ -282,6 +285,9 @@ export default function TeacherManagement() {
                           )}
                           {teacher.status === 'left' && (
                             <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">Left</Badge>
+                          )}
+                          {teacher.status === 'active' && teacher.resignation_document_url && (
+                            <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">Pending Resignation</Badge>
                           )}
                         </div>
                       </TableCell>

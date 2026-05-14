@@ -314,3 +314,10 @@ html {
   background: hsl(var(--primary) / 0.2);
   color: hsl(var(--foreground));
 }
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

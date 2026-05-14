@@ -51,6 +51,18 @@ export default function TeacherLogin() {
         throw new Error("Access denied. This portal is strictly for teacher accounts.");
       }
 
+      // 4. Check if teacher is marked as 'left'
+      const { data: teacherData } = await supabase
+        .from("teachers")
+        .select("status")
+        .eq("user_id", authData.user.id)
+        .maybeSingle();
+
+      if (teacherData && teacherData.status === 'left') {
+        await supabase.auth.signOut();
+        throw new Error("Access denied. Your teacher account has been deactivated.");
+      }
+
       // 4. Success Navigation
       toast({ 
         title: "Success", 

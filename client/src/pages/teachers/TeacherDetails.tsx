@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
+import { compressFile } from "@/lib/fileCompression";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { generateTeacherPDF } from "@/lib/pdfGenerator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Download, Settings } from "lucide-react";
+import { Loader2, ArrowLeft, Download, Settings, FileText, Upload } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -39,6 +41,7 @@ export default function TeacherDetails() {
   const [newStatus, setNewStatus] = useState<string>("active");
   const [noticeStartDate, setNoticeStartDate] = useState<string>("");
   const [lastWorkingDate, setLastWorkingDate] = useState<string>("");
+  const [resignationFile, setResignationFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -91,10 +94,33 @@ export default function TeacherDetails() {
 
     setUpdatingStatus(true);
     try {
+      let resignationDocumentUrl = teacher?.resignation_document_url || null;
+
+      if (newStatus === "on_notice" && resignationFile) {
+        const fileToUpload = await compressFile(resignationFile);
+        const fileExt = resignationFile.name.split('.').pop()?.toLowerCase();
+        const fileName = `${id}-${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('teacher_documents')
+          .upload(fileName, fileToUpload);
+          
+        if (uploadError) {
+          throw new Error("Failed to upload document: " + uploadError.message);
+        }
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('teacher_documents')
+          .getPublicUrl(fileName);
+          
+        resignationDocumentUrl = publicUrl;
+      }
+
       await api.patch(`/api/teachers/${id}/status`, {
         status: newStatus,
         noticeStartDate: newStatus === "on_notice" ? noticeStartDate : null,
-        lastWorkingDate: newStatus === "on_notice" ? lastWorkingDate : null
+        lastWorkingDate: newStatus === "on_notice" ? lastWorkingDate : null,
+        resignationDocumentUrl: newStatus === "on_notice" ? resignationDocumentUrl : null
       });
 
       toast({
@@ -119,6 +145,7 @@ export default function TeacherDetails() {
     setNewStatus(teacher?.status || "active");
     setNoticeStartDate(teacher?.notice_start_date ? new Date(teacher.notice_start_date).toISOString().split('T')[0] : "");
     setLastWorkingDate(teacher?.last_working_date ? new Date(teacher.last_working_date).toISOString().split('T')[0] : "");
+    setResignationFile(null);
     setIsStatusDialogOpen(true);
   };
 
@@ -202,7 +229,7 @@ export default function TeacherDetails() {
                   }
                 </p>
               </div>
-              {teacher.status === 'on_notice' && teacher.last_working_date && (
+              {teacher.last_working_date && (
                 <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
                   <p className="text-sm text-amber-700">Last Working Date</p>
                   <p className="text-lg font-medium text-amber-900">
@@ -212,6 +239,18 @@ export default function TeacherDetails() {
                       day: 'numeric'
                     })}
                   </p>
+                </div>
+              )}
+              {teacher.resignation_document_url && (
+                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100 md:col-span-2">
+                  <p className="text-sm text-emerald-700 mb-2">Notice Application</p>
+                  <Button 
+                    variant="outline" 
+                    className="gap-2 bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+                    onClick={() => window.open(teacher.resignation_document_url, '_blank')}
+                  >
+                    <FileText className="w-4 h-4" /> View Submitted Document
+                  </Button>
                 </div>
               )}
             </div>
@@ -259,24 +298,57 @@ export default function TeacherDetails() {
             </div>
 
             {newStatus === "on_notice" && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Notice Start Date</Label>
-                  <Input 
-                    type="date" 
-                    value={noticeStartDate} 
-                    onChange={(e) => setNoticeStartDate(e.target.value)} 
-                  />
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Notice Start Date</Label>
+                    <Input 
+                      type="date" 
+                      value={noticeStartDate} 
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => {
+                        setNoticeStartDate(e.target.value);
+                        // Auto-set last working date to 30 days after
+                        if (e.target.value) {
+                          const start = new Date(e.target.value);
+                          start.setDate(start.getDate() + 30);
+                          setLastWorkingDate(start.toISOString().split('T')[0]);
+                        } else {
+                          setLastWorkingDate('');
+                        }
+                      }} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Working Date</Label>
+                    <Input 
+                      type="date" 
+                      value={lastWorkingDate} 
+                      min={noticeStartDate || new Date().toISOString().split('T')[0]}
+                      disabled={!noticeStartDate}
+                      onChange={(e) => setLastWorkingDate(e.target.value)} 
+                    />
+                    {!noticeStartDate && (
+                      <p className="text-xs text-muted-foreground">Select notice start date first</p>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Last Working Date</Label>
-                  <Input 
-                    type="date" 
-                    value={lastWorkingDate} 
-                    onChange={(e) => setLastWorkingDate(e.target.value)} 
-                  />
+                  <Label>Application Document (Optional)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type="file" 
+                      onChange={(e) => setResignationFile(e.target.files?.[0] || null)}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                  {teacher?.resignation_document_url && !resignationFile && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      A document is already uploaded. Uploading a new one will replace it.
+                    </p>
+                  )}
                 </div>
-              </div>
+              </>
             )}
             
             {newStatus === "left" && (

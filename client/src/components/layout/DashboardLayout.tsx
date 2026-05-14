@@ -82,7 +82,7 @@ export default function DashboardLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 transform transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col shadow-2xl lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 transform transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col shadow-2xl lg:shadow-none print:hidden ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -156,10 +156,10 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen lg:ml-72 transition-all duration-300 bg-white">
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-72 print:ml-0 transition-all duration-300 bg-white">
         {/* Mobile Menu Toggle — floating button */}
         <button
-          className="lg:hidden fixed top-4 left-4 z-30 w-11 h-11 rounded-xl bg-slate-900 text-white border border-slate-700 shadow-lg flex items-center justify-center hover:bg-slate-800 transition-all"
+          className="lg:hidden print:hidden fixed top-4 left-4 z-30 w-11 h-11 rounded-xl bg-slate-900 text-white border border-slate-700 shadow-lg flex items-center justify-center hover:bg-slate-800 transition-all"
           onClick={() => setIsMobileMenuOpen(true)}
         >
           <Menu className="w-5 h-5" />

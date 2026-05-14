@@ -115,7 +115,7 @@ export default function HeroSection() {
               src={images[currentImageIndex].src}
               alt={images[currentImageIndex].alt}
               loading={currentImageIndex === 0 ? "eager" : "lazy"}
-              fetchPriority={currentImageIndex === 0 ? "high" : "auto"}
+              {...({ fetchpriority: currentImageIndex === 0 ? "high" : "auto" } as any)}
               decoding="async"
               sizes="100vw"
               className="w-full h-full object-cover object-center"

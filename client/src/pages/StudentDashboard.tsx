@@ -436,7 +436,7 @@ export default function StudentDashboard() {
             {/* Mobile user avatar */}
             <div className="lg:hidden w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center border border-blue-200">
               <span className="text-sm font-bold text-blue-700">
-                {profile?.firstName?.charAt(0) || user.email?.charAt(0).toUpperCase()}
+                {profile?.firstName?.charAt(0).toUpperCase() || 'S'}
               </span>
             </div>
           </div>
@@ -688,9 +688,6 @@ export default function StudentDashboard() {
                           <h3 className="text-xl font-semibold text-foreground">
                             {profile.firstName} {profile.lastName}
                           </h3>
-                          <p className="text-sm text-muted-foreground">
-                            Roll No: {profile.rollNumber}
-                          </p>
                           <Badge className="mt-2 bg-blue-100 text-blue-700 hover:bg-blue-100">
                             Student
                           </Badge>
@@ -1148,7 +1145,7 @@ export default function StudentDashboard() {
 
                       <Button
                         onClick={handleResultLookup}
-                        disabled={lookupLoading || !selectedResultExam || !resultRollNumber || !resultPassword}
+                        disabled={lookupLoading || !selectedResultExam || !resultPassword}
                         className="w-full gap-2 bg-purple-600 hover:bg-purple-700 rounded-xl"
                       >
                         {lookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
@@ -1162,7 +1159,7 @@ export default function StudentDashboard() {
                       <div>
                         <h3 className="font-bold text-lg">{lookupResult.exam.name}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {lookupResult.exam.className} · {lookupResult.student.name} · Roll: {lookupResult.student.rollNumber}
+                          {lookupResult.exam.className} · {lookupResult.student.name}
                         </p>
                       </div>
                       <Button variant="outline" size="sm" onClick={() => { setLookupResult(null); setLookupError(''); }}>

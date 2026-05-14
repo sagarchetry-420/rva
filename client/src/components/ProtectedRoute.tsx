@@ -83,9 +83,9 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  // Not authenticated → send to login
+  // Not authenticated → send to landing page
   if (!state.authenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   // Authenticated but role not allowed → redirect to their own dashboard

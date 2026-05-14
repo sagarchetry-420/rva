@@ -49,14 +49,14 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             {/* Public Routes - redirect logged-in users to their dashboard */}
             <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/studentlogin" element={<PublicRoute><StudentLogin /></PublicRoute>} />
             <Route path="/teacherlogin" element={<PublicRoute><TeacherLogin /></PublicRoute>} />
-            <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Protected Admin Dashboard Routes - Nested under DashboardLayout */}
             <Route

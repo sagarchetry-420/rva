@@ -85,7 +85,17 @@ export default function NoticesSection() {
                 {/* Gradient overlay on hover */}
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none" />
 
-                <div className="relative z-10">
+                {notice.document_url && (
+                  <a
+                    href={notice.document_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute inset-0 z-10"
+                    aria-label={`View document for ${notice.title}`}
+                  />
+                )}
+
+                <div className="relative z-0">
                   <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
                     <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
                       <Calendar className="w-3 h-3 text-slate-600" />
@@ -106,27 +116,15 @@ export default function NoticesSection() {
                   </p>
                   <button
                     onClick={() => setExpandedId(expandedId === notice.id ? null : notice.id)}
-                    className="inline-flex items-center gap-1.5 text-orange-500 font-bold text-xs tracking-wide uppercase hover:text-orange-600 transition-colors focus:outline-none"
+                    className="inline-flex items-center gap-1.5 text-orange-500 font-bold text-xs tracking-wide uppercase hover:text-orange-600 transition-colors focus:outline-none relative z-20"
                   >
                     {expandedId === notice.id ? "Show Less" : "Read More"} 
                     <ArrowRight className={`w-3.5 h-3.5 transition-transform duration-300 ${expandedId === notice.id ? "-rotate-90" : "group-hover:translate-x-1"}`} />
                   </button>
-                  {notice.document_url && (
-                    <a
-                      href={notice.document_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-emerald-600 font-bold text-xs tracking-wide uppercase hover:text-emerald-700 transition-colors mt-2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      View Document
-                    </a>
-                  )}
                 </div>
 
                 {/* Top accent line */}
-                <div className="absolute top-0 left-0 h-[2px] w-0 bg-gradient-to-r from-orange-400 to-amber-500 group-hover:w-full transition-all duration-500" />
+                <div className="absolute top-0 left-0 h-[2px] w-0 bg-gradient-to-r from-orange-400 to-amber-500 group-hover:w-full transition-all duration-500 z-0" />
               </motion.div>
             ))}
           </div>

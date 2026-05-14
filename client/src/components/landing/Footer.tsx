@@ -30,7 +30,7 @@ export default function Footer() {
           <div>
             <h4 className="font-sans font-bold text-lg mb-6 text-slate-900">Quick Links</h4>
             <div className="space-y-4">
-              {["Home", "About Us", "Courses", "Admissions", "Contact"].map((item) => (
+              {["Home", "About Us", "Courses", "Contact"].map((item) => (
                 <a key={item} href={`#${item.toLowerCase().replace(" ", "")}`} className="block text-sm font-medium text-slate-600 hover:text-orange-500 transition-colors flex items-center gap-2 group">
                   <span className="w-1 h-1 rounded-full bg-orange-500/0 group-hover:bg-orange-500 transition-all" />
                   {item}
@@ -42,7 +42,7 @@ export default function Footer() {
           <div>
             <h4 className="font-sans font-bold text-lg mb-6 text-slate-900">Academics</h4>
             <div className="space-y-4">
-              {["Notice Board", "School Calendar", "Examination", "Faculty", "Library"].map((item) => (
+              {["Notice Board"].map((item) => (
                 <a key={item} href="#" className="block text-sm font-medium text-slate-600 hover:text-orange-500 transition-colors flex items-center gap-2 group">
                   <span className="w-1 h-1 rounded-full bg-orange-500/0 group-hover:bg-orange-500 transition-all" />
                   {item}

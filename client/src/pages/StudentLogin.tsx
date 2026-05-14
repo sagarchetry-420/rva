@@ -13,6 +13,7 @@ export default function StudentLogin() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"login" | "forgot">("login");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -72,7 +73,8 @@ export default function StudentLogin() {
   }
 };
 
-  const handleForgotPassword = async () => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!email) {
       toast({ 
         title: "Email required", 
@@ -92,6 +94,7 @@ export default function StudentLogin() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Email sent", description: "Check your school email for the reset link." });
+      setMode("login");
     }
   };
 
@@ -105,14 +108,16 @@ export default function StudentLogin() {
             </div>
           </Link>
           <CardTitle className="font-display text-2xl text-blue-900">
-            Student Portal
+            {mode === "login" ? "Student Portal" : "Reset Student Password"}
           </CardTitle>
           <CardDescription>
-            Sign in to access your classes, grades, and assignments
+            {mode === "login"
+              ? "Sign in to access your classes, grades, and assignments"
+              : "Enter your student email to receive a reset link"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleStudentLogin} className="space-y-4">
+          <form onSubmit={mode === "login" ? handleStudentLogin : handleForgotPassword} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Student Email</Label>
               <Input 
@@ -126,27 +131,29 @@ export default function StudentLogin() {
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="focus-visible:ring-blue-500"
-                />
-                <button 
-                  type="button" 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-blue-600 transition-colors" 
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+            {mode === "login" && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="focus-visible:ring-blue-500"
+                  />
+                  <button 
+                    type="button" 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-blue-600 transition-colors" 
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
             
             <Button 
               type="submit" 
@@ -155,24 +162,36 @@ export default function StudentLogin() {
             >
               {loading ? (
                 <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Verifying...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {mode === "login" ? "Verifying..." : "Sending..."}
                 </span>
               ) : (
-                "Access Portal"
+                mode === "login" ? "Access Portal" : "Send Reset Link"
               )}
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm">
-            <button 
-              onClick={handleForgotPassword} 
-              className="text-blue-600 font-medium hover:underline hover:text-blue-800 transition-colors"
-            >
-              Forgot your password?
-            </button>
-            <p className="text-muted-foreground mt-4 text-xs">
-              Need an account? Please contact your school administrator.
-            </p>
+          <div className="mt-6 text-center text-sm space-y-2">
+            {mode === "login" ? (
+              <button 
+                onClick={() => setMode("forgot")} 
+                className="text-blue-600 font-medium hover:underline hover:text-blue-800 transition-colors"
+              >
+                Forgot your password?
+              </button>
+            ) : (
+              <button 
+                onClick={() => setMode("login")} 
+                className="text-blue-600 font-medium hover:underline hover:text-blue-800 transition-colors"
+              >
+                Back to sign in
+              </button>
+            )}
+            
+            {mode === "login" && (
+              <p className="text-muted-foreground mt-4 text-xs">
+                Need an account? Please contact your school administrator.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

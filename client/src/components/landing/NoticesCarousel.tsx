@@ -8,6 +8,7 @@ interface Notice {
   title: string;
   content: string;
   publish_date: string;
+  document_url?: string | null;
 }
 
 export default function NoticesCarousel() {
@@ -76,9 +77,18 @@ export default function NoticesCarousel() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -5 }}
                 transition={{ duration: 0.3 }}
-                 className="cursor-pointer group"
+                 className="cursor-pointer group relative"
                >
-                 <div className="flex flex-col gap-0.5">
+                 {currentNotice.document_url && (
+                   <a
+                     href={currentNotice.document_url}
+                     target="_blank"
+                     rel="noopener noreferrer"
+                     className="absolute inset-0 z-10"
+                     aria-label={`View document for ${currentNotice.title}`}
+                   />
+                 )}
+                 <div className="flex flex-col gap-0.5 relative z-0">
                    <p className="text-xs md:text-sm font-bold text-slate-900 group-hover:text-orange-600 transition-colors line-clamp-1">
                      {currentNotice.title}
                    </p>

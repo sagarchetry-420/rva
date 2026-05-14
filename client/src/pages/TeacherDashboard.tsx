@@ -386,6 +386,8 @@ export default function TeacherDashboard() {
     }
   };
 
+
+
   const setAllStatus = (status: string) => {
     const updated: Record<string, string> = {};
     students.forEach((s) => (updated[s.id] = status));
@@ -484,6 +486,14 @@ export default function TeacherDashboard() {
 
         {/* Sign Out Button */}
         <div className="px-3 py-4 border-t border-white/10">
+          <Button
+            variant="ghost"
+            onClick={handleSignOut}
+            className="w-full justify-start gap-3 text-white/80 hover:text-white hover:bg-red-500/20 px-4 py-3 h-auto"
+          >
+            <LogOut className="w-5 h-5" />
+            Sign Out
+          </Button>
         </div>
       </aside>
 
@@ -515,7 +525,7 @@ export default function TeacherDashboard() {
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center border border-emerald-200">
               <span className="text-sm font-bold text-emerald-700">
-                {(profile?.firstName || 'T').charAt(0).toUpperCase()}
+                T
               </span>
             </div>
             <Button

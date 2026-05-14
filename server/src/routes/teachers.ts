@@ -190,32 +190,39 @@ teachersRouter.post('/', requireAuth, async (req, res) => {
     }
 
     const emailReady = isEmailConfigured();
+    let emailSent = false;
+    let emailError: string | null = emailReady ? null : 'Email service is not configured on the server.';
 
-    // Respond immediately — don't make the client wait for SMTP
-    res.json({
-      user: userData.user,
-      emailSent: emailReady,
-      emailError: emailReady ? null : 'Email service is not configured on the server.',
-    });
-
-    // Fire-and-forget: send email in the background (only if configured)
     if (emailReady) {
-      sendTeacherEnrollmentEmail({
-        to: normalizedEmail,
-        firstName,
-        lastName,
-        loginEmail: normalizedEmail,
-        temporaryPassword: password,
-      }).then(result => {
+      try {
+        const result = await sendTeacherEnrollmentEmail({
+          to: normalizedEmail,
+          firstName,
+          lastName,
+          loginEmail: normalizedEmail,
+          temporaryPassword: password,
+        });
+        
+        emailSent = result.sent;
         if (!result.sent) {
+          emailError = result.error || 'Failed to send email';
           console.error('[Teachers POST] Enrollment email failed:', result.error);
         } else {
           console.log('[Teachers POST] Enrollment email sent:', result.messageId);
         }
-      }).catch(err => {
+      } catch (err: any) {
         console.error('[Teachers POST] Enrollment email error:', err);
-      });
+        emailError = err.message || 'Unknown email error';
+      }
     }
+
+    // Respond AFTER email finishes, because Vercel/serverless will kill the process
+    // if we respond first.
+    res.json({
+      user: userData.user,
+      emailSent,
+      emailError,
+    });
   } catch (err: any) {
     console.error('[Teachers POST] Unexpected error:', err);
     res.status(500).json({ error: 'Failed to create teacher: ' + err.message });

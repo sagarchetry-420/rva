@@ -145,7 +145,7 @@ teachersRouter.post('/', requireAuth, async (req, res) => {
       if (attempt === maxRetries) {
         console.warn('[Teachers POST] Profile trigger did not fire after retries — proceeding anyway');
       }
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
 
     // Now manually create the teacher record
@@ -189,24 +189,28 @@ teachersRouter.post('/', requireAuth, async (req, res) => {
       console.log('[Teachers POST] Assignments created successfully');
     }
 
-    const enrollmentEmail = await sendTeacherEnrollmentEmail({
+    // Respond immediately — don't make the client wait for SMTP
+    res.json({
+      user: userData.user,
+      emailSent: true,
+      emailError: null,
+    });
+
+    // Fire-and-forget: send email in the background
+    sendTeacherEnrollmentEmail({
       to: normalizedEmail,
       firstName,
       lastName,
       loginEmail: normalizedEmail,
       temporaryPassword: password,
-    });
-
-    if (!enrollmentEmail.sent) {
-      console.error('[Teachers POST] Enrollment email failed:', enrollmentEmail.error);
-    } else {
-      console.log('[Teachers POST] Enrollment email sent:', enrollmentEmail.messageId);
-    }
-
-    res.json({
-      user: userData.user,
-      emailSent: enrollmentEmail.sent,
-      emailError: enrollmentEmail.error ?? null,
+    }).then(result => {
+      if (!result.sent) {
+        console.error('[Teachers POST] Enrollment email failed:', result.error);
+      } else {
+        console.log('[Teachers POST] Enrollment email sent:', result.messageId);
+      }
+    }).catch(err => {
+      console.error('[Teachers POST] Enrollment email error:', err);
     });
   } catch (err: any) {
     console.error('[Teachers POST] Unexpected error:', err);

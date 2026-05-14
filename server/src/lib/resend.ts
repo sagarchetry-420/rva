@@ -2,6 +2,31 @@ import nodemailer from 'nodemailer';
 
 const ENROLLMENT_SENDER_EMAIL = 'rvasupport@gmail.com';
 
+// Cached transporter to reuse SMTP connections instead of reconnecting each time
+let cachedTransporter: nodemailer.Transporter | null = null;
+let cachedTransporterKey: string | null = null;
+
+function getOrCreateTransporter(config: { user: string; appPassword: string }): nodemailer.Transporter {
+  const key = `${config.user}:${config.appPassword}`;
+  if (cachedTransporter && cachedTransporterKey === key) {
+    return cachedTransporter;
+  }
+  cachedTransporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: config.user,
+      pass: config.appPassword,
+    },
+    pool: true,
+    maxConnections: 3,
+    connectionTimeout: 5_000,   // 5s to establish TCP connection
+    greetingTimeout: 5_000,     // 5s for SMTP greeting
+    socketTimeout: 10_000,      // 10s for socket inactivity
+  } as any);
+  cachedTransporterKey = key;
+  return cachedTransporter;
+}
+
 type StudentEnrollmentEmailInput = {
   to: string;
   firstName: string;
@@ -94,13 +119,7 @@ export async function sendStudentEnrollmentEmail(input: StudentEnrollmentEmailIn
   `;
 
   try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: smtpConfig.user,
-        pass: smtpConfig.appPassword,
-      },
-    });
+    const transporter = getOrCreateTransporter(smtpConfig);
 
     const payload: {
       from: string;
@@ -179,13 +198,7 @@ export async function sendTeacherEnrollmentEmail(input: TeacherEnrollmentEmailIn
   `;
 
   try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: smtpConfig.user,
-        pass: smtpConfig.appPassword,
-      },
-    });
+    const transporter = getOrCreateTransporter(smtpConfig);
 
     const payload: {
       from: string;

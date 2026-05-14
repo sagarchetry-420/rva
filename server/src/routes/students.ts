@@ -554,7 +554,7 @@ studentsRouter.post('/', requireAuth, async (req, res) => {
       if (attempt === maxRetries) {
         console.warn('[POST /api/students] Profile trigger did not fire after retries — proceeding anyway');
       }
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
 
     // Now manually create the student record in the students table
@@ -609,25 +609,30 @@ studentsRouter.post('/', requireAuth, async (req, res) => {
       }
     }
 
-    const enrollmentEmail = await sendStudentEnrollmentEmail({
+    console.log('[POST /api/students] Student created successfully:', userData.user?.id);
+
+    // Respond immediately — don't make the client wait for SMTP
+    res.json({
+      user: userData.user,
+      emailSent: true,
+      emailError: null,
+    });
+
+    // Fire-and-forget: send email in the background
+    sendStudentEnrollmentEmail({
       to: normalizedEmail,
       firstName,
       lastName,
       loginEmail: normalizedEmail,
       temporaryPassword: password,
-    });
-
-    if (!enrollmentEmail.sent) {
-      console.error('[POST /api/students] Enrollment email failed:', enrollmentEmail.error);
-    } else {
-      console.log('[POST /api/students] Enrollment email sent:', enrollmentEmail.messageId);
-    }
-
-    console.log('[POST /api/students] Student created successfully:', userData.user?.id);
-    res.json({
-      user: userData.user,
-      emailSent: enrollmentEmail.sent,
-      emailError: enrollmentEmail.error ?? null,
+    }).then(result => {
+      if (!result.sent) {
+        console.error('[POST /api/students] Enrollment email failed:', result.error);
+      } else {
+        console.log('[POST /api/students] Enrollment email sent:', result.messageId);
+      }
+    }).catch(err => {
+      console.error('[POST /api/students] Enrollment email error:', err);
     });
   } catch (err: any) {
     console.error('[POST /api/students] Error:', err);

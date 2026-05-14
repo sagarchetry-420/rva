@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { Printer } from "lucide-react";
 import {
   Loader2,
   CheckCircle,
@@ -32,6 +33,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 
 interface StudentProfile {
@@ -67,6 +69,17 @@ interface Notice {
   created_at: string;
 }
 
+interface UpcomingExam {
+  id: string;
+  exam_date: string;
+  start_time: string;
+  end_time: string;
+  total_marks: number;
+  passing_marks: number;
+  subjects: { id: string; name: string; code: string } | null;
+  exams: { id: string; name: string; class_id: string; classes: { id: string; name: string } | null } | null;
+}
+
 export default function StudentDashboard() {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -85,6 +98,10 @@ export default function StudentDashboard() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [noticesLoading, setNoticesLoading] = useState(false);
 
+  // Exams state
+  const [scheduledExams, setScheduledExams] = useState<UpcomingExam[]>([]);
+  const [examsLoading, setExamsLoading] = useState(false);
+
   // Mobile sidebar state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -96,6 +113,7 @@ export default function StudentDashboard() {
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
     { icon: User, label: "My Profile", id: "profile" },
     { icon: ClipboardCheck, label: "Attendance", id: "attendance" },
+    { icon: FileText, label: "Exams", id: "exams" },
     { icon: Bell, label: "Notices", id: "notices" },
   ];
 
@@ -117,6 +135,7 @@ export default function StudentDashboard() {
       fetchProfile(),
       fetchAttendance(),
       fetchNotices(),
+      fetchScheduledExams(),
     ]);
   };
 
@@ -164,6 +183,27 @@ export default function StudentDashboard() {
       setNoticesLoading(false);
     }
   };
+
+  const fetchScheduledExams = async () => {
+    setExamsLoading(true);
+    try {
+      const classId = profile?.classId;
+      const url = classId ? `/api/exams/schedule?class_id=${classId}` : '/api/exams/schedule';
+      const data = await api.get<UpcomingExam[]>(url);
+      setScheduledExams(data || []);
+    } catch (error: any) {
+      console.error("Exams fetch error:", error);
+    } finally {
+      setExamsLoading(false);
+    }
+  };
+
+  // Re-fetch exams when profile loads (to get class-specific exams)
+  useEffect(() => {
+    if (profile?.classId) {
+      fetchScheduledExams();
+    }
+  }, [profile?.classId]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -493,15 +533,54 @@ export default function StudentDashboard() {
                     </Button>
                     <Button
                       variant="outline"
-                      className="h-auto py-4 flex flex-col gap-2 hover:bg-amber-50 hover:border-amber-200"
-                      onClick={() => setActiveTab("attendance")}
+                      className="h-auto py-4 flex flex-col gap-2 hover:bg-orange-50 hover:border-orange-200"
+                      onClick={() => setActiveTab("exams")}
                     >
-                      <TrendingUp className="w-6 h-6 text-amber-500" />
-                      <span className="text-xs font-medium">View Stats</span>
+                      <FileText className="w-6 h-6 text-orange-500" />
+                      <span className="text-xs font-medium">Exams</span>
                     </Button>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Upcoming Exams Preview */}
+              {(() => {
+                const upcomingOnlyExams = scheduledExams.filter(e => new Date(e.exam_date) >= new Date(new Date().setHours(0,0,0,0)));
+                if (upcomingOnlyExams.length === 0) return null;
+                return (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <FileText className="w-5 h-5 text-orange-500" />
+                        Upcoming Exams
+                      </CardTitle>
+                      <Button variant="ghost" size="sm" onClick={() => setActiveTab("exams")} className="text-blue-600 hover:text-blue-700">View All</Button>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {upcomingOnlyExams.slice(0, 5).map((exam) => (
+                          <div key={exam.id} className="p-3 rounded-lg border bg-muted/20 hover:bg-muted/40 transition-colors">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-sm text-card-foreground truncate">
+                                  {exam.subjects?.name || 'Unknown'}
+                                </h4>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {exam.exams?.name} · {new Date(exam.exam_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </p>
+                              </div>
+                              <div className="flex gap-1.5 shrink-0">
+                                <Badge className="bg-blue-50 text-blue-700 text-[10px]">{exam.total_marks} marks</Badge>
+                                <Badge className="bg-green-50 text-green-700 text-[10px]">Pass: {exam.passing_marks}</Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
               {/* Recent Notices Preview */}
               {notices.length > 0 && (
@@ -511,40 +590,17 @@ export default function StudentDashboard() {
                       <Bell className="w-5 h-5 text-rose-500" />
                       Recent Notices
                     </CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setActiveTab("notices")}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      View All
-                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setActiveTab("notices")} className="text-blue-600 hover:text-blue-700">View All</Button>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       {notices.slice(0, 3).map((notice) => (
-                        <div
-                          key={notice.id}
-                          className="p-3 rounded-lg border bg-muted/20 hover:bg-muted/40 transition-colors"
-                        >
+                        <div key={notice.id} className="p-3 rounded-lg border bg-muted/20 hover:bg-muted/40 transition-colors">
                           <div className="flex items-start justify-between gap-2">
-                            <h4 className="font-medium text-sm text-card-foreground truncate">
-                              {notice.title}
-                            </h4>
-                            <Badge
-                              variant="secondary"
-                              className={`text-[10px] shrink-0 ${
-                                notice.target_audience === "All"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-amber-100 text-amber-700"
-                              }`}
-                            >
-                              {notice.target_audience}
-                            </Badge>
+                            <h4 className="font-medium text-sm text-card-foreground truncate">{notice.title}</h4>
+                            <Badge variant="secondary" className={`text-[10px] shrink-0 ${notice.target_audience === "All" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>{notice.target_audience}</Badge>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                            {notice.content}
-                          </p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{notice.content}</p>
                         </div>
                       ))}
                     </div>
@@ -823,6 +879,168 @@ export default function StudentDashboard() {
                             year: "numeric",
                           })}
                         </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Exams View */}
+          {activeTab === "exams" && (
+            <Card>
+              <CardHeader className="border-b bg-muted/20 flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <FileText className="w-5 h-5 text-orange-500" />
+                  Exam Schedule
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={fetchScheduledExams} disabled={examsLoading} className="gap-1">
+                  <RefreshCw className={`w-3.5 h-3.5 ${examsLoading ? "animate-spin" : ""}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </Button>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {examsLoading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="animate-spin w-8 h-8 text-orange-500" /></div>
+                ) : scheduledExams.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/5">
+                    <FileText className="w-10 h-10 text-muted-foreground/40 mx-auto mb-4" />
+                    <p className="text-muted-foreground font-medium">No scheduled exams</p>
+                    <p className="text-sm text-muted-foreground mt-1">Your exam schedule will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {Object.entries(
+                      scheduledExams.reduce((acc, exam) => {
+                        const examName = exam.exams?.name || 'Other';
+                        if (!acc[examName]) acc[examName] = [];
+                        acc[examName].push(exam);
+                        return acc;
+                      }, {} as Record<string, typeof scheduledExams>)
+                    ).filter(([_, exams]) => {
+                      // Only show routine if at least one subject is today or in the future
+                      return exams.some(e => new Date(e.exam_date) >= new Date(new Date().setHours(0,0,0,0)));
+                    }).map(([examName, exams]) => (
+                      <div key={examName} className="space-y-3">
+                        <div className="flex items-center justify-between border-b pb-2">
+                          <h3 className="font-semibold text-lg text-slate-800">{examName}</h3>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-2"
+                            onClick={() => {
+                              const printWindow = window.open('', '_blank');
+                              if (!printWindow) return;
+                              const tableHtml = `
+                                <html>
+                                  <head>
+                                    <title>${examName} - Routine</title>
+                                    <style>
+                                      body { font-family: system-ui, sans-serif; padding: 2rem; color: #333; max-width: 1000px; margin: 0 auto; }
+                                      h1 { text-align: center; color: #111; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
+                                      table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+                                      th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                                      th { background-color: #f8f9fa; font-weight: 600; color: #444; }
+                                      td { font-size: 0.95rem; }
+                                      .footer { margin-top: 3rem; text-align: center; font-size: 0.875rem; color: #666; }
+                                    </style>
+                                  </head>
+                                  <body>
+                                    <h1>${examName} - Exam Routine</h1>
+                                    <table>
+                                      <thead>
+                                        <tr>
+                                          <th>Date</th>
+                                          <th>Day</th>
+                                          <th>Time</th>
+                                          <th>Subject</th>
+                                          <th>Code</th>
+                                          <th>Marks (Total/Pass)</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        ${exams.map(exam => {
+                                          const dateObj = new Date(exam.exam_date);
+                                          const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                          const dayStr = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+                                          const formatTime = (time24: string) => {
+                                            const [h, m] = time24.split(':');
+                                            const hr = parseInt(h);
+                                            return (hr % 12 || 12) + ':' + m + ' ' + (hr >= 12 ? 'PM' : 'AM');
+                                          };
+                                          return `
+                                            <tr>
+                                              <td>${dateStr}</td>
+                                              <td>${dayStr}</td>
+                                              <td>${formatTime(exam.start_time)} - ${formatTime(exam.end_time)}</td>
+                                              <td><strong>${exam.subjects?.name || 'N/A'}</strong></td>
+                                              <td>${exam.subjects?.code || 'N/A'}</td>
+                                              <td>${exam.total_marks} / ${exam.passing_marks}</td>
+                                            </tr>
+                                          `;
+                                        }).join('')}
+                                      </tbody>
+                                    </table>
+                                    <div class="footer">Generated by RVA Examination System</div>
+                                    <script>window.onload = () => { window.print(); window.close(); }</script>
+                                  </body>
+                                </html>
+                              `;
+                              printWindow.document.write(tableHtml);
+                              printWindow.document.close();
+                            }}
+                          >
+                            <Printer className="w-4 h-4" />
+                            <span className="hidden sm:inline">Download Routine</span>
+                          </Button>
+                        </div>
+                        <div className="border rounded-md overflow-hidden">
+                          <Table>
+                            <TableHeader className="bg-muted/50">
+                              <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Time</TableHead>
+                                <TableHead>Subject</TableHead>
+                                <TableHead>Code</TableHead>
+                                <TableHead className="text-right">Marks</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {exams.map((exam) => {
+                                const isPast = new Date(exam.exam_date) < new Date(new Date().setHours(0,0,0,0));
+                                const formatTime = (time24: string) => {
+                                  if (!time24) return '';
+                                  const [h, m] = time24.split(':');
+                                  const hr = parseInt(h);
+                                  return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+                                };
+                                return (
+                                  <TableRow key={exam.id} className={isPast ? 'opacity-60 bg-muted/20' : ''}>
+                                    <TableCell>
+                                      <div className="font-medium">{new Date(exam.exam_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                                      <div className="text-xs text-muted-foreground">{new Date(exam.exam_date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="text-sm">{formatTime(exam.start_time)} - {formatTime(exam.end_time)}</div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="font-medium flex items-center gap-2">
+                                        {exam.subjects?.name}
+                                        {isPast && <Badge variant="secondary" className="text-[10px] h-4 px-1">Completed</Badge>}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>{exam.subjects?.code}</TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="text-sm font-medium">{exam.total_marks}</div>
+                                      <div className="text-xs text-muted-foreground">Pass: {exam.passing_marks}</div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </div>
                     ))}
                   </div>

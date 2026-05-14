@@ -152,11 +152,17 @@ export default function TeacherManagement() {
             <Card key={teacher.id} className="shadow-sm border overflow-hidden">
               <CardContent className="p-4 space-y-3">
                 {/* Teacher Name */}
-                <div>
-                  <h3 className="font-semibold text-base">
-                    {teacher.profiles?.first_name} {teacher.profiles?.last_name}
-                  </h3>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-base">
+                      {teacher.profiles?.first_name} {teacher.profiles?.last_name}
+                    </h3>
+                    {teacher.status === 'on_notice' && (
+                      <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-[10px]">On Notice</Badge>
+                    )}
+                    {teacher.status === 'left' && (
+                      <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 text-[10px]">Left</Badge>
+                    )}
+                  </div>
 
                 {/* Classes & Subjects */}
                 {(teacher.teacher_subjects || []).length > 0 && (
@@ -266,8 +272,18 @@ export default function TeacherManagement() {
                 ) : (
                   filteredTeachers.map((teacher) => (
                     <TableRow key={teacher.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-medium">
-                        {teacher.profiles?.first_name} {teacher.profiles?.last_name}
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {teacher.profiles?.first_name} {teacher.profiles?.last_name}
+                          </span>
+                          {teacher.status === 'on_notice' && (
+                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">On Notice</Badge>
+                          )}
+                          {teacher.status === 'left' && (
+                            <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">Left</Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {(teacher.teacher_subjects || []).length > 0 ? (

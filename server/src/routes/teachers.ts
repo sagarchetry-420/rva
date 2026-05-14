@@ -23,6 +23,9 @@ teachersRouter.get('/', requireAuth, async (req, res) => {
         id,
         user_id,
         hire_date,
+        status,
+        notice_start_date,
+        last_working_date,
         profiles (
           first_name,
           last_name
@@ -247,6 +250,9 @@ teachersRouter.get('/:id', requireAuth, async (req, res) => {
         id,
         user_id,
         hire_date,
+        status,
+        notice_start_date,
+        last_working_date,
         profiles (
           first_name,
           last_name
@@ -304,5 +310,68 @@ teachersRouter.delete('/:id', requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete teacher' });
+  }
+});
+// PATCH /api/teachers/:id/status (admin only)
+teachersRouter.patch('/:id/status', requireAuth, async (req, res) => {
+  try {
+    const isAdmin = await isUserAdmin(req.userId!);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
+    }
+
+    const supabase = createAdminClient();
+    const { status, noticeStartDate, lastWorkingDate } = req.body;
+
+    if (!['active', 'on_notice', 'left'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    if (status === 'on_notice') {
+      if (!noticeStartDate || !lastWorkingDate) {
+        return res.status(400).json({ error: 'noticeStartDate and lastWorkingDate are required for on_notice status' });
+      }
+    }
+
+    const updateData: any = { status };
+    
+    if (status === 'on_notice') {
+      updateData.notice_start_date = noticeStartDate;
+      updateData.last_working_date = lastWorkingDate;
+    } else if (status === 'active') {
+      updateData.notice_start_date = null;
+      updateData.last_working_date = null;
+    } else if (status === 'left') {
+      // If marked as left without a prior notice period, we might not have these dates, but we keep whatever they had
+    }
+
+    // Update teacher record
+    const { error: updateError } = await supabase
+      .from('teachers')
+      .update(updateData)
+      .eq('id', req.params.id);
+
+    if (updateError) {
+      console.error('[PATCH /api/teachers/:id/status] Error:', updateError);
+      return res.status(400).json({ error: updateError.message });
+    }
+
+    // If teacher is marked as left, remove all their class assignments
+    if (status === 'left') {
+      const { error: deleteError } = await supabase
+        .from('teacher_subjects')
+        .delete()
+        .eq('teacher_id', req.params.id);
+        
+      if (deleteError) {
+        console.error('[PATCH /api/teachers/:id/status] Error deleting assignments:', deleteError);
+        // Don't fail the request if assignments fail to delete, but log it
+      }
+    }
+
+    res.json({ success: true, status });
+  } catch (err: any) {
+    console.error('[PATCH /api/teachers/:id/status] Unexpected error:', err);
+    res.status(500).json({ error: 'Failed to update teacher status: ' + err.message });
   }
 });

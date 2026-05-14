@@ -18,6 +18,8 @@ import {
   X,
   Mail,
   Download,
+  Award,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,6 +51,7 @@ interface StudentDetail {
   classId: string | null;
   rollNumber?: string;
   enrollmentDate: string;
+  status?: 'active' | 'graduated' | 'left';
   attendance: {
     totalDays: number;
     presentDays: number;
@@ -99,6 +102,7 @@ export default function ClassDetail() {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const [classInfo, setClassInfo] = useState<any>(null);
+  const [classes, setClasses] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
@@ -106,6 +110,7 @@ export default function ClassDetail() {
     null
   );
   const [detailLoading, setDetailLoading] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   useEffect(() => {
     fetchClassData();
@@ -124,12 +129,17 @@ export default function ClassDetail() {
 
     setLoading(true);
     try {
-      const [classData, studentsData] = await Promise.all([
-        api.get<any>(`/api/classes/${classId}`),
-        api.get<Student[]>(`/api/students?class_id=${classId}`),
+      const isUnassigned = classId === 'unassigned';
+      const [classData, studentsData, classesData] = await Promise.all([
+        isUnassigned
+          ? Promise.resolve({ id: 'unassigned', name: 'Unassigned Students', description: 'Students who have left school or passed out.' })
+          : api.get<any>(`/api/classes/${classId}`),
+        api.get<Student[]>(`/api/students?class_id=${classId}&status=all`),
+        api.get<any[]>('/api/classes/simple'),
       ]);
       setClassInfo(classData);
       setStudents(studentsData);
+      setClasses(classesData);
     } catch (error: any) {
       console.error("Fetch Error:", error);
       toast.error("Failed to load class data");
@@ -162,6 +172,30 @@ export default function ClassDetail() {
       toast.error("Failed to load student details");
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (studentId: string, newStatus: 'graduated' | 'left') => {
+    const actionLabel = newStatus === 'graduated' ? 'pass out this student' : 'mark this student as left';
+    if (!confirm(`Are you sure you want to ${actionLabel}? They will be removed from their class.`)) return;
+
+    setStatusUpdating(true);
+    try {
+      await api.post('/api/students/status/update', {
+        studentIds: [studentId],
+        status: newStatus,
+      });
+      toast.success(
+        newStatus === 'graduated'
+          ? 'Student passed out successfully'
+          : 'Student marked as left'
+      );
+      setSelectedStudent(null);
+      await fetchClassData();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update student status');
+    } finally {
+      setStatusUpdating(false);
     }
   };
 
@@ -556,6 +590,15 @@ export default function ClassDetail() {
                       <p className="text-orange-200 mt-1">
                         {selectedStudent.className}
                       </p>
+                      {selectedStudent.status && selectedStudent.status !== 'active' && (
+                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full mt-1 ${
+                          selectedStudent.status === 'graduated'
+                            ? 'bg-green-500/30 text-green-100'
+                            : 'bg-red-500/30 text-red-100'
+                        }`}>
+                          {selectedStudent.status === 'graduated' ? 'Passed Out' : 'Left'}
+                        </span>
+                      )}
                       {selectedStudent.rollNumber && (
                         <p className="text-orange-100 text-sm mt-1">
                           Roll Number: {selectedStudent.rollNumber}
@@ -672,8 +715,86 @@ export default function ClassDetail() {
                     </div>
                   )}
 
+                  {/* Graduate / Mark as Left */}
+                  {(!selectedStudent.status || selectedStudent.status === 'active') && (() => {
+                    const CLASS_ORDER: Record<string, number> = {
+                      'nursery': 1, 'kg': 2, 'kindergarten': 2, 'lkg': 2, 'ukg': 3,
+                      '1': 4, 'class 1': 4, 'grade 1': 4, 'i': 4,
+                      '2': 5, 'class 2': 5, 'grade 2': 5, 'ii': 5,
+                      '3': 6, 'class 3': 6, 'grade 3': 6, 'iii': 6,
+                      '4': 7, 'class 4': 7, 'grade 4': 7, 'iv': 7,
+                      '5': 8, 'class 5': 8, 'grade 5': 8, 'v': 8,
+                      '6': 9, 'class 6': 9, 'grade 6': 9, 'vi': 9,
+                      '7': 10, 'class 7': 10, 'grade 7': 10, 'vii': 10,
+                      '8': 11, 'class 8': 11, 'grade 8': 11, 'viii': 11,
+                      '9': 12, 'class 9': 12, 'grade 9': 12, 'ix': 12,
+                      '10': 13, 'class 10': 13, 'grade 10': 13, 'x': 13,
+                      '11': 14, 'class 11': 14, 'grade 11': 14, 'xi': 14,
+                      '12': 15, 'class 12': 15, 'grade 12': 15, 'xii': 15,
+                      'unassigned': 99
+                    };
+                    const getOrder = (name: string) => {
+                      const lower = name.toLowerCase().trim();
+                      if (CLASS_ORDER[lower] !== undefined) return CLASS_ORDER[lower];
+                      const numMatch = lower.match(/(\d+)/);
+                      if (numMatch) {
+                        const num = parseInt(numMatch[1]);
+                        if (num >= 1 && num <= 12) return num + 3;
+                      }
+                      return 50;
+                    };
+                    
+                    const currentOrder = getOrder(selectedStudent.className);
+                    const maxOrder = classes.length > 0 ? Math.max(...classes.map(c => getOrder(c.name))) : 15;
+                    const isGraduatingClass = currentOrder >= maxOrder && currentOrder !== 99;
+
+                    return (
+                      <div className="flex gap-2 pt-4 border-t border-gray-100">
+                        {isGraduatingClass && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 rounded-xl border-green-200 text-green-700 hover:bg-green-50"
+                            onClick={() => handleStatusUpdate(selectedStudent!.id, 'graduated')}
+                            disabled={statusUpdating}
+                          >
+                            {statusUpdating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Award className="w-4 h-4 mr-1" />}
+                            Pass Out
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 rounded-xl border-red-200 text-red-700 hover:bg-red-50"
+                          onClick={() => handleStatusUpdate(selectedStudent!.id, 'left')}
+                          disabled={statusUpdating}
+                        >
+                          {statusUpdating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <LogOut className="w-4 h-4 mr-1" />}
+                          Mark as Left
+                        </Button>
+                      </div>
+                    );
+                  })()}
+
+                  {selectedStudent.status && selectedStudent.status !== 'active' && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <div className={`p-3 sm:p-4 rounded-xl flex items-center gap-3 ${
+                        selectedStudent.status === 'graduated' ? 'bg-green-50 text-green-700 border border-green-200' :
+                        'bg-red-50 text-red-700 border border-red-200'
+                      }`}>
+                        {selectedStudent.status === 'graduated' ? <Award className="w-5 h-5 sm:w-6 sm:h-6" /> : <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />}
+                        <div>
+                          <h4 className="font-semibold text-sm sm:text-base">
+                            Student has {selectedStudent.status === 'graduated' ? 'Passed Out' : 'Left School'}
+                          </h4>
+                          <p className="text-xs sm:text-sm opacity-80">This student is no longer active in the current academic session.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-gray-100">
                     <Button
                       variant="outline"
                       className="flex-1 rounded-xl border-gray-200 hover:bg-gray-50"

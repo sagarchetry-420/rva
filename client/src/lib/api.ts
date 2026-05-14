@@ -11,9 +11,10 @@ async function getAuthHeaders(options: RequestInit = {}): Promise<HeadersInit> {
     ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
   };
 
-  // Only add Content-Type for requests with a body (POST, PUT, etc.)
+  // Only add Content-Type for requests with a JSON body (skip for FormData uploads)
   const method = (options.method || 'GET').toUpperCase();
-  if (method !== 'GET' && method !== 'DELETE') {
+  const isFormData = options.body instanceof FormData;
+  if (method !== 'GET' && method !== 'DELETE' && !isFormData) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -49,4 +50,11 @@ export const api = {
   post: <T>(path: string, body: unknown) => apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body) }),
   put: <T>(path: string, body: unknown) => apiFetch<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   delete: <T>(path: string) => apiFetch<T>(path, { method: 'DELETE' }),
+  /** Upload FormData (multipart/form-data) — browser auto-sets Content-Type with boundary */
+  upload: <T>(path: string, formData: FormData) => {
+    return apiFetch<T>(path, {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };

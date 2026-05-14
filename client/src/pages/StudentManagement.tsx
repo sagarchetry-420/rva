@@ -21,15 +21,21 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Download
+  Download,
+  LogOut,
+  Award,
+  Filter
 } from "lucide-react";
 import { toast } from "sonner";
+
+type StudentStatus = 'active' | 'graduated' | 'left';
 
 interface Student {
   id: string;
   user_id: string;
   enrollment_date: string;
   roll_number?: string | number | null;
+  status?: StudentStatus;
   profiles?: {
     first_name: string;
     last_name: string;
@@ -53,6 +59,7 @@ interface StudentDetail {
   classId: string | null;
   rollNumber?: string;
   enrollmentDate: string;
+  status?: StudentStatus;
   attendance: {
     totalDays: number;
     presentDays: number;
@@ -87,9 +94,10 @@ interface BulkPromotionResponse {
 
 // Class sorting order
 const CLASS_ORDER: Record<string, number> = {
+  'pre-nursery': 0,
+  'pg': 0, 'play group': 0,
   'nursery': 1,
-  'kg': 2,
-  'kindergarten': 2,
+  'kg': 2, 'kindergarten': 2,
   'lkg': 2,
   'ukg': 3,
   '1': 4, 'class 1': 4, 'grade 1': 4, 'i': 4,
@@ -152,7 +160,7 @@ function getNextClassIdForPromotion(
       return a.name.localeCompare(b.name);
     })[0];
 
-  return nextClass?.id ?? "";
+  return nextClass?.id ?? "graduate";
 }
 
 export default function StudentManagement() {
@@ -172,12 +180,19 @@ export default function StudentManagement() {
   const [promotionCandidatesLoading, setPromotionCandidatesLoading] = useState(false);
   const [promotionSubmitting, setPromotionSubmitting] = useState(false);
   const [reassignRetainedRollNumbers, setReassignRetainedRollNumbers] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StudentStatus | 'all'>('active');
+  const [statusUpdating, setStatusUpdating] = useState(false);
   const classRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // Re-fetch when status filter changes
+  useEffect(() => {
+    fetchStudents();
+  }, [statusFilter]);
 
   // Auto-expand classes with matching students and scroll to first match when searching
   useEffect(() => {
@@ -220,12 +235,29 @@ export default function StudentManagement() {
     }
   }, [searchQuery, loading]);
 
+  async function fetchStudents() {
+    setLoading(true);
+    try {
+      const studentsData = await api.get<Student[]>(`/api/students?status=${statusFilter}`);
+      setStudents(studentsData);
+      // Expand all classes by default
+      const allClassIds = new Set(classes.map((c: any) => c.id));
+      allClassIds.add('unassigned');
+      setExpandedClasses(allClassIds);
+    } catch (error: any) {
+      console.error("Fetch Error:", error);
+      toast.error("Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function fetchInitialData() {
     setLoading(true);
     try {
       const [classesData, studentsData] = await Promise.all([
         api.get<any[]>('/api/classes/simple'),
-        api.get<Student[]>('/api/students')
+        api.get<Student[]>(`/api/students?status=${statusFilter}`)
       ]);
       setClasses(classesData);
       setStudents(studentsData);
@@ -368,6 +400,30 @@ export default function StudentManagement() {
     }
   };
 
+  const handleStatusUpdate = async (studentId: string, newStatus: 'graduated' | 'left') => {
+    const actionLabel = newStatus === 'graduated' ? 'pass out this student' : 'mark this student as left';
+    if (!confirm(`Are you sure you want to ${actionLabel}? They will be removed from their class.`)) return;
+
+    setStatusUpdating(true);
+    try {
+      await api.post('/api/students/status/update', {
+        studentIds: [studentId],
+        status: newStatus,
+      });
+      toast.success(
+        newStatus === 'graduated'
+          ? 'Student passed out successfully'
+          : 'Student marked as left'
+      );
+      setSelectedStudent(null);
+      await fetchStudents();
+    } catch (error: any) {
+      toast.error(error.message || `Failed to update student status`);
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
   const handleStudentClick = async (studentId: string) => {
     setDetailLoading(true);
     try {
@@ -458,7 +514,19 @@ export default function StudentManagement() {
   const totalStudents = filteredStudents.length;
   const promotedCount = selectedPromotionStudentIds.size;
   const retainedCount = Math.max(promotionCandidates.length - promotedCount, 0);
-  const promotionTargetClasses = classes.filter((classItem) => classItem.id !== promotionFromClassId);
+  const promotionTargetClasses = (() => {
+    if (!promotionFromClassId) return [];
+    const fromClass = classes.find((c) => c.id === promotionFromClassId);
+    if (!fromClass) return [];
+    const fromOrder = getClassSortOrder(fromClass.name);
+    const targetClasses = classes
+      .filter((classItem) => getClassSortOrder(classItem.name) > fromOrder)
+      .sort((a, b) => getClassSortOrder(a.name) - getClassSortOrder(b.name));
+    
+    targetClasses.push({ id: 'graduate', name: '🎓 Pass Out (Remove from Class)' } as any);
+    
+    return targetClasses;
+  })();
 
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase() || '?';
@@ -528,7 +596,7 @@ export default function StudentManagement() {
                   className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
                 >
                   <option value="">Select source class</option>
-                  {classes.map((classItem) => (
+                  {[...classes].sort((a, b) => getClassSortOrder(a.name) - getClassSortOrder(b.name)).map((classItem) => (
                     <option key={classItem.id} value={classItem.id}>{classItem.name}</option>
                   ))}
                 </select>
@@ -778,6 +846,36 @@ export default function StudentManagement() {
           </CardContent>
         </Card>
 
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-4 h-4 text-gray-400" />
+          {([
+            { value: 'active' as const, label: 'Active', icon: Users, color: 'orange' },
+            { value: 'graduated' as const, label: 'Pass Out', icon: Award, color: 'green' },
+            { value: 'left' as const, label: 'Left School', icon: LogOut, color: 'red' },
+            { value: 'all' as const, label: 'All', icon: Users, color: 'gray' },
+          ]).map(({ value, label, icon: Icon, color }) => {
+            const isActive = statusFilter === value;
+            return (
+              <button
+                key={value}
+                onClick={() => setStatusFilter(value)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  isActive
+                    ? color === 'orange' ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-300'
+                    : color === 'green' ? 'bg-green-100 text-green-700 ring-1 ring-green-300'
+                    : color === 'red' ? 'bg-red-100 text-red-700 ring-1 ring-red-300'
+                    : 'bg-gray-100 text-gray-700 ring-1 ring-gray-300'
+                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Class-wise Student List */}
         {loading ? (
           <Card className="border-0 shadow-sm rounded-2xl bg-white">
@@ -891,7 +989,18 @@ export default function StudentManagement() {
                       <h2 className="text-xl sm:text-2xl font-bold">
                         {selectedStudent.firstName} {selectedStudent.lastName}
                       </h2>
-                      <p className="text-orange-200 mt-1">{selectedStudent.className}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-orange-200">{selectedStudent.className}</p>
+                        {selectedStudent.status && selectedStudent.status !== 'active' && (
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            selectedStudent.status === 'graduated'
+                              ? 'bg-green-500/30 text-green-100'
+                              : 'bg-red-500/30 text-red-100'
+                          }`}>
+                            {selectedStudent.status === 'graduated' ? 'Passed Out' : 'Left'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -985,7 +1094,57 @@ export default function StudentManagement() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-3 pt-4 border-t border-gray-100">
+                  {selectedStudent.status === 'active' && (() => {
+                    const currentOrder = getClassSortOrder(selectedStudent.className);
+                    const maxOrder = classes.length > 0 ? Math.max(...classes.map(c => getClassSortOrder(c.name))) : 15;
+                    const isGraduatingClass = currentOrder >= maxOrder && currentOrder !== 99;
+
+                    return (
+                      <div className="flex gap-2 pt-4 border-t border-gray-100">
+                        {isGraduatingClass && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 rounded-xl border-green-200 text-green-700 hover:bg-green-50"
+                            onClick={() => handleStatusUpdate(selectedStudent!.id, 'graduated')}
+                            disabled={statusUpdating}
+                          >
+                            {statusUpdating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Award className="w-4 h-4 mr-1" />}
+                            Pass Out
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 rounded-xl border-red-200 text-red-700 hover:bg-red-50"
+                          onClick={() => handleStatusUpdate(selectedStudent!.id, 'left')}
+                          disabled={statusUpdating}
+                        >
+                          {statusUpdating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <LogOut className="w-4 h-4 mr-1" />}
+                          Mark as Left
+                        </Button>
+                      </div>
+                    );
+                  })()}
+
+                  {selectedStudent.status && selectedStudent.status !== 'active' && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <div className={`p-3 sm:p-4 rounded-xl flex items-center gap-3 ${
+                        selectedStudent.status === 'graduated' ? 'bg-green-50 text-green-700 border border-green-200' :
+                        'bg-red-50 text-red-700 border border-red-200'
+                      }`}>
+                        {selectedStudent.status === 'graduated' ? <Award className="w-5 h-5 sm:w-6 sm:h-6" /> : <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />}
+                        <div>
+                          <h4 className="font-semibold text-sm sm:text-base">
+                            Student has {selectedStudent.status === 'graduated' ? 'Passed Out' : 'Left School'}
+                          </h4>
+                          <p className="text-xs sm:text-sm opacity-80">This student is no longer active in the current academic session.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-3 border-t border-gray-100">
                     <Button
                       variant="outline"
                       className="flex-1 rounded-xl border-gray-200 hover:bg-gray-50"

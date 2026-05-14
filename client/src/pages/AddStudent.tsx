@@ -4,13 +4,14 @@ import { api } from "@/lib/api";
 import { generateTemporaryPassword } from "@/lib/passwordGenerator";
 import { copyToClipboard } from "@/lib/clipboard";
 import { generateStudentPDF } from "@/lib/pdfGenerator";
+import BulkStudentUpload from "@/components/BulkStudentUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, UserPlus, Loader2, CheckCircle, RefreshCw, Copy, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, UserPlus, Users, Loader2, CheckCircle, RefreshCw, Copy, Eye, EyeOff } from "lucide-react";
 
 // Class sorting order (same as StudentManagement)
 const CLASS_ORDER: Record<string, number> = {
@@ -54,6 +55,7 @@ export default function AddStudent() {
     emailError?: string | null;
   };
 
+  const [activeTab, setActiveTab] = useState<"single" | "bulk">("single");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordCopied, setPasswordCopied] = useState(false);
@@ -254,12 +256,38 @@ export default function AddStudent() {
         </Card>
       ) : (
         <Card className="shadow-lg border-primary/10">
-          <CardHeader className="bg-primary/5">
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-primary" /> Enroll New Student
+          <CardHeader className="bg-primary/5 pb-3">
+            <CardTitle className="flex items-center gap-2 mb-3">
+              <UserPlus className="w-5 h-5 text-primary" /> Enroll Students
             </CardTitle>
+            {/* Tab toggle */}
+            <div className="flex rounded-lg bg-muted p-1 gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("single")}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "single"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <UserPlus className="w-4 h-4" /> Single Student
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("bulk")}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "bulk"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Users className="w-4 h-4" /> Bulk Upload
+              </button>
+            </div>
           </CardHeader>
           <CardContent className="pt-6">
+            {activeTab === "single" ? (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -335,6 +363,9 @@ export default function AddStudent() {
                 Confirm Enrollment
               </Button>
             </form>
+            ) : (
+              <BulkStudentUpload />
+            )}
           </CardContent>
         </Card>
       )}

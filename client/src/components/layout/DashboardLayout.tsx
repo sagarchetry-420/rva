@@ -13,6 +13,7 @@ import {
   Calendar,
   Award,
   FileText,
+  Trophy,
   CheckSquare,
   Menu,
   X,
@@ -60,6 +61,7 @@ export default function DashboardLayout() {
     { icon: Calendar, label: "Routine", path: "/dashboard/routines" },
     { icon: CheckSquare, label: "Attendance", path: "/dashboard/attendance" },
     { icon: Award, label: "Exam", path: "/dashboard/exams" },
+    { icon: Trophy, label: "Results", path: "/dashboard/results" },
     { icon: Bell, label: "Notice", path: "/dashboard/notices" },
   ];
 
@@ -137,12 +139,12 @@ export default function DashboardLayout() {
           <div className="flex items-center gap-3 mb-4 px-2">
             <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center border border-white/10 shrink-0">
               <span className="text-sm font-bold text-white">
-                {user.email?.charAt(0).toUpperCase()}
+                {(role || 'U').charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white truncate">{role === 'admin' ? 'Administrator' : role || 'User'}</p>
-              <p className="text-xs text-slate-400 truncate">{user.email}</p>
+              <p className="text-xs text-slate-400 truncate text-capitalize">{role || 'Account'}</p>
             </div>
           </div>
           <button

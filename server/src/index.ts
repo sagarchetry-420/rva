@@ -12,6 +12,7 @@ import { dashboardRouter } from './routes/dashboard.js';
 import { examsRouter } from './routes/exams.js';
 import { routinesRouter } from './routes/routines.js';
 import { adminRouter } from './routes/admin.js';
+import { resultsRouter } from './routes/results.js';
 
 import { globalErrorHandler } from './middleware/errorHandler.js';
 
@@ -97,6 +98,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/exams', examsRouter);
 app.use('/api/routines', routinesRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/results', resultsRouter);
 
 // Global error handler — must be LAST
 app.use(globalErrorHandler);

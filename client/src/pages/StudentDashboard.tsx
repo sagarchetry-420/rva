@@ -34,6 +34,9 @@ import {
   X,
   ChevronRight,
   FileText,
+  Trophy,
+  Eye,
+  Lock,
 } from "lucide-react";
 
 interface StudentProfile {
@@ -108,12 +111,21 @@ export default function StudentDashboard() {
   // Active tab state for navigation
   const [activeTab, setActiveTab] = useState("dashboard");
 
+  // Results lookup state
+  const [resultExams, setResultExams] = useState<any[]>([]);
+  const [selectedResultExam, setSelectedResultExam] = useState("");
+  const [resultPassword, setResultPassword] = useState("");
+  const [lookupResult, setLookupResult] = useState<any>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState("");
+
   // Sidebar navigation items
   const sidebarLinks = [
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
     { icon: User, label: "My Profile", id: "profile" },
     { icon: ClipboardCheck, label: "Attendance", id: "attendance" },
     { icon: FileText, label: "Exams", id: "exams" },
+    { icon: Trophy, label: "Results", id: "results" },
     { icon: Bell, label: "Notices", id: "notices" },
   ];
 
@@ -202,8 +214,42 @@ export default function StudentDashboard() {
   useEffect(() => {
     if (profile?.classId) {
       fetchScheduledExams();
+      fetchResultExams();
     }
   }, [profile?.classId]);
+
+  const fetchResultExams = async () => {
+    try {
+      const classId = profile?.classId;
+      const url = classId ? `/api/exams?class_id=${classId}` : "/api/exams";
+      const data = await api.get<any[]>(url);
+      setResultExams(data || []);
+    } catch (err) {
+      console.error("Result exams fetch error:", err);
+    }
+  };
+
+  const handleResultLookup = async () => {
+    if (!selectedResultExam || !resultPassword) {
+      setLookupError("Please fill in all fields (Exam and Password).");
+      return;
+    }
+
+    setLookupLoading(true);
+    setLookupError("");
+
+    try {
+      const data = await api.post<any>("/api/results/student-lookup", {
+        examId: selectedResultExam,
+        password: resultPassword,
+      });
+      setLookupResult(data);
+    } catch (err: any) {
+      setLookupError(err.message || "Failed to look up results");
+    } finally {
+      setLookupLoading(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -294,12 +340,12 @@ export default function StudentDashboard() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
               <span className="text-sm font-bold text-white">
-                {profile?.firstName?.charAt(0) || user.email?.charAt(0).toUpperCase()}
+                {profile?.firstName?.charAt(0) || 'S'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
-                {profileLoading ? "Loading..." : `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim() || user.email?.split("@")[0]}
+                {profileLoading ? "Loading..." : `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim() || 'Student'}
               </p>
               <p className="text-xs text-blue-200 truncate">{profile?.className || "Student"}</p>
             </div>
@@ -643,7 +689,7 @@ export default function StudentDashboard() {
                             {profile.firstName} {profile.lastName}
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            {profile.email}
+                            Roll No: {profile.rollNumber}
                           </p>
                           <Badge className="mt-2 bg-blue-100 text-blue-700 hover:bg-blue-100">
                             Student
@@ -1043,6 +1089,163 @@ export default function StudentDashboard() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Results Lookup View */}
+          {activeTab === "results" && (
+            <Card>
+              <CardHeader className="border-b bg-muted/20">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Trophy className="w-5 h-5 text-purple-500" />
+                  Result Lookup
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {!lookupResult ? (
+                  <div className="max-w-md mx-auto space-y-6">
+                    <div className="text-center mb-6">
+                      <Lock className="w-12 h-12 text-purple-300 mx-auto mb-3" />
+                      <p className="text-muted-foreground text-sm">Enter your details to view your exam results securely.</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold">Select Exam *</label>
+                        <select
+                          value={selectedResultExam}
+                          onChange={e => setSelectedResultExam(e.target.value)}
+                          className="w-full border rounded-xl px-3 py-2 text-sm bg-background"
+                        >
+                          <option value="">Choose an exam...</option>
+                          {resultExams.map((exam: any) => (
+                            <option key={exam.id} value={exam.id}>
+                              {exam.name} {exam.is_final ? '(FINAL)' : ''} — {exam.classes?.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold">Password *</label>
+                        <input
+                          type="password"
+                          value={resultPassword}
+                          onChange={e => setResultPassword(e.target.value)}
+                          placeholder="Enter your login password"
+                          className="w-full border rounded-xl px-3 py-2 text-sm bg-background"
+                        />
+                      </div>
+
+                      {lookupError && (
+                        <div className="text-red-600 text-sm bg-red-50 p-3 rounded-xl">
+                          {lookupError}
+                        </div>
+                      )}
+
+                      <Button
+                        onClick={handleResultLookup}
+                        disabled={lookupLoading || !selectedResultExam || !resultRollNumber || !resultPassword}
+                        className="w-full gap-2 bg-purple-600 hover:bg-purple-700 rounded-xl"
+                      >
+                        {lookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                        View Results
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-lg">{lookupResult.exam.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {lookupResult.exam.className} · {lookupResult.student.name} · Roll: {lookupResult.student.rollNumber}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => { setLookupResult(null); setLookupError(''); }}>
+                        ← Back
+                      </Button>
+                    </div>
+
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/30">
+                            <TableHead>Subject</TableHead>
+                            <TableHead className="text-center">Total</TableHead>
+                            <TableHead className="text-center">Pass Marks</TableHead>
+                            <TableHead className="text-center">Obtained</TableHead>
+                            <TableHead className="text-center">Result</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {lookupResult.subjects.map((sub: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{sub.subjectName} ({sub.subjectCode})</TableCell>
+                              <TableCell className="text-center">{sub.totalMarks}</TableCell>
+                              <TableCell className="text-center">{sub.passingMarks}</TableCell>
+                              <TableCell className="text-center">
+                                {!sub.hasResult ? (
+                                  <span className="text-muted-foreground">—</span>
+                                ) : sub.isAbsent ? (
+                                  <span className="text-purple-600 font-medium">AB</span>
+                                ) : (
+                                  <span className={sub.passed ? 'text-green-700 font-semibold' : 'text-red-600 font-semibold'}>
+                                    {sub.marksObtained}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {!sub.hasResult ? (
+                                  <Badge variant="outline" className="text-amber-600 text-[10px]">Pending</Badge>
+                                ) : sub.isAbsent ? (
+                                  <Badge className="bg-purple-100 text-purple-700 text-[10px]">Absent</Badge>
+                                ) : sub.passed ? (
+                                  <Badge className="bg-green-100 text-green-700 text-[10px]">Pass</Badge>
+                                ) : (
+                                  <Badge className="bg-red-100 text-red-700 text-[10px]">Fail</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Summary */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <Card className="bg-blue-50/80 border-0">
+                        <CardContent className="p-3 text-center">
+                          <p className="text-[10px] font-semibold text-gray-500 uppercase">Total</p>
+                          <p className="text-lg font-bold text-blue-600">{lookupResult.totalObtained}/{lookupResult.totalMarks}</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-amber-50/80 border-0">
+                        <CardContent className="p-3 text-center">
+                          <p className="text-[10px] font-semibold text-gray-500 uppercase">Percentage</p>
+                          <p className="text-lg font-bold text-amber-600">{lookupResult.percentage}%</p>
+                        </CardContent>
+                      </Card>
+                      <Card className={`border-0 ${lookupResult.overallPassed ? 'bg-green-50/80' : 'bg-red-50/80'}`}>
+                        <CardContent className="p-3 text-center">
+                          <p className="text-[10px] font-semibold text-gray-500 uppercase">Result</p>
+                          <p className={`text-lg font-bold ${lookupResult.overallPassed ? 'text-green-600' : 'text-red-600'}`}>
+                            {lookupResult.allResultsEntered ? (lookupResult.overallPassed ? 'PASS' : 'FAIL') : 'Pending'}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-purple-50/80 border-0">
+                        <CardContent className="p-3 text-center">
+                          <p className="text-[10px] font-semibold text-gray-500 uppercase">Exam</p>
+                          <p className="text-sm font-bold text-purple-600 truncate">
+                            {lookupResult.exam.isFinal ? 'Final' : 'Regular'}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </div>
                 )}
               </CardContent>

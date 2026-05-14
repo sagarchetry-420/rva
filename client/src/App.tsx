@@ -25,6 +25,7 @@ import CreateNotice from "./pages/CreateNotice"
 import NoticeManagement from "./pages/NoticeManagement"
 import AttendanceManagement from "./pages/AttendanceManagement"
 import ExamManagement from "./pages/ExamManagement"
+import ResultsManagement from "./pages/ResultsManagement"
 import RoutineManagement from "./pages/RoutineManagement"
 import CreateRoutine from "./pages/CreateRoutine"
 import ClassDetail from "./pages/classes/ClassDetail"
@@ -79,6 +80,7 @@ function App() {
               <Route path="notices/create" element={<CreateNotice />} />
               <Route path="attendance" element={<AttendanceManagement />} />
               <Route path="exams" element={<ExamManagement />} />
+              <Route path="results" element={<ResultsManagement />} />
               <Route path="routines" element={<RoutineManagement />} />
               <Route path="routines/create" element={<CreateRoutine />} />
             </Route>

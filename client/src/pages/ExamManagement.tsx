@@ -43,10 +43,40 @@ interface Exam {
   name: string;
   description: string | null;
   class_id: string;
+  is_final: boolean;
   created_at: string;
   classes: { id: string; name: string } | null;
   exam_subjects: ExamSubject[];
 }
+
+const sortClasses = (a: ClassItem, b: ClassItem) => {
+  const classOrder: { [key: string]: number } = {
+    'play': 1,
+    'pre-nursery': 2,
+    'nursery': 3,
+    'lkg': 4,
+    'kg': 5,
+    'ukg': 6,
+  };
+
+  const aName = a.name.toLowerCase().trim();
+  const bName = b.name.toLowerCase().trim();
+
+  const getOrder = (name: string) => {
+    for (const [key, order] of Object.entries(classOrder)) {
+      if (name.includes(key)) return order;
+    }
+    const numMatch = name.match(/\d+/);
+    if (numMatch) return parseInt(numMatch[0]) + 10;
+    return 100;
+  };
+
+  const aOrder = getOrder(aName);
+  const bOrder = getOrder(bName);
+
+  if (aOrder !== bOrder) return aOrder - bOrder;
+  return aName.localeCompare(bName);
+};
 
 export default function ExamManagement() {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -61,6 +91,7 @@ export default function ExamManagement() {
   const [examName, setExamName] = useState("");
   const [selectedClassId, setSelectedClassId] = useState("");
   const [description, setDescription] = useState("");
+  const [isFinal, setIsFinal] = useState(false);
   const [subjectSchedules, setSubjectSchedules] = useState<SubjectSchedule[]>([]);
 
   useEffect(() => { fetchData(); }, []);
@@ -74,7 +105,7 @@ export default function ExamManagement() {
         api.get<Subject[]>('/api/classes/subjects')
       ]);
       setExams(examsData);
-      setClasses(classesData);
+      setClasses([...classesData].sort(sortClasses));
       setAllSubjects(subjectsData);
       const allIds = new Set(examsData.map((e: Exam) => e.id));
       setExpandedExams(allIds);
@@ -124,6 +155,7 @@ export default function ExamManagement() {
         name: examName,
         classId: selectedClassId,
         description: description || null,
+        isFinal,
         subjects: subjectSchedules.map(s => ({
           subjectId: s.subjectId,
           examDate: s.examDate,
@@ -134,7 +166,7 @@ export default function ExamManagement() {
         }))
       });
       toast.success("Exam scheduled successfully!");
-      setExamName(""); setSelectedClassId(""); setDescription("");
+      setExamName(""); setSelectedClassId(""); setDescription(""); setIsFinal(false);
       setSubjectSchedules([]); setShowForm(false);
       fetchData();
     } catch (error: any) { toast.error("Failed to create exam: " + error.message); }
@@ -268,9 +300,22 @@ export default function ExamManagement() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2 sm:col-span-2">
+              <div className="space-y-2 sm:col-span-2">
                   <Label>Description (Optional)</Label>
                   <Textarea placeholder="Additional notes..." value={description} onChange={e => setDescription(e.target.value)} className="rounded-xl min-h-[60px]" />
+                </div>
+                <div className="flex items-center gap-3 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    id="isFinal"
+                    checked={isFinal}
+                    onChange={e => setIsFinal(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <Label htmlFor="isFinal" className="cursor-pointer">
+                    <span className="font-semibold">Final Exam</span>
+                    <span className="text-xs text-muted-foreground ml-2">(Results will be used for student promotion decisions)</span>
+                  </Label>
                 </div>
               </div>
 
@@ -391,7 +436,10 @@ export default function ExamManagement() {
                       className="w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-gray-50/50 border-b border-gray-100 hover:bg-gray-50 transition-colors"
                     >
                       <div className="text-left">
-                        <h4 className="text-base font-bold text-gray-800">{exam.name}</h4>
+                        <h4 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                          {exam.name}
+                          {exam.is_final && <Badge className="bg-red-100 text-red-700 text-[10px] font-semibold">FINAL</Badge>}
+                        </h4>
                         <p className="text-xs text-gray-500">
                           {subjects.length} subject{subjects.length !== 1 ? 's' : ''} · {upcoming} upcoming
                           {exam.description && ` · ${exam.description}`}

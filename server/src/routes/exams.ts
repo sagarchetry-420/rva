@@ -17,6 +17,7 @@ examsRouter.get('/', requireAuth, async (req, res) => {
         name,
         description,
         class_id,
+        is_final,
         created_at,
         classes(id, name),
         exam_subjects(
@@ -104,6 +105,7 @@ examsRouter.get('/:id', requireAuth, async (req, res) => {
         name,
         description,
         class_id,
+        is_final,
         created_at,
         classes(id, name),
         exam_subjects(
@@ -134,7 +136,7 @@ examsRouter.get('/:id', requireAuth, async (req, res) => {
 examsRouter.post('/', requireAuth, async (req, res) => {
   try {
     const supabase = createAdminClient();
-    const { name, classId, description, subjects } = req.body;
+    const { name, classId, description, subjects, isFinal } = req.body;
 
     if (!name || !classId || !subjects || !Array.isArray(subjects) || subjects.length === 0) {
       return res.status(400).json({ error: 'Name, class, and at least one subject are required' });
@@ -153,7 +155,8 @@ examsRouter.post('/', requireAuth, async (req, res) => {
       .insert({
         name,
         class_id: classId,
-        description: description || null
+        description: description || null,
+        is_final: isFinal || false
       })
       .select()
       .single();
@@ -189,6 +192,7 @@ examsRouter.post('/', requireAuth, async (req, res) => {
         name,
         description,
         class_id,
+        is_final,
         created_at,
         classes(id, name),
         exam_subjects(

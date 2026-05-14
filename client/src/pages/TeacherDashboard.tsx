@@ -42,7 +42,9 @@ import {
   Briefcase,
   Upload,
   FileText,
-  Printer
+  Printer,
+  Trophy,
+  Save
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -104,6 +106,14 @@ export default function TeacherDashboard() {
   const [scheduledExams, setScheduledExams] = useState<UpcomingExam[]>([]);
   const [examsLoading, setExamsLoading] = useState(false);
 
+  // Results state
+  const [assignedExamSubjects, setAssignedExamSubjects] = useState<any[]>([]);
+  const [resultsLoading, setResultsLoading] = useState(false);
+  const [selectedExamSubject, setSelectedExamSubject] = useState<any>(null);
+  const [studentMarks, setStudentMarks] = useState<any[]>([]);
+  const [marksLoading, setMarksLoading] = useState(false);
+  const [savingMarks, setSavingMarks] = useState(false);
+
   // Attendance validation state
   const [attendanceAlreadyMarked, setAttendanceAlreadyMarked] = useState(false);
   const [markedByOtherTeacher, setMarkedByOtherTeacher] = useState(false);
@@ -125,6 +135,7 @@ export default function TeacherDashboard() {
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
     { icon: ClipboardCheck, label: "Attendance", id: "attendance" },
     { icon: FileText, label: "Exams", id: "exams" },
+    { icon: Trophy, label: "Results", id: "results" },
     { icon: Bell, label: "Notices", id: "notices" },
     { icon: BookOpen, label: "My Classes", id: "classes" },
     { icon: Briefcase, label: "Employment", id: "employment" },
@@ -152,6 +163,7 @@ export default function TeacherDashboard() {
       fetchTeacherClasses();
       fetchNotices();
       fetchScheduledExams();
+      fetchAssignedExamSubjects();
     }
   }, [user, authLoading]);
 
@@ -272,6 +284,65 @@ export default function TeacherDashboard() {
       console.error("Exams fetch error:", error);
     } finally {
       setExamsLoading(false);
+    }
+  };
+
+  const fetchAssignedExamSubjects = async () => {
+    setResultsLoading(true);
+    try {
+      const data = await api.get<any[]>("/api/results/my-assigned-subjects");
+      setAssignedExamSubjects(data || []);
+    } catch (error: any) {
+      console.error("Assigned subjects fetch error:", error);
+    } finally {
+      setResultsLoading(false);
+    }
+  };
+
+  const fetchStudentMarks = async (examSubjectId: string) => {
+    setMarksLoading(true);
+    try {
+      const data = await api.get<any>(`/api/results/exam-subjects/${examSubjectId}`);
+      setSelectedExamSubject(data.examSubject);
+      setStudentMarks(data.students || []);
+    } catch (error: any) {
+      toast({ title: "Error", description: "Failed to load student marks.", variant: "destructive" });
+    } finally {
+      setMarksLoading(false);
+    }
+  };
+
+  const handleSaveMarks = async () => {
+    if (!selectedExamSubject) return;
+    // Validate all marks
+    for (const sm of studentMarks) {
+      if (!sm.isAbsent && (sm.marksObtained === null || sm.marksObtained === undefined || sm.marksObtained === '')) {
+        toast({ title: "Validation Error", description: `Please enter marks for ${sm.firstName} ${sm.lastName} or mark as absent.`, variant: "destructive" });
+        return;
+      }
+      if (!sm.isAbsent && (sm.marksObtained < 0 || sm.marksObtained > selectedExamSubject.totalMarks)) {
+        toast({ title: "Validation Error", description: `Marks for ${sm.firstName} must be between 0 and ${selectedExamSubject.totalMarks}.`, variant: "destructive" });
+        return;
+      }
+    }
+    setSavingMarks(true);
+    try {
+      await api.post(`/api/results/exam-subjects/${selectedExamSubject.id}`, {
+        marks: studentMarks.map((sm: any) => ({
+          studentId: sm.studentId,
+          marksObtained: sm.isAbsent ? 0 : (sm.marksObtained || 0),
+          isAbsent: sm.isAbsent || false,
+          remarks: sm.remarks || '',
+        })),
+      });
+      toast({ title: "Success", description: "Marks saved successfully!" });
+      // Go back to list and refresh
+      setSelectedExamSubject(null);
+      fetchAssignedExamSubjects();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to save marks.", variant: "destructive" });
+    } finally {
+      setSavingMarks(false);
     }
   };
 
@@ -444,7 +515,7 @@ export default function TeacherDashboard() {
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center border border-emerald-200">
               <span className="text-sm font-bold text-emerald-700">
-                {user.email?.charAt(0).toUpperCase()}
+                {(profile?.firstName || 'T').charAt(0).toUpperCase()}
               </span>
             </div>
             <Button
@@ -1358,6 +1429,162 @@ export default function TeacherDashboard() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Results Entry View */}
+          {activeTab === "results" && (
+            <Card>
+              <CardHeader className="border-b bg-muted/20 flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Trophy className="w-5 h-5 text-purple-500" />
+                  Marks Entry
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => { fetchAssignedExamSubjects(); }} className="text-purple-600">
+                  <RefreshCw className="w-4 h-4 mr-1" /> Refresh
+                </Button>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {resultsLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="animate-spin w-8 h-8 text-purple-600" />
+                  </div>
+                ) : !selectedExamSubject ? (
+                  <div className="space-y-4">
+                    {(() => {
+                      const pendingSubjects = assignedExamSubjects.filter((es: any) => {
+                        const isPast = new Date(es.exam_date) < new Date(new Date().setHours(0,0,0,0));
+                        const isComplete = es.resultsEntered >= es.totalStudents && es.totalStudents > 0;
+                        return isPast && !isComplete;
+                      });
+                      return pendingSubjects.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Trophy className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                        <p className="text-muted-foreground font-medium">No pending marks entry</p>
+                        <p className="text-sm text-muted-foreground mt-1">All marks have been entered or no exams are due yet.</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-3">
+                        {pendingSubjects.map((es: any) => {
+                          return (
+                            <button
+                              key={es.id}
+                              onClick={() => fetchStudentMarks(es.id)}
+                              className="w-full text-left p-4 rounded-xl border transition-all bg-white hover:shadow-md hover:border-purple-200"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-semibold text-sm">{es.subjects?.name} ({es.subjects?.code})</div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {(es as any).exams?.name} · {es.className} · {new Date(es.exam_date).toLocaleDateString()}
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="text-purple-600 border-purple-300 text-[10px]">
+                                  {es.resultsEntered}/{es.totalStudents} entered
+                                </Badge>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                    })()}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-base">{selectedExamSubject.subjectName} ({selectedExamSubject.subjectCode})</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedExamSubject.examName} · {selectedExamSubject.className} · Max: {selectedExamSubject.totalMarks} · Pass: {selectedExamSubject.passingMarks}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedExamSubject(null)}>
+                        ← Back
+                      </Button>
+                    </div>
+
+                    {marksLoading ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 className="animate-spin w-8 h-8 text-purple-600" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-muted/30">
+                                <TableHead className="w-12">Roll</TableHead>
+                                <TableHead>Student Name</TableHead>
+                                <TableHead className="w-32 text-center">Marks (/{selectedExamSubject.totalMarks})</TableHead>
+                                <TableHead className="w-20 text-center">Absent</TableHead>
+                                <TableHead className="w-20 text-center">Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {studentMarks.map((sm: any, idx: number) => (
+                                <TableRow key={sm.studentId}>
+                                  <TableCell className="text-sm font-medium">{sm.rollNumber || idx + 1}</TableCell>
+                                  <TableCell className="font-medium">{sm.firstName} {sm.lastName}</TableCell>
+                                  <TableCell className="text-center">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={selectedExamSubject.totalMarks}
+                                      value={sm.isAbsent ? '' : (sm.marksObtained ?? '')}
+                                      disabled={sm.isAbsent}
+                                      onChange={(e) => {
+                                        const val = e.target.value === '' ? null : parseInt(e.target.value);
+                                        setStudentMarks(prev => prev.map((m: any) =>
+                                          m.studentId === sm.studentId ? { ...m, marksObtained: val } : m
+                                        ));
+                                      }}
+                                      className="w-20 text-center border rounded-md px-2 py-1 text-sm disabled:bg-muted/50"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={sm.isAbsent}
+                                      onChange={(e) => {
+                                        setStudentMarks(prev => prev.map((m: any) =>
+                                          m.studentId === sm.studentId ? { ...m, isAbsent: e.target.checked, marksObtained: e.target.checked ? 0 : m.marksObtained } : m
+                                        ));
+                                      }}
+                                      className="w-4 h-4"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {sm.marksObtained !== null && !sm.isAbsent ? (
+                                      sm.marksObtained >= selectedExamSubject.passingMarks ? (
+                                        <Badge className="bg-green-100 text-green-700 text-[10px]">Pass</Badge>
+                                      ) : (
+                                        <Badge className="bg-red-100 text-red-700 text-[10px]">Fail</Badge>
+                                      )
+                                    ) : sm.isAbsent ? (
+                                      <Badge className="bg-purple-100 text-purple-700 text-[10px]">AB</Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">—</span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                        <Button
+                          onClick={handleSaveMarks}
+                          disabled={savingMarks}
+                          className="gap-2 bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
+                        >
+                          {savingMarks ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          Save Marks
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </CardContent>

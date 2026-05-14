@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { createAdminClient, isUserAdmin } from '../lib/supabase.js';
-import { sendStudentEnrollmentEmail } from '../lib/resend.js';
+import { sendStudentEnrollmentEmail, isEmailConfigured } from '../lib/resend.js';
 
 export const studentsRouter = Router();
 
@@ -611,29 +611,33 @@ studentsRouter.post('/', requireAuth, async (req, res) => {
 
     console.log('[POST /api/students] Student created successfully:', userData.user?.id);
 
+    const emailReady = isEmailConfigured();
+
     // Respond immediately — don't make the client wait for SMTP
     res.json({
       user: userData.user,
-      emailSent: true,
-      emailError: null,
+      emailSent: emailReady,
+      emailError: emailReady ? null : 'Email service is not configured on the server.',
     });
 
-    // Fire-and-forget: send email in the background
-    sendStudentEnrollmentEmail({
-      to: normalizedEmail,
-      firstName,
-      lastName,
-      loginEmail: normalizedEmail,
-      temporaryPassword: password,
-    }).then(result => {
-      if (!result.sent) {
-        console.error('[POST /api/students] Enrollment email failed:', result.error);
-      } else {
-        console.log('[POST /api/students] Enrollment email sent:', result.messageId);
-      }
-    }).catch(err => {
-      console.error('[POST /api/students] Enrollment email error:', err);
-    });
+    // Fire-and-forget: send email in the background (only if configured)
+    if (emailReady) {
+      sendStudentEnrollmentEmail({
+        to: normalizedEmail,
+        firstName,
+        lastName,
+        loginEmail: normalizedEmail,
+        temporaryPassword: password,
+      }).then(result => {
+        if (!result.sent) {
+          console.error('[POST /api/students] Enrollment email failed:', result.error);
+        } else {
+          console.log('[POST /api/students] Enrollment email sent:', result.messageId);
+        }
+      }).catch(err => {
+        console.error('[POST /api/students] Enrollment email error:', err);
+      });
+    }
   } catch (err: any) {
     console.error('[POST /api/students] Error:', err);
     res.status(500).json({ error: err.message || 'Failed to create student' });

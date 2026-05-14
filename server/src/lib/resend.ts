@@ -52,8 +52,8 @@ type EmailSendResult = {
 function getGmailConfig():
   { user: string; appPassword: string; from: string; replyTo: string }
   | { error: string } {
-  const user = process.env.GMAIL_USER?.trim() || ENROLLMENT_SENDER_EMAIL;
-  const appPassword = process.env.GMAIL_APP_PASSWORD?.trim();
+  const user = process.env.GMAIL_USER?.replace(/"/g, '').trim() || ENROLLMENT_SENDER_EMAIL;
+  const appPassword = process.env.GMAIL_APP_PASSWORD?.replace(/"/g, '').trim();
   if (!appPassword) {
     return { error: 'GMAIL_APP_PASSWORD is not configured' };
   }
@@ -64,6 +64,12 @@ function getGmailConfig():
     from: `Rose Valley Academy <${user}>`,
     replyTo: user,
   };
+}
+
+/** Quick sync check — can we attempt to send email? */
+export function isEmailConfigured(): boolean {
+  const config = getGmailConfig();
+  return !('error' in config);
 }
 
 export async function sendStudentEnrollmentEmail(input: StudentEnrollmentEmailInput): Promise<EmailSendResult> {

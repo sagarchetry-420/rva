@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { createAdminClient, isUserAdmin } from '../lib/supabase.js';
-import { sendTeacherEnrollmentEmail } from '../lib/resend.js';
+import { sendTeacherEnrollmentEmail, isEmailConfigured } from '../lib/resend.js';
 
 export const teachersRouter = Router();
 
@@ -189,29 +189,33 @@ teachersRouter.post('/', requireAuth, async (req, res) => {
       console.log('[Teachers POST] Assignments created successfully');
     }
 
+    const emailReady = isEmailConfigured();
+
     // Respond immediately — don't make the client wait for SMTP
     res.json({
       user: userData.user,
-      emailSent: true,
-      emailError: null,
+      emailSent: emailReady,
+      emailError: emailReady ? null : 'Email service is not configured on the server.',
     });
 
-    // Fire-and-forget: send email in the background
-    sendTeacherEnrollmentEmail({
-      to: normalizedEmail,
-      firstName,
-      lastName,
-      loginEmail: normalizedEmail,
-      temporaryPassword: password,
-    }).then(result => {
-      if (!result.sent) {
-        console.error('[Teachers POST] Enrollment email failed:', result.error);
-      } else {
-        console.log('[Teachers POST] Enrollment email sent:', result.messageId);
-      }
-    }).catch(err => {
-      console.error('[Teachers POST] Enrollment email error:', err);
-    });
+    // Fire-and-forget: send email in the background (only if configured)
+    if (emailReady) {
+      sendTeacherEnrollmentEmail({
+        to: normalizedEmail,
+        firstName,
+        lastName,
+        loginEmail: normalizedEmail,
+        temporaryPassword: password,
+      }).then(result => {
+        if (!result.sent) {
+          console.error('[Teachers POST] Enrollment email failed:', result.error);
+        } else {
+          console.log('[Teachers POST] Enrollment email sent:', result.messageId);
+        }
+      }).catch(err => {
+        console.error('[Teachers POST] Enrollment email error:', err);
+      });
+    }
   } catch (err: any) {
     console.error('[Teachers POST] Unexpected error:', err);
     res.status(500).json({ error: 'Failed to create teacher: ' + err.message });

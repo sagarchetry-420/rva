@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, UserPlus, Loader2, CheckCircle, RefreshCw, Copy, Eye, EyeOff, Download } from "lucide-react";
+import { ArrowLeft, UserPlus, Loader2, CheckCircle, RefreshCw, Copy, Eye, EyeOff } from "lucide-react";
 
 // Class sorting order (same as StudentManagement)
 const CLASS_ORDER: Record<string, number> = {
@@ -48,6 +48,12 @@ function getClassSortOrder(className: string): number {
 }
 
 export default function AddStudent() {
+  type CreateStudentResponse = {
+    user: { id: string } | null;
+    emailSent?: boolean;
+    emailError?: string | null;
+  };
+
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordCopied, setPasswordCopied] = useState(false);
@@ -58,6 +64,9 @@ export default function AddStudent() {
     password: string;
     firstName: string;
     lastName: string;
+    classId: string;
+    emailSent: boolean;
+    emailError: string | null;
   } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -129,7 +138,7 @@ export default function AddStudent() {
         classId: formData.classId
       });
 
-      await api.post('/api/students', {
+      const response = await api.post<CreateStudentResponse>('/api/students', {
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
@@ -144,12 +153,17 @@ export default function AddStudent() {
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
+        classId: formData.classId,
+        emailSent: response.emailSent !== false,
+        emailError: response.emailError ?? null,
       });
       setEnrollmentSuccess(true);
 
       toast({
         title: "Enrollment Successful",
-        description: `${formData.firstName} has been registered successfully.`,
+        description: response.emailSent === false
+          ? `${formData.firstName} has been registered, but credentials email could not be sent.`
+          : `${formData.firstName} has been registered and credentials email has been sent.`,
       });
 
     } catch (error: any) {
@@ -191,34 +205,23 @@ export default function AddStudent() {
                 </p>
               </div>
 
-              {/* Download PDF Button */}
-              <Button
-                onClick={() => {
-                  // Create temporary student object with the actual password
-                  const studentData: any = {
-                    id: 'temp',
-                    userId: 'temp',
-                    firstName: enrollmentData.firstName,
-                    lastName: enrollmentData.lastName,
-                    email: enrollmentData.email,
-                    className: classes.find(c => c.id === enrollmentData.classId)?.name || 'N/A',
-                    classId: enrollmentData.classId,
-                    enrollmentDate: new Date().toISOString(),
-                    attendance: {
-                      totalDays: 0,
-                      presentDays: 0,
-                      absentDays: 0,
-                      lateDays: 0,
-                      attendancePercentage: 0
-                    }
-                  };
-                  generateStudentPDF(studentData, enrollmentData.password);
-                  toast({ description: "PDF downloaded with credentials" });
-                }}
-                className="gap-2 bg-blue-600 hover:bg-blue-700"
+              <div
+                className={`rounded-lg border p-3 text-sm ${
+                  enrollmentData.emailSent
+                    ? "border-green-200 bg-green-100 text-green-800"
+                    : "border-orange-200 bg-orange-100 text-orange-800"
+                }`}
               >
-                <Download className="w-4 h-4" /> Download Credentials PDF
-              </Button>
+                {enrollmentData.emailSent ? (
+                  <p>
+                    Credentials email sent to <span className="font-semibold">{enrollmentData.email}</span>
+                  </p>
+                ) : (
+                  <p>
+                    Student created, but email was not sent. {enrollmentData.emailError ? `Reason: ${enrollmentData.emailError}` : "Please verify Resend setup and share credentials manually."}
+                  </p>
+                )}
+              </div>
 
               <div className="flex gap-3">
                 <Button

@@ -54,9 +54,13 @@ export default function GallerySection() {
               transition={{ delay: i * 0.1, duration: 0.5 }}
               className={`group relative rounded-xl overflow-hidden border border-slate-200 cursor-pointer shadow-sm hover:shadow-xl hover:border-orange-200 hover:-translate-y-1 transition-all duration-300 ${item.span}`}
             >
-              <div
-                className="absolute inset-0 bg-cover bg-center transform group-hover:scale-110 transition-transform duration-700 ease-out saturate-50 group-hover:saturate-100"
-                style={{ backgroundImage: `url('${item.image}')` }}
+              <img
+                src={item.image}
+                alt={`${item.title} - ${item.category}`}
+                loading="lazy"
+                decoding="async"
+                sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                className="absolute inset-0 w-full h-full object-cover object-center transform-gpu group-hover:scale-105 transition-transform duration-700 ease-out"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 

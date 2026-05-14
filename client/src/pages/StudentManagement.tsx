@@ -29,6 +29,7 @@ interface Student {
   id: string;
   user_id: string;
   enrollment_date: string;
+  roll_number?: string | number | null;
   profiles?: {
     first_name: string;
     last_name: string;
@@ -68,6 +69,22 @@ interface ClassGroup {
   sortOrder: number;
 }
 
+interface PromotionCandidate {
+  id: string;
+  fullName: string;
+  rollNumber: string;
+}
+
+interface BulkPromotionResponse {
+  success: boolean;
+  academicYear: string;
+  promotedCount: number;
+  retainedCount: number;
+  sourceClassName: string;
+  targetClassName: string;
+  reassignRetainedRollNumbers: boolean;
+}
+
 // Class sorting order
 const CLASS_ORDER: Record<string, number> = {
   'nursery': 1,
@@ -104,6 +121,40 @@ function getClassSortOrder(className: string): number {
   return 50; // Default for unknown classes
 }
 
+function getDefaultAcademicYear(): string {
+  const currentYear = new Date().getFullYear();
+  return `${currentYear}-${currentYear + 1}`;
+}
+
+function parseNumericRoll(rollNumber: string | number | null | undefined): number | null {
+  if (rollNumber === null || rollNumber === undefined) return null;
+  const normalized = String(rollNumber).trim();
+  if (!/^\d+$/.test(normalized)) return null;
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getNextClassIdForPromotion(
+  fromClassId: string,
+  classOptions: Array<{ id: string; name: string }>
+): string {
+  if (!fromClassId) return "";
+
+  const fromClass = classOptions.find((classItem) => classItem.id === fromClassId);
+  if (!fromClass) return "";
+
+  const fromOrder = getClassSortOrder(fromClass.name);
+  const nextClass = classOptions
+    .filter((classItem) => classItem.id !== fromClassId && getClassSortOrder(classItem.name) > fromOrder)
+    .sort((a, b) => {
+      const orderDiff = getClassSortOrder(a.name) - getClassSortOrder(b.name);
+      if (orderDiff !== 0) return orderDiff;
+      return a.name.localeCompare(b.name);
+    })[0];
+
+  return nextClass?.id ?? "";
+}
+
 export default function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -112,6 +163,15 @@ export default function StudentManagement() {
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
   const [selectedStudent, setSelectedStudent] = useState<StudentDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [showPromotionPanel, setShowPromotionPanel] = useState(false);
+  const [promotionFromClassId, setPromotionFromClassId] = useState("");
+  const [promotionToClassId, setPromotionToClassId] = useState("");
+  const [promotionAcademicYear, setPromotionAcademicYear] = useState(getDefaultAcademicYear());
+  const [promotionCandidates, setPromotionCandidates] = useState<PromotionCandidate[]>([]);
+  const [selectedPromotionStudentIds, setSelectedPromotionStudentIds] = useState<Set<string>>(new Set());
+  const [promotionCandidatesLoading, setPromotionCandidatesLoading] = useState(false);
+  const [promotionSubmitting, setPromotionSubmitting] = useState(false);
+  const [reassignRetainedRollNumbers, setReassignRetainedRollNumbers] = useState(false);
   const classRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const navigate = useNavigate();
 
@@ -180,6 +240,118 @@ export default function StudentManagement() {
       setLoading(false);
     }
   }
+
+  async function loadPromotionCandidates(fromClassId: string) {
+    if (!fromClassId) {
+      setPromotionCandidates([]);
+      setSelectedPromotionStudentIds(new Set());
+      return;
+    }
+
+    setPromotionCandidatesLoading(true);
+    try {
+      const classStudents = await api.get<Student[]>(`/api/students?class_id=${encodeURIComponent(fromClassId)}`);
+      const candidates = classStudents
+        .map((student) => {
+          const fullName = `${student.profiles?.first_name ?? ""} ${student.profiles?.last_name ?? ""}`.trim();
+          return {
+            id: student.id,
+            fullName: fullName || "Unnamed Student",
+            rollNumber: student.roll_number === null || student.roll_number === undefined
+              ? "N/A"
+              : String(student.roll_number).trim() || "N/A",
+            enrollmentDate: student.enrollment_date,
+          };
+        })
+        .sort((a, b) => {
+          const rollA = parseNumericRoll(a.rollNumber === "N/A" ? undefined : a.rollNumber);
+          const rollB = parseNumericRoll(b.rollNumber === "N/A" ? undefined : b.rollNumber);
+
+          if (rollA !== null && rollB !== null && rollA !== rollB) {
+            return rollA - rollB;
+          }
+          if (rollA !== null && rollB === null) return -1;
+          if (rollA === null && rollB !== null) return 1;
+          return new Date(a.enrollmentDate).getTime() - new Date(b.enrollmentDate).getTime();
+        });
+
+      setPromotionCandidates(candidates.map(({ enrollmentDate, ...candidate }) => candidate));
+      setSelectedPromotionStudentIds(new Set(candidates.map((candidate) => candidate.id)));
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load promotion candidates");
+      setPromotionCandidates([]);
+      setSelectedPromotionStudentIds(new Set());
+    } finally {
+      setPromotionCandidatesLoading(false);
+    }
+  }
+
+  const handlePromotionFromClassChange = async (nextClassId: string) => {
+    setPromotionFromClassId(nextClassId);
+    const autoSelectedToClassId = getNextClassIdForPromotion(nextClassId, classes);
+    setPromotionToClassId(autoSelectedToClassId);
+    await loadPromotionCandidates(nextClassId);
+  };
+
+  const togglePromotionSelection = (studentId: string) => {
+    setSelectedPromotionStudentIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(studentId)) {
+        next.delete(studentId);
+      } else {
+        next.add(studentId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllPromotionCandidates = () => {
+    setSelectedPromotionStudentIds(new Set(promotionCandidates.map((student) => student.id)));
+  };
+
+  const unselectAllPromotionCandidates = () => {
+    setSelectedPromotionStudentIds(new Set());
+  };
+
+  const handleBulkPromotion = async () => {
+    if (!promotionFromClassId || !promotionToClassId) {
+      toast.error("Please select both source and target classes");
+      return;
+    }
+    if (promotionFromClassId === promotionToClassId) {
+      toast.error("Source and target classes must be different");
+      return;
+    }
+    if (!promotionAcademicYear.trim()) {
+      toast.error("Please provide an academic year");
+      return;
+    }
+    if (promotionCandidates.length === 0) {
+      toast.error("No students available in the selected source class");
+      return;
+    }
+
+    setPromotionSubmitting(true);
+    try {
+      const response = await api.post<BulkPromotionResponse>('/api/students/promotions/bulk', {
+        fromClassId: promotionFromClassId,
+        toClassId: promotionToClassId,
+        academicYear: promotionAcademicYear.trim(),
+        promotedStudentIds: Array.from(selectedPromotionStudentIds),
+        reassignRetainedRollNumbers,
+      });
+
+      toast.success(
+        `Promotion complete: ${response.promotedCount} promoted, ${response.retainedCount} retained`
+      );
+      await fetchInitialData();
+      await loadPromotionCandidates(promotionFromClassId);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to process bulk promotion");
+    } finally {
+      setPromotionSubmitting(false);
+    }
+  };
 
   const handleDelete = async (studentId: string) => {
     if (!confirm("Are you sure? This will remove the student record.")) return;
@@ -284,6 +456,9 @@ export default function StudentManagement() {
 
   const classGroups = groupedStudents();
   const totalStudents = filteredStudents.length;
+  const promotedCount = selectedPromotionStudentIds.size;
+  const retainedCount = Math.max(promotionCandidates.length - promotedCount, 0);
+  const promotionTargetClasses = classes.filter((classItem) => classItem.id !== promotionFromClassId);
 
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase() || '?';
@@ -315,12 +490,180 @@ export default function StudentManagement() {
           <p className="text-gray-500 mt-1 text-sm sm:text-base">Manage and view all enrolled students by class.</p>
         </div>
 
-        <Button asChild className="gap-2 bg-orange-600 hover:bg-orange-700 shadow-sm rounded-xl h-10 sm:h-11 w-full sm:w-auto sm:self-start">
-          <Link to="/dashboard/students/add">
-            <UserPlus className="w-4 h-4" /> Add Student
-          </Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 sm:self-start">
+          <Button asChild className="gap-2 bg-orange-600 hover:bg-orange-700 shadow-sm rounded-xl h-10 sm:h-11 w-full sm:w-auto">
+            <Link to="/dashboard/students/add">
+              <UserPlus className="w-4 h-4" /> Add Student
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2 rounded-xl h-10 sm:h-11 border-orange-200 text-orange-700 hover:bg-orange-50"
+            onClick={() => setShowPromotionPanel((previous) => !previous)}
+          >
+            <GraduationCap className="w-4 h-4" />
+            {showPromotionPanel ? "Hide Promotion Panel" : "Promote Students"}
+          </Button>
+        </div>
       </div>
+
+      {showPromotionPanel && (
+        <Card className="border border-orange-200 bg-orange-50/40 rounded-2xl shadow-sm">
+          <CardContent className="p-4 sm:p-5 space-y-4">
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Annual Promotion</h3>
+              <p className="text-sm text-gray-600">
+                Select students who passed. Unselected students stay in the current class.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">From Class</label>
+                <select
+                  value={promotionFromClassId}
+                  onChange={(event) => {
+                    void handlePromotionFromClassChange(event.target.value);
+                  }}
+                  className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                >
+                  <option value="">Select source class</option>
+                  {classes.map((classItem) => (
+                    <option key={classItem.id} value={classItem.id}>{classItem.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">To Class (Auto)</label>
+                <select
+                  value={promotionToClassId}
+                  onChange={(event) => setPromotionToClassId(event.target.value)}
+                  className="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  disabled={!promotionFromClassId}
+                >
+                  <option value="">
+                    {promotionFromClassId ? "No next class found" : "Select source class first"}
+                  </option>
+                  {promotionTargetClasses.map((classItem) => (
+                    <option key={classItem.id} value={classItem.id}>{classItem.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Academic Year</label>
+                <Input
+                  value={promotionAcademicYear}
+                  onChange={(event) => setPromotionAcademicYear(event.target.value)}
+                  placeholder="2026-2027"
+                  className="h-10 rounded-xl bg-white"
+                />
+              </div>
+            </div>
+
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={reassignRetainedRollNumbers}
+                onChange={(event) => setReassignRetainedRollNumbers(event.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-400"
+              />
+              Reassign roll numbers for retained students in source class
+            </label>
+
+            {promotionFromClassId && (
+              <div className="rounded-xl border border-gray-200 bg-white">
+                <div className="p-3 sm:p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="text-sm text-gray-600">
+                    <span className="font-semibold text-green-700">{promotedCount}</span> selected for promotion,{" "}
+                    <span className="font-semibold text-amber-700">{retainedCount}</span> retained
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg text-xs"
+                      onClick={selectAllPromotionCandidates}
+                      disabled={promotionCandidatesLoading || promotionCandidates.length === 0}
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg text-xs"
+                      onClick={unselectAllPromotionCandidates}
+                      disabled={promotionCandidatesLoading || promotionCandidates.length === 0}
+                    >
+                      Unselect All
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+                  {promotionCandidatesLoading ? (
+                    <div className="p-6 flex items-center justify-center gap-2 text-sm text-gray-500">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading students...
+                    </div>
+                  ) : promotionCandidates.length === 0 ? (
+                    <div className="p-6 text-sm text-gray-500 text-center">
+                      No students found in the selected source class.
+                    </div>
+                  ) : (
+                    promotionCandidates.map((student) => {
+                      const isSelected = selectedPromotionStudentIds.has(student.id);
+                      return (
+                        <label
+                          key={student.id}
+                          className="px-3 sm:px-4 py-3 flex items-center justify-between gap-3 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => togglePromotionSelection(student.id)}
+                              className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-400 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">{student.fullName}</p>
+                              <p className="text-xs text-gray-500">Roll: {student.rollNumber}</p>
+                            </div>
+                          </div>
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                            isSelected
+                              ? "bg-green-100 text-green-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}>
+                            {isSelected ? "Promote" : "Retain"}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button
+                className="rounded-xl bg-orange-600 hover:bg-orange-700"
+                onClick={handleBulkPromotion}
+                disabled={
+                  promotionSubmitting ||
+                  !promotionFromClassId ||
+                  !promotionToClassId ||
+                  promotionCandidates.length === 0
+                }
+              >
+                {promotionSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Promote Selected Students
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">

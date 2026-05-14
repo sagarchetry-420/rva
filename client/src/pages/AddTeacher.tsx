@@ -47,6 +47,12 @@ function getClassSortOrder(className: string): number {
 }
 
 export default function AddTeacher() {
+  type CreateTeacherResponse = {
+    user: { id: string } | null;
+    emailSent?: boolean;
+    emailError?: string | null;
+  };
+
   const [loading, setLoading] = useState(false);
 
   // Success state to track enrolled teacher
@@ -58,6 +64,8 @@ export default function AddTeacher() {
     lastName: string;
     hireDate: string;
     assignments: Array<{ classId: string; subjectId: string }>;
+    emailSent: boolean;
+    emailError: string | null;
   } | null>(null);
 
   // State to hold the dynamic classes and subjects from your database
@@ -154,7 +162,7 @@ export default function AddTeacher() {
     console.log('[AddTeacher] Sending payload:', JSON.stringify(payload, null, 2));
 
     try {
-      const response = await api.post('/api/teachers', payload);
+      const response = await api.post<CreateTeacherResponse>('/api/teachers', payload);
       console.log('[AddTeacher] Success response:', response);
 
       // Store enrollment data for success screen
@@ -164,13 +172,17 @@ export default function AddTeacher() {
         firstName: formData.firstName,
         lastName: formData.lastName,
         hireDate: formData.hireDate,
-        assignments: assignments
+        assignments: assignments,
+        emailSent: response.emailSent !== false,
+        emailError: response.emailError ?? null,
       });
       setEnrollmentSuccess(true);
 
       toast({
-        title: "Teacher Registered",
-        description: `${formData.firstName} ${formData.lastName} has been added successfully!`
+        title: "Enrollment Successful",
+        description: response.emailSent === false
+          ? `${formData.firstName} has been registered, but credentials email could not be sent.`
+          : `${formData.firstName} has been registered and credentials email has been sent.`,
       });
 
     } catch (error: any) {
@@ -208,6 +220,24 @@ export default function AddTeacher() {
                 <p className="text-gray-600 mt-2">
                   {enrollmentData.firstName} {enrollmentData.lastName} has been registered with {enrollmentData.assignments.length} assignment(s)
                 </p>
+              </div>
+
+              <div
+                className={`rounded-lg border p-3 text-sm ${
+                  enrollmentData.emailSent
+                    ? "border-green-200 bg-green-100 text-green-800"
+                    : "border-orange-200 bg-orange-100 text-orange-800"
+                }`}
+              >
+                {enrollmentData.emailSent ? (
+                  <p>
+                    Credentials email sent to <span className="font-semibold">{enrollmentData.email}</span>
+                  </p>
+                ) : (
+                  <p>
+                    Teacher created, but email was not sent. {enrollmentData.emailError ? `Reason: ${enrollmentData.emailError}` : "Please verify email setup and share credentials manually."}
+                  </p>
+                )}
               </div>
 
               {/* Download PDF Button */}
@@ -319,8 +349,6 @@ export default function AddTeacher() {
                   onClick={() => {
                     const newPassword = generateTemporaryPassword();
                     setFormData({ ...formData, password: newPassword });
-                    setShowPassword(true);
-                    setPasswordCopied(false);
                     toast({
                       title: "Password Generated",
                       description: "A secure temporary password has been created.",

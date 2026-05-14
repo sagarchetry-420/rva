@@ -1,10 +1,11 @@
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useSpring, useTransform } from "framer-motion";
 import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef, useState, useEffect, useCallback } from "react";
 
 const images = [
-  "/school_images/img1.jpg",
-  "/school_images/img3.jpg",
+  { src: "/schools images/rva image.jpg", alt: "Rose Valley Academy campus" },
+  { src: "/gallery/ncc.jpg", alt: "Students participating in NCC activities" },
+  { src: "/gallery/ncc2.jpg", alt: "Students in school discipline and leadership program" },
 ];
 
 export default function HeroSection() {
@@ -16,7 +17,12 @@ export default function HeroSection() {
     offset: ["start start", "end start"],
   });
 
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
+  const parallaxY = useTransform(scrollYProgress, [0, 1], [0, 120]);
+  const y = useSpring(parallaxY, {
+    stiffness: 90,
+    damping: 24,
+    mass: 0.35,
+  });
 
   const paginate = useCallback((newDirection: number) => {
     setPage(([prevIndex]) => {
@@ -102,14 +108,16 @@ export default function HeroSection() {
             transition={{
               x: { type: "tween", duration: 0.8, ease: "easeOut" },
             }}
-            style={{ y }}
-            className="absolute inset-0 w-full h-[120%] -top-[10%]"
+            style={{ y, willChange: "transform" }}
+            className="absolute inset-0 w-full h-[112%] -top-[6%]"
           >
             <img
-              src={images[currentImageIndex]}
-              alt={`School image ${currentImageIndex + 1}`}
+              src={images[currentImageIndex].src}
+              alt={images[currentImageIndex].alt}
               loading={currentImageIndex === 0 ? "eager" : "lazy"}
+              fetchPriority={currentImageIndex === 0 ? "high" : "auto"}
               decoding="async"
+              sizes="100vw"
               className="w-full h-full object-cover object-center"
             />
           </motion.div>

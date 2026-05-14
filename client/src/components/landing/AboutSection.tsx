@@ -1,4 +1,4 @@
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { CheckCircle, Quote } from "lucide-react";
 import { useRef } from "react";
 
@@ -17,7 +17,12 @@ export default function AboutSection() {
     target: imageRef,
     offset: ["start end", "end start"],
   });
-  const imageY = useTransform(scrollYProgress, [0, 1], ["-10%", "10%"]);
+  const parallaxImageY = useTransform(scrollYProgress, [0, 1], [-28, 28]);
+  const imageY = useSpring(parallaxImageY, {
+    stiffness: 90,
+    damping: 26,
+    mass: 0.35,
+  });
 
   return (
     <section id="about" className="py-20 relative overflow-hidden bg-white text-slate-900">
@@ -88,8 +93,8 @@ export default function AboutSection() {
               <motion.img
                 src="/principal's_image/principal's image1.jpg"
                 alt="Principal Bhargav Chetia"
-                style={{ y: imageY }}
-                className="absolute inset-0 w-full h-[120%] -top-[10%] object-cover"
+                style={{ y: imageY, willChange: "transform" }}
+                className="absolute inset-0 w-full h-[112%] -top-[6%] object-cover"
               />
               <div className="absolute inset-0 bg-black/10" />
             </div>

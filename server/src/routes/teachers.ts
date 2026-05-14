@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { createAdminClient, isUserAdmin } from '../lib/supabase.js';
+import { sendTeacherEnrollmentEmail } from '../lib/resend.js';
 
 export const teachersRouter = Router();
 
@@ -83,13 +84,14 @@ teachersRouter.post('/', requireAuth, async (req, res) => {
 
     const admin = createAdminClient();
     const { email, password, firstName, lastName, hireDate, assignments } = req.body;
+    const normalizedEmail = typeof email === 'string' ? email.trim() : '';
 
     console.log('[Teachers POST] Request body:', JSON.stringify(req.body, null, 2));
-    console.log('[Teachers POST] Creating user:', { email, firstName, lastName, hireDate });
+    console.log('[Teachers POST] Creating user:', { email: normalizedEmail, firstName, lastName, hireDate });
     console.log('[Teachers POST] Assignments:', assignments);
 
     // Validate required fields
-    if (!email || !password || !firstName || !lastName) {
+    if (!normalizedEmail || !password || !firstName || !lastName) {
       return res.status(400).json({
         error: 'Missing required fields: email, password, firstName, lastName'
       });
@@ -109,7 +111,7 @@ teachersRouter.post('/', requireAuth, async (req, res) => {
 
     // Create auth user (simpler metadata without teacher-specific data)
     const { data: userData, error: authError } = await admin.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password,
       email_confirm: true,
       user_metadata: {
@@ -187,7 +189,25 @@ teachersRouter.post('/', requireAuth, async (req, res) => {
       console.log('[Teachers POST] Assignments created successfully');
     }
 
-    res.json({ user: userData.user });
+    const enrollmentEmail = await sendTeacherEnrollmentEmail({
+      to: normalizedEmail,
+      firstName,
+      lastName,
+      loginEmail: normalizedEmail,
+      temporaryPassword: password,
+    });
+
+    if (!enrollmentEmail.sent) {
+      console.error('[Teachers POST] Enrollment email failed:', enrollmentEmail.error);
+    } else {
+      console.log('[Teachers POST] Enrollment email sent:', enrollmentEmail.messageId);
+    }
+
+    res.json({
+      user: userData.user,
+      emailSent: enrollmentEmail.sent,
+      emailError: enrollmentEmail.error ?? null,
+    });
   } catch (err: any) {
     console.error('[Teachers POST] Unexpected error:', err);
     res.status(500).json({ error: 'Failed to create teacher: ' + err.message });

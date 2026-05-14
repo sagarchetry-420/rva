@@ -10,7 +10,7 @@ noticesRouter.get('/public', async (_req, res) => {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('notices')
-      .select('id, title, content, publish_date')
+      .select('id, title, content, publish_date, document_url')
       .eq('target_audience', 'All')
       .lte('publish_date', new Date().toISOString())
       .order('publish_date', { ascending: false })
@@ -29,7 +29,7 @@ noticesRouter.get('/teacher', requireAuth, async (req, res) => {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('notices')
-      .select('id, title, content, publish_date')
+      .select('id, title, content, publish_date, document_url')
       .in('target_audience', ['All', 'Staff'])
       .lte('publish_date', new Date().toISOString())
       .order('publish_date', { ascending: false })
@@ -48,7 +48,7 @@ noticesRouter.get('/student', requireAuth, async (req, res) => {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('notices')
-      .select('id, title, content, publish_date')
+      .select('id, title, content, publish_date, document_url')
       .in('target_audience', ['All', 'Students'])
       .lte('publish_date', new Date().toISOString())
       .order('publish_date', { ascending: false })
@@ -93,12 +93,13 @@ noticesRouter.post('/', requireAuth, async (req, res) => {
     }
 
     const supabase = createAdminClient();
-    const { title, content, targetAudience } = req.body;
+    const { title, content, targetAudience, documentUrl } = req.body;
     const { error } = await supabase.from('notices').insert([{
       title,
       content,
       target_audience: targetAudience,
       author_id: req.userId,
+      document_url: documentUrl || null,
     }]);
 
     if (error) return res.status(400).json({ error: error.message });

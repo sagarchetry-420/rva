@@ -205,6 +205,21 @@ export default function RoutineManagement() {
     return colors[dayIndex];
   };
 
+  const handlePrint = () => {
+    if (selectedClass) {
+      const originalTitle = document.title;
+      const className = selectedClass.name.replace(/\s+/g, '_');
+      document.title = `Class_${className}_Routine`;
+      window.print();
+      // setTimeout is used because window.print() blocks execution in some browsers until the dialog closes
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 100);
+    } else {
+      window.print();
+    }
+  };
+
   return (
     <div className="space-y-3 sm:space-y-4 md:space-y-6">
       {/* Header Section */}
@@ -228,7 +243,7 @@ export default function RoutineManagement() {
             <>
               <Button
                 variant="outline"
-                onClick={() => window.print()}
+                onClick={handlePrint}
                 className="gap-1.5 sm:gap-2 shadow-sm rounded-lg sm:rounded-xl h-9 sm:h-10 md:h-11 flex-1 sm:flex-none text-xs sm:text-sm"
               >
                 <Printer className="w-4 h-4" /> Print / Download

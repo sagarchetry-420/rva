@@ -48,6 +48,7 @@ export type Database = {
           author_id: string | null
           content: string
           created_at: string
+          document_url: string | null
           id: string
           publish_date: string
           target_audience: Database["public"]["Enums"]["notice_audience"]
@@ -57,6 +58,7 @@ export type Database = {
           author_id?: string | null
           content: string
           created_at?: string
+          document_url?: string | null
           id?: string
           publish_date?: string
           target_audience?: Database["public"]["Enums"]["notice_audience"]
@@ -66,6 +68,7 @@ export type Database = {
           author_id?: string | null
           content?: string
           created_at?: string
+          document_url?: string | null
           id?: string
           publish_date?: string
           target_audience?: Database["public"]["Enums"]["notice_audience"]

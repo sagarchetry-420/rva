@@ -113,7 +113,15 @@ export default function TeacherDashboard() {
     { icon: Briefcase, label: "Employment", id: "employment" },
   ];
 
-  const today = new Date().toISOString().split("T")[0];
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const today = getLocalDateString();
   const formattedDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",

@@ -363,3 +363,52 @@ attendanceRouter.post('/admin-leave', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Failed to save leave' });
   }
 });
+
+// GET /api/attendance/admin/report-data — get monthly attendance data for a class
+attendanceRouter.get('/admin/report-data', requireAuth, async (req, res) => {
+  try {
+    const supabase = createAdminClient();
+    const classId = req.query.class_id as string;
+    const month = req.query.month as string; // Format: YYYY-MM
+
+    if (!classId || !month) {
+      return res.status(400).json({ error: 'class_id and month are required' });
+    }
+
+    // Calculate start and end dates of the month
+    const year = parseInt(month.split('-')[0]);
+    const monthIndex = parseInt(month.split('-')[1]) - 1;
+    const startDate = new Date(year, monthIndex, 1).toLocaleDateString('en-CA'); // YYYY-MM-DD local time
+    const endDate = new Date(year, monthIndex + 1, 0).toLocaleDateString('en-CA');
+
+    // First fetch all students in the class
+    const { data: students, error: studentsError } = await supabase
+      .from('students')
+      .select('id, user_id, roll_number, profiles!user_id(first_name, last_name)')
+      .eq('class_id', classId)
+      .order('id');
+
+    if (studentsError) return res.status(400).json({ error: studentsError.message });
+    if (!students || students.length === 0) return res.json({ students: [], attendance: [] });
+
+    const studentIds = students.map((s: any) => s.id);
+
+    // Fetch attendance for these students within the month
+    const { data: attendance, error: attendanceError } = await supabase
+      .from('student_attendance')
+      .select('student_id, date, status')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .in('student_id', studentIds);
+
+    if (attendanceError) return res.status(400).json({ error: attendanceError.message });
+
+    res.json({
+      students,
+      attendance: attendance || []
+    });
+  } catch (err) {
+    console.error('Fetch report data error:', err);
+    res.status(500).json({ error: 'Failed to fetch report data' });
+  }
+});

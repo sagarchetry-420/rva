@@ -15,6 +15,9 @@ import {
   RefreshCw,
   Calendar,
   Users,
+  FileText,
+  ExternalLink,
+  Paperclip,
 } from "lucide-react";
 
 interface Notice {
@@ -24,6 +27,7 @@ interface Notice {
   target_audience: string;
   publish_date: string;
   created_at: string;
+  document_url: string | null;
 }
 
 export default function NoticeManagement() {
@@ -82,6 +86,18 @@ export default function NoticeManagement() {
         return "bg-amber-100 text-amber-700 border-amber-200";
       default:
         return "bg-slate-100 text-slate-700";
+    }
+  };
+
+  const getDocumentName = (url: string) => {
+    try {
+      const parts = url.split('/');
+      const filename = parts[parts.length - 1];
+      // Remove the timestamp prefix (e.g., "1234567890-")
+      const cleanName = filename.replace(/^\d+-/, '');
+      return decodeURIComponent(cleanName);
+    } catch {
+      return "Attached Document";
     }
   };
 
@@ -180,10 +196,36 @@ export default function NoticeManagement() {
                         <Users className="w-3 h-3 mr-1" />
                         {notice.target_audience}
                       </Badge>
+                      {notice.document_url && (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 bg-emerald-50 text-emerald-700 border-emerald-200"
+                        >
+                          <Paperclip className="w-3 h-3 mr-1" />
+                          Document
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-slate-600 text-sm leading-relaxed line-clamp-2">
                       {notice.content}
                     </p>
+
+                    {/* Document Attachment */}
+                    {notice.document_url && (
+                      <div className="mt-3">
+                        <button
+                          onClick={() => window.open(notice.document_url!, '_blank')}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-emerald-700 text-sm font-medium transition-colors"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span className="truncate max-w-[200px]">
+                            {getDocumentName(notice.document_url)}
+                          </span>
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                        </button>
+                      </div>
+                    )}
+
                     <p className="text-xs text-slate-400 mt-3 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       Published{" "}

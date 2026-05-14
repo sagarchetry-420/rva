@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Megaphone, Calendar, ArrowRight } from "lucide-react";
+import { Megaphone, Calendar, ArrowRight, FileText } from "lucide-react";
 
 interface Notice {
   id: string;
   title: string;
   content: string;
   publish_date: string;
+  document_url: string | null;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || "";
@@ -110,6 +111,18 @@ export default function NoticesSection() {
                     {expandedId === notice.id ? "Show Less" : "Read More"} 
                     <ArrowRight className={`w-3.5 h-3.5 transition-transform duration-300 ${expandedId === notice.id ? "-rotate-90" : "group-hover:translate-x-1"}`} />
                   </button>
+                  {notice.document_url && (
+                    <a
+                      href={notice.document_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-emerald-600 font-bold text-xs tracking-wide uppercase hover:text-emerald-700 transition-colors mt-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      View Document
+                    </a>
+                  )}
                 </div>
 
                 {/* Top accent line */}

@@ -1,4 +1,4 @@
-import { motion, AnimatePresence, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useSpring, useTransform, Variants } from "framer-motion";
 import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef, useState, useEffect, useCallback } from "react";
 
@@ -62,7 +62,7 @@ export default function HeroSection() {
     }
   };
 
-  const textVariants = {
+  const textVariants: Variants = {
     hidden: { opacity: 0, y: 40, filter: "blur(10px)" },
     visible: (custom: number) => ({
       opacity: 1,
@@ -76,7 +76,7 @@ export default function HeroSection() {
     }),
   };
 
-  const slideVariants = {
+  const slideVariants: Variants = {
     enter: (customDirection: number) => ({
       x: customDirection > 0 ? "100%" : "-100%",
     }),

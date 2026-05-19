@@ -9,7 +9,7 @@ require_once dirname(__DIR__) . '/includes/PHPMailer/PHPMailer.php';
 require_once dirname(__DIR__) . '/includes/PHPMailer/SMTP.php';
 
 // Helper function for sending credentials
-function sendCredentialsEmail($toEmail, $firstName, $username, $plainPassword) {
+function sendCredentialsEmail($toEmail, $firstName, $username, $plainPassword, $phone = '') {
     global $conn;
     $mail = new PHPMailer(true);
     try {
@@ -25,8 +25,28 @@ function sendCredentialsEmail($toEmail, $firstName, $username, $plainPassword) {
         $mail->addAddress($toEmail, $firstName);
 
         $mail->isHTML(true);
-        $mail->Subject = 'Your School Account Credentials';
-        $mail->Body    = "Hello $firstName,<br><br>Your account has been created. Here are your login details:<br><b>Username:</b> $username<br><b>Password:</b> $plainPassword<br><br>Please log in and change your password.";
+        $mail->Subject = 'Your Rose Valley Academy Account Credentials';
+        $mail->Body    = "
+            <div style='font-family:Arial,sans-serif;max-width:500px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;'>
+                <div style='background:#1e3a5f;color:#fff;padding:20px;text-align:center;'>
+                    <h2 style='margin:0;'>Rose Valley Academy</h2>
+                    <p style='margin:5px 0 0;font-size:13px;opacity:0.8;'>Account Credentials</p>
+                </div>
+                <div style='padding:24px;'>
+                    <p style='margin:0 0 16px;'>Hello <strong>$firstName</strong>,</p>
+                    <p style='margin:0 0 16px;color:#6b7280;'>Your account has been created successfully. Below are your login credentials:</p>
+                    <table style='width:100%;border-collapse:collapse;margin-bottom:16px;'>
+                        <tr><td style='padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:600;width:120px;'>Username</td><td style='padding:10px 12px;border:1px solid #e5e7eb;'>$username</td></tr>
+                        <tr><td style='padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:600;'>Password</td><td style='padding:10px 12px;border:1px solid #e5e7eb;'>$plainPassword</td></tr>
+                        <tr><td style='padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:600;'>Email</td><td style='padding:10px 12px;border:1px solid #e5e7eb;'>$toEmail</td></tr>
+                        " . (!empty($phone) ? "<tr><td style='padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:600;'>Phone</td><td style='padding:10px 12px;border:1px solid #e5e7eb;'>$phone</td></tr>" : "") . "
+                    </table>
+                    <p style='margin:0 0 8px;color:#6b7280;font-size:13px;'>Please log in and change your password at your earliest convenience.</p>
+                </div>
+                <div style='background:#f9fafb;padding:12px;text-align:center;font-size:12px;color:#9ca3af;border-top:1px solid #e5e7eb;'>
+                    &copy; " . date('Y') . " Rose Valley Academy. All rights reserved.
+                </div>
+            </div>";
 
         $mail->send();
         return true;
@@ -49,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $parent_phone = sanitize($conn, $_POST['parent_phone']);
         $dob = sanitize($conn, $_POST['date_of_birth']);
         $email = sanitize($conn, $_POST['email']);
+        $roll_number = sanitize($conn, $_POST['roll_number']);
         // Check if email already exists
         if (!empty($email)) {
             $email_check = mysqli_query($conn, "SELECT user_id FROM users WHERE email='$email'");
@@ -56,6 +77,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 setFlashMessage('error', 'This email address is already registered. Please use a different email.');
                 header('Location: students.php'); exit();
             }
+        }
+        
+        // Check duplicate roll number in class
+        $roll_check = mysqli_query($conn, "SELECT student_id FROM students WHERE class_id=$class_id AND roll_number='$roll_number'");
+        if (mysqli_num_rows($roll_check) > 0) {
+            setFlashMessage('error', "Roll number '$roll_number' is already assigned in this class.");
+            header('Location: students.php'); exit();
         }
         
         $username = strtolower($first_name . '.' . $last_name . rand(100, 999));
@@ -70,16 +98,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $q = "INSERT INTO users (username, password, user_type, email) VALUES ('$username', '$password', 'student', '$email')";
         if (mysqli_query($conn, $q)) {
             $uid = mysqli_insert_id($conn);
-            $roll = 'STD' . sprintf('%03d', $uid);
             $q2 = "INSERT INTO students (user_id, first_name, last_name, date_of_birth, gender, phone, email, parent_name, parent_phone, class_id, roll_number, admission_date) 
-                   VALUES ($uid, '$first_name', '$last_name', '$dob', '$gender', '$phone', '$email', '$parent_name', '$parent_phone', $class_id, '$roll', CURDATE())";
+                   VALUES ($uid, '$first_name', '$last_name', '$dob', '$gender', '$phone', '$email', '$parent_name', '$parent_phone', $class_id, '$roll_number', CURDATE())";
             mysqli_query($conn, $q2);
             
             if (!empty($email)) {
-                sendCredentialsEmail($email, $first_name, $username, $plain_password);
+                sendCredentialsEmail($email, $first_name, $username, $plain_password, $phone);
             }
             
             setFlashMessage('success', 'Student registered successfully!');
+
         } else {
             setFlashMessage('error', 'Failed to register the student. Please try again.');
         }
@@ -97,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $parent_phone = sanitize($conn, $_POST['parent_phone']);
         $dob = sanitize($conn, $_POST['date_of_birth']);
         $email = sanitize($conn, $_POST['email']);
+        $roll_number = sanitize($conn, $_POST['roll_number']);
         
         // Get current data to check for changes and get user_id
         $current_res = mysqli_query($conn, "SELECT * FROM students WHERE student_id=$sid");
@@ -112,17 +141,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
         
+        // Check duplicate roll number in class
+        if ($roll_number !== $current['roll_number'] || $class_id != $current['class_id']) {
+            $roll_check = mysqli_query($conn, "SELECT student_id FROM students WHERE class_id=$class_id AND roll_number='$roll_number' AND student_id != $sid");
+            if (mysqli_num_rows($roll_check) > 0) {
+                setFlashMessage('error', "Roll number '$roll_number' is already assigned in this class.");
+                header('Location: students.php'); exit();
+            }
+        }
+        
         // Check if anything actually changed
         if ($first_name === $current['first_name'] && $last_name === $current['last_name'] && 
             $class_id == $current['class_id'] && $gender === $current['gender'] && 
             $phone === $current['phone'] && $parent_name === $current['parent_name'] && 
             $parent_phone === $current['parent_phone'] && $dob === $current['date_of_birth'] && 
-            $email === $current['email']) {
+            $email === $current['email'] && $roll_number === $current['roll_number']) {
             setFlashMessage('info', 'No changes were made.');
             header('Location: students.php'); exit();
         }
         
-        $q = "UPDATE students SET first_name='$first_name', last_name='$last_name', date_of_birth='$dob', gender='$gender', phone='$phone', email='$email', parent_name='$parent_name', parent_phone='$parent_phone', class_id=$class_id WHERE student_id=$sid";
+        $q = "UPDATE students SET first_name='$first_name', last_name='$last_name', date_of_birth='$dob', gender='$gender', phone='$phone', email='$email', parent_name='$parent_name', parent_phone='$parent_phone', class_id=$class_id, roll_number='$roll_number' WHERE student_id=$sid";
         mysqli_query($conn, $q);
         mysqli_query($conn, "UPDATE users SET email='$email' WHERE user_id=$uid");
         
@@ -230,7 +268,7 @@ $classes_result = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name
             <div class="table-container" id="printableTable">
                 <div class="table-header">
                     <h2>All Students (<?php echo mysqli_num_rows($students_result); ?>)</h2>
-                    <div class="search-box">
+                    <div class="search-box no-print">
                         <input type="text" id="searchInput" placeholder="Search students..." onkeyup="searchTable('searchInput','dataTable')">
                     </div>
                 </div>
@@ -297,6 +335,10 @@ $classes_result = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name
                             <input type="text" name="last_name" required>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label>Roll Number *</label>
+                        <input type="text" name="roll_number" required placeholder="e.g. 101, A-01">
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>Date of Birth</label>
@@ -357,7 +399,7 @@ $classes_result = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name
                 <h2>Edit Student</h2>
                 <span class="close" onclick="closeModal('editModal')">&times;</span>
             </div>
-            <form method="POST">
+            <form method="POST" id="edit_student_form">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="student_id" id="edit_student_id">
                 <div class="modal-body">
@@ -370,6 +412,10 @@ $classes_result = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name
                             <label>Last Name *</label>
                             <input type="text" name="last_name" id="edit_last_name" required>
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Roll Number *</label>
+                        <input type="text" name="roll_number" id="edit_roll_number" required>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -416,7 +462,7 @@ $classes_result = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="submit" class="btn btn-primary" id="edit_submit_btn" disabled>Save Changes</button>
                 </div>
             </form>
         </div>
@@ -460,6 +506,7 @@ $classes_result = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name
         document.getElementById('edit_student_id').value = data.student_id;
         document.getElementById('edit_first_name').value = data.first_name;
         document.getElementById('edit_last_name').value = data.last_name;
+        document.getElementById('edit_roll_number').value = data.roll_number || '';
         document.getElementById('edit_dob').value = data.date_of_birth || '';
         document.getElementById('edit_gender').value = data.gender || 'Male';
         document.getElementById('edit_class_id').value = data.class_id;
@@ -467,8 +514,32 @@ $classes_result = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name
         document.getElementById('edit_email').value = data.email || '';
         document.getElementById('edit_parent_name').value = data.parent_name || '';
         document.getElementById('edit_parent_phone').value = data.parent_phone || '';
+        
+        // Reset button state
+        const submitBtn = document.getElementById('edit_submit_btn');
+        submitBtn.disabled = true;
+        
+        // Store initial form data
+        const form = document.getElementById('edit_student_form');
+        form.dataset.initialData = JSON.stringify(Object.fromEntries(new FormData(form)));
+        
         openModal('editModal');
     }
+
+    // Add change listener to edit form
+    document.getElementById('edit_student_form').addEventListener('input', function() {
+        const initialData = JSON.parse(this.dataset.initialData);
+        const currentData = Object.fromEntries(new FormData(this));
+        const hasChanged = JSON.stringify(initialData) !== JSON.stringify(currentData);
+        document.getElementById('edit_submit_btn').disabled = !hasChanged;
+    });
+
+    document.getElementById('edit_student_form').addEventListener('change', function() {
+        const initialData = JSON.parse(this.dataset.initialData);
+        const currentData = Object.fromEntries(new FormData(this));
+        const hasChanged = JSON.stringify(initialData) !== JSON.stringify(currentData);
+        document.getElementById('edit_submit_btn').disabled = !hasChanged;
+    });
     
     let currentStudentData = null;
 

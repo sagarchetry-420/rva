@@ -40,6 +40,30 @@ $notices = mysqli_query($conn, "SELECT * FROM notices WHERE target_audience IN (
 
             <div class="dashboard-grid">
                 <div class="dashboard-section">
+                    <h2>📅 Upcoming Exams</h2>
+                    <div class="notices-list">
+                    <?php 
+                    $cid = $student['class_id'];
+                    $upcoming_exams = @mysqli_query($conn, "SELECT e.exam_name, s.subject_name, sch.exam_date, sch.start_time 
+                        FROM exam_schedules sch 
+                        JOIN examinations e ON sch.exam_id = e.exam_id 
+                        JOIN subjects s ON sch.subject_id = s.subject_id 
+                        WHERE sch.class_id=$cid AND sch.exam_date >= CURDATE() 
+                        ORDER BY sch.exam_date ASC, sch.start_time ASC LIMIT 5");
+                        
+                    if($upcoming_exams && mysqli_num_rows($upcoming_exams) > 0):
+                        while($ue = mysqli_fetch_assoc($upcoming_exams)):
+                    ?>
+                        <div class="notice-item">
+                            <div class="notice-date"><?php echo date('M d',strtotime($ue['exam_date']));?></div>
+                            <div class="notice-content"><h4><?php echo htmlspecialchars($ue['subject_name']);?></h4><p><?php echo htmlspecialchars($ue['exam_name']);?> at <?php echo date('h:i A', strtotime($ue['start_time']));?></p></div>
+                        </div>
+                    <?php endwhile; else: ?>
+                        <div class="notice-item"><div class="notice-content"><p>No upcoming exams scheduled.</p></div></div>
+                    <?php endif; ?>
+                    </div>
+                </div>
+                <div class="dashboard-section">
                     <h2>📢 Recent Notices</h2>
                     <div class="notices-list">
                     <?php while($n=mysqli_fetch_assoc($notices)):?>

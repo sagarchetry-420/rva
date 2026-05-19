@@ -8,7 +8,7 @@ require_once dirname(__DIR__) . '/includes/PHPMailer/Exception.php';
 require_once dirname(__DIR__) . '/includes/PHPMailer/PHPMailer.php';
 require_once dirname(__DIR__) . '/includes/PHPMailer/SMTP.php';
 
-function sendCredentialsEmail($toEmail, $firstName, $username, $plainPassword) {
+function sendCredentialsEmail($toEmail, $firstName, $username, $plainPassword, $phone = '') {
     global $conn;
     $mail = new PHPMailer(true);
     try {
@@ -24,8 +24,28 @@ function sendCredentialsEmail($toEmail, $firstName, $username, $plainPassword) {
         $mail->addAddress($toEmail, $firstName);
 
         $mail->isHTML(true);
-        $mail->Subject = 'Your School Account Credentials';
-        $mail->Body    = "Hello $firstName,<br><br>Your account has been created. Here are your login details:<br><b>Username:</b> $username<br><b>Password:</b> $plainPassword<br><br>Please log in and change your password.";
+        $mail->Subject = 'Your Rose Valley Academy Account Credentials';
+        $mail->Body    = "
+            <div style='font-family:Arial,sans-serif;max-width:500px;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;'>
+                <div style='background:#1e3a5f;color:#fff;padding:20px;text-align:center;'>
+                    <h2 style='margin:0;'>Rose Valley Academy</h2>
+                    <p style='margin:5px 0 0;font-size:13px;opacity:0.8;'>Account Credentials</p>
+                </div>
+                <div style='padding:24px;'>
+                    <p style='margin:0 0 16px;'>Hello <strong>$firstName</strong>,</p>
+                    <p style='margin:0 0 16px;color:#6b7280;'>Your account has been created successfully. Below are your login credentials:</p>
+                    <table style='width:100%;border-collapse:collapse;margin-bottom:16px;'>
+                        <tr><td style='padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:600;width:120px;'>Username</td><td style='padding:10px 12px;border:1px solid #e5e7eb;'>$username</td></tr>
+                        <tr><td style='padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:600;'>Password</td><td style='padding:10px 12px;border:1px solid #e5e7eb;'>$plainPassword</td></tr>
+                        <tr><td style='padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:600;'>Email</td><td style='padding:10px 12px;border:1px solid #e5e7eb;'>$toEmail</td></tr>
+                        " . (!empty($phone) ? "<tr><td style='padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;font-weight:600;'>Phone</td><td style='padding:10px 12px;border:1px solid #e5e7eb;'>$phone</td></tr>" : "") . "
+                    </table>
+                    <p style='margin:0 0 8px;color:#6b7280;font-size:13px;'>Please log in and change your password at your earliest convenience.</p>
+                </div>
+                <div style='background:#f9fafb;padding:12px;text-align:center;font-size:12px;color:#9ca3af;border-top:1px solid #e5e7eb;'>
+                    &copy; " . date('Y') . " Rose Valley Academy. All rights reserved.
+                </div>
+            </div>";
 
         $mail->send();
         return true;
@@ -97,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     if (mysqli_query($conn, $q2)) {
                         $count++;
                         if (!empty($email)) {
-                            sendCredentialsEmail($email, $first_name, $username, $plain_password);
+                            sendCredentialsEmail($email, $first_name, $username, $plain_password, $phone);
                         }
                     } else {
                         $errors[] = "Failed to insert student info for $first_name $last_name.";

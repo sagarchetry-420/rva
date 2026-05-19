@@ -146,6 +146,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn:disabled { background: #d1d5db !important; color: #9ca3af !important; cursor: not-allowed !important; border-color: #e5e7eb !important; transform: none !important; box-shadow: none !important; }
 
 .btn-primary { background: var(--primary); color: white; }
 .btn-primary:hover { background: var(--primary-dark); box-shadow: 0 4px 12px rgba(30,58,138,0.4); }
@@ -654,6 +655,7 @@ a { text-decoration: none; color: inherit; }
 .badge-absent { background: #fee2e2; color: #991b1b; }
 .badge-late { background: #fef3c7; color: #92400e; }
 .badge-excused { background: #dbeafe; color: #1e40af; }
+.badge-info { background: #dbeafe; color: #1e40af; }
 
 .empty-state {
     text-align: center;

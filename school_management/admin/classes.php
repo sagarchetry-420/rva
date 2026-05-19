@@ -9,6 +9,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $sec = sanitize($conn, $_POST['section']);
         $tid = !empty($_POST['class_teacher_id']) ? intval($_POST['class_teacher_id']) : 'NULL';
         $ay = sanitize($conn, $_POST['academic_year']);
+        // Check duplicate class_name + section + academic_year
+        $dup = mysqli_query($conn, "SELECT class_id FROM classes WHERE class_name='$cn' AND section='$sec' AND academic_year='$ay'");
+        if (mysqli_num_rows($dup) > 0) {
+            setFlashMessage('error', "Class '$cn Section $sec' for academic year '$ay' already exists.");
+            header('Location: classes.php'); exit();
+        }
         mysqli_query($conn, "INSERT INTO classes (class_name,section,class_teacher_id,academic_year) VALUES ('$cn','$sec',$tid,'$ay')");
         setFlashMessage('success', "Class '$cn $sec' has been created successfully!");
         header('Location: classes.php'); exit();
@@ -19,12 +25,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $sec = sanitize($conn, $_POST['section']);
         $tid = !empty($_POST['class_teacher_id']) ? intval($_POST['class_teacher_id']) : 'NULL';
         $ay = sanitize($conn, $_POST['academic_year']);
+        // Check duplicate excluding current record
+        $dup = mysqli_query($conn, "SELECT class_id FROM classes WHERE class_name='$cn' AND section='$sec' AND academic_year='$ay' AND class_id!=$cid");
+        if (mysqli_num_rows($dup) > 0) {
+            setFlashMessage('error', "Class '$cn Section $sec' for academic year '$ay' already exists.");
+            header('Location: classes.php'); exit();
+        }
         mysqli_query($conn, "UPDATE classes SET class_name='$cn',section='$sec',class_teacher_id=$tid,academic_year='$ay' WHERE class_id=$cid");
         setFlashMessage('success', 'Class details updated successfully!');
         header('Location: classes.php'); exit();
     }
     if ($action === 'delete') {
-        mysqli_query($conn, "DELETE FROM classes WHERE class_id=".intval($_POST['class_id']));
+        // Check if class has students
+        $cid = intval($_POST['class_id']);
+        $sc = mysqli_query($conn, "SELECT COUNT(*) as cnt FROM students WHERE class_id=$cid");
+        $cnt = mysqli_fetch_assoc($sc)['cnt'];
+        if ($cnt > 0) {
+            setFlashMessage('error', "Cannot delete this class. $cnt student(s) are assigned to it.");
+            header('Location: classes.php'); exit();
+        }
+        mysqli_query($conn, "DELETE FROM class_subjects WHERE class_id=$cid");
+        mysqli_query($conn, "DELETE FROM classes WHERE class_id=$cid");
         setFlashMessage('success', 'Class has been deleted successfully.');
         header('Location: classes.php'); exit();
     }
@@ -33,11 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $tid = !empty($_POST['teacher_id']) ? intval($_POST['teacher_id']) : 'NULL';
         $chk = mysqli_query($conn, "SELECT id FROM class_subjects WHERE class_id=$cid AND subject_id=$sid");
         if (mysqli_num_rows($chk) > 0) {
+            // Update teacher assignment if subject already assigned
             mysqli_query($conn, "UPDATE class_subjects SET teacher_id=$tid WHERE class_id=$cid AND subject_id=$sid");
+            setFlashMessage('info', 'This subject was already assigned. Teacher assignment has been updated.');
         } else {
             mysqli_query($conn, "INSERT INTO class_subjects (class_id,subject_id,teacher_id) VALUES ($cid,$sid,$tid)");
+            setFlashMessage('success', 'Subject has been assigned to the class successfully!');
         }
-        setFlashMessage('success', 'Subject has been assigned to the class successfully!');
         header('Location: classes.php'); exit();
     }
 }

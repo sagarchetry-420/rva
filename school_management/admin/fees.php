@@ -9,6 +9,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $type = sanitize($conn, $_POST['fee_type']);
         $amt = floatval($_POST['amount']);
         $due = sanitize($conn, $_POST['due_date']);
+        // Check duplicate: same student + fee_type + due_date
+        $dup = mysqli_query($conn, "SELECT fee_id FROM fees WHERE student_id=$sid AND fee_type='$type' AND due_date='$due'");
+        if (mysqli_num_rows($dup) > 0) {
+            setFlashMessage('error', "A '$type' fee with due date $due is already assigned to this student.");
+            header('Location: fees.php'); exit();
+        }
         mysqli_query($conn, "INSERT INTO fees (student_id,fee_type,amount,due_date,payment_status) VALUES ($sid,'$type',$amt,'$due','Pending')");
         setFlashMessage('success', 'Fee has been assigned to the student successfully!');
         header('Location: fees.php'); exit();

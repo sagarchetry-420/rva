@@ -262,7 +262,7 @@ $recent_leaves = mysqli_query($conn, "SELECT a.*, s.first_name, s.last_name, s.r
                 <!-- Mark Leave Form -->
                 <div class="table-container" style="align-self:start;">
                     <div class="table-header"><h2><i class="fa-solid fa-calendar-plus"></i> Mark Leave</h2></div>
-                    <form method="POST" enctype="multipart/form-data" style="padding:20px;">
+                    <form method="POST" id="leaveForm" enctype="multipart/form-data" style="padding:20px;">
                         <input type="hidden" name="action" value="mark_leave">
                         <div class="form-group">
                             <label>Class *</label>
@@ -278,18 +278,22 @@ $recent_leaves = mysqli_query($conn, "SELECT a.*, s.first_name, s.last_name, s.r
                             <input type="text" name="roll_number" required placeholder="e.g. 101">
                         </div>
                         <div class="form-row">
-                            <input type="hidden" name="leave_start_date" value="<?php echo date('Y-m-d'); ?>">
-                            <div class="form-group" style="width: 100%;">
-                                <label>End Date</label>
-                                <input type="date" name="leave_end_date" value="">
+                            <div class="form-group" style="width:100%">
+                                <label>Start Date *</label>
+                                <input type="date" name="leave_start_date" id="leave_start" value="<?php echo date('Y-m-d'); ?>" required>
                             </div>
+                        </div>
+                        <div class="form-group" id="endDateGroup">
+                            <label>End Date</label>
+                            <input type="date" name="leave_end_date" id="leave_end">
                         </div>
                         <div class="form-group">
                             <label>Leave Type *</label>
                             <select name="leave_type" required>
-                                <option value="">Select Type</option>
-                                <option value="Full Day">Full Day</option>
+                                <option value="Sick Leave">Sick Leave</option>
+                                <option value="Casual Leave">Casual Leave</option>
                                 <option value="Half Day">Half Day</option>
+                                <option value="Other">Other</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -298,10 +302,9 @@ $recent_leaves = mysqli_query($conn, "SELECT a.*, s.first_name, s.last_name, s.r
                         </div>
                         <div class="form-group">
                             <label>Upload Application Document</label>
-                            <input type="file" name="application_document" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-                            <small style="color:var(--gray)">Optional. Upload student's leave application.</small>
+                            <input type="file" name="application_document" accept=".pdf,.jpg,.jpeg,.png">
                         </div>
-                        <button type="submit" class="btn btn-primary" style="width:100%;"><i class="fa-solid fa-calendar-check"></i> Mark Leave</button>
+                        <button type="submit" class="btn btn-primary" id="leaveSubmitBtn" style="width:100%;"><i class="fa-solid fa-calendar-check"></i> Mark Leave</button>
                     </form>
                 </div>
 
@@ -352,35 +355,49 @@ $recent_leaves = mysqli_query($conn, "SELECT a.*, s.first_name, s.last_name, s.r
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        const leaveForm = document.getElementById('leaveForm');
         const leaveType = document.querySelector('select[name="leave_type"]');
         const startDate = document.querySelector('input[name="leave_start_date"]');
         const endDate = document.querySelector('input[name="leave_end_date"]');
+        const rollInput = document.querySelector('input[name="roll_number"]');
+        const classSelect = document.querySelector('select[name="class_id"]');
+        const submitBtn = document.getElementById('leaveSubmitBtn');
 
         if (leaveType && startDate && endDate) {
-            const endDateGroup = endDate.closest('.form-group');
+            function validateForm() {
+                if (classSelect.value && rollInput.value.trim() && startDate.value && leaveType.value) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                } else {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.5';
+                    submitBtn.style.cursor = 'not-allowed';
+                }
+            }
 
             function updateDateLogic() {
                 if (leaveType.value === 'Half Day') {
-                    endDateGroup.style.display = 'none';
+                    document.getElementById('endDateGroup').style.display = 'none';
                     endDate.value = '';
                 } else {
-                    endDateGroup.style.display = 'block';
+                    document.getElementById('endDateGroup').style.display = 'block';
                 }
 
                 if (startDate.value) {
-                    let sDate = new Date(startDate.value);
-                    sDate.setDate(sDate.getDate() + 1);
-                    let minEnd = sDate.toISOString().split('T')[0];
-                    endDate.setAttribute('min', minEnd);
-                    
-                    if (endDate.value && endDate.value <= startDate.value) {
+                    endDate.setAttribute('min', startDate.value);
+                    if (endDate.value && endDate.value < startDate.value) {
                         endDate.value = '';
                     }
                 }
+                validateForm();
             }
 
             leaveType.addEventListener('change', updateDateLogic);
             startDate.addEventListener('change', updateDateLogic);
+            rollInput.addEventListener('input', validateForm);
+            classSelect.addEventListener('change', validateForm);
+            
             updateDateLogic();
         }
     });

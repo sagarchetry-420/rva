@@ -61,6 +61,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header("Location: examinations.php?tab=routines&exam_id=$eid&class_id=$cid"); exit();
     }
     
+    // Save Marks Action
+    if ($a === 'save_marks') {
+        $eid = intval($_POST['exam_id']);
+        $subid = intval($_POST['subject_id']);
+        
+        $count = 0;
+        foreach ($_POST['marks'] as $sid => $mdata) {
+            $sid = intval($sid);
+            $marks = !empty($mdata['obtained']) ? floatval($mdata['obtained']) : 0;
+            $is_absent = isset($mdata['absent']) ? 1 : 0;
+            
+            // Basic grade calculation logic
+            $grade = 'F';
+            if ($is_absent) $grade = 'Ab';
+            else {
+                if ($marks >= 80) $grade = 'A+';
+                elseif ($marks >= 70) $grade = 'A';
+                elseif ($marks >= 60) $grade = 'B';
+                elseif ($marks >= 50) $grade = 'C';
+                elseif ($marks >= 40) $grade = 'D';
+                elseif ($marks >= 30) $grade = 'E';
+            }
+            
+            mysqli_query($conn, "INSERT INTO results (student_id, exam_id, subject_id, marks_obtained, is_absent, grade) 
+                VALUES ($sid, $eid, $subid, $marks, $is_absent, '$grade')
+                ON DUPLICATE KEY UPDATE marks_obtained=$marks, is_absent=$is_absent, grade='$grade'");
+            $count++;
+        }
+        setFlashMessage('success', "Marks saved for $count students.");
+        header("Location: examinations.php?tab=marks&exam_id=$eid&class_id=" . intval($_POST['class_id']) . "&subject_id=$subid"); exit();
+    }
+    
     // Export Results Action
     if ($a === 'export_csv') {
         $eid = intval($_POST['exam_id']);
@@ -159,6 +191,7 @@ $sel_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
             <div class="tab-nav">
                 <a href="?tab=manage" class="tab-btn <?php echo $tab==='manage'?'active':''; ?>"><i class="fa-solid fa-list-check"></i> Manage Exams</a>
                 <a href="?tab=routines" class="tab-btn <?php echo $tab==='routines'?'active':''; ?>"><i class="fa-solid fa-calendar-days"></i> Exam Routines</a>
+                <a href="?tab=marks" class="tab-btn <?php echo $tab==='marks'?'active':''; ?>"><i class="fa-solid fa-pen-nib"></i> Enter Marks</a>
                 <a href="?tab=results" class="tab-btn <?php echo $tab==='results'?'active':''; ?>"><i class="fa-solid fa-square-poll-vertical"></i> View Results</a>
             </div>
 
@@ -291,6 +324,95 @@ $sel_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
             <?php endif; endif; ?>
 
 
+            <?php elseif ($tab === 'marks'): ?>
+            <!-- ===================== ENTER MARKS ===================== -->
+            <div class="filter-bar">
+                <form method="GET" style="display:flex;gap:15px;align-items:flex-end;flex-wrap:wrap;">
+                    <input type="hidden" name="tab" value="marks">
+                    <div class="form-group"><label>Exam</label>
+                        <select name="exam_id" required onchange="this.form.submit()">
+                            <option value="">-- Select Exam --</option>
+                            <?php mysqli_data_seek($exams, 0); while ($e = mysqli_fetch_assoc($exams)): ?>
+                            <option value="<?php echo $e['exam_id']; ?>" <?php echo $sel_exam==$e['exam_id']?'selected':''; ?>><?php echo htmlspecialchars($e['exam_name']); ?></option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Class</label>
+                        <select name="class_id" required onchange="this.form.submit()">
+                            <option value="">-- Select Class --</option>
+                            <?php mysqli_data_seek($classes, 0); while ($c = mysqli_fetch_assoc($classes)): ?>
+                            <option value="<?php echo $c['class_id']; ?>" <?php echo $sel_class==$c['class_id']?'selected':''; ?>><?php echo htmlspecialchars($c['class_name'].' '.$c['section']); ?></option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
+                    <?php if($sel_class > 0): 
+                        $class_subjects = mysqli_query($conn, "SELECT s.subject_id, s.subject_name FROM class_subjects cs JOIN subjects s ON cs.subject_id=s.subject_id WHERE cs.class_id=$sel_class ORDER BY s.subject_name");
+                        $sel_sub = isset($_GET['subject_id']) ? intval($_GET['subject_id']) : 0;
+                    ?>
+                    <div class="form-group"><label>Subject</label>
+                        <select name="subject_id" required onchange="this.form.submit()">
+                            <option value="">-- Select Subject --</option>
+                            <?php while($sub = mysqli_fetch_assoc($class_subjects)): ?>
+                            <option value="<?php echo $sub['subject_id']; ?>" <?php echo $sel_sub==$sub['subject_id']?'selected':''; ?>><?php echo htmlspecialchars($sub['subject_name']); ?></option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+                </form>
+            </div>
+
+            <?php if ($sel_exam > 0 && $sel_class > 0 && isset($sel_sub) && $sel_sub > 0): 
+                $students = mysqli_query($conn, "SELECT student_id, first_name, last_name, roll_number FROM students WHERE class_id=$sel_class ORDER BY roll_number");
+                $existing_marks = [];
+                $mq = mysqli_query($conn, "SELECT * FROM results WHERE exam_id=$sel_exam AND subject_id=$sel_sub");
+                while($m = mysqli_fetch_assoc($mq)) $existing_marks[$m['student_id']] = $m;
+                
+                $schedule = mysqli_fetch_assoc(mysqli_query($conn, "SELECT full_marks, pass_marks FROM exam_schedules WHERE exam_id=$sel_exam AND class_id=$sel_class AND subject_id=$sel_sub"));
+                $max = $schedule ? $schedule['full_marks'] : 100;
+            ?>
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>Entering Marks: <?php echo htmlspecialchars($sel_sub_name ?? 'Subject'); ?></h2>
+                    <span class="badge badge-info">Max Marks: <?php echo $max; ?></span>
+                </div>
+                <form method="POST">
+                    <input type="hidden" name="action" value="save_marks">
+                    <input type="hidden" name="exam_id" value="<?php echo $sel_exam; ?>">
+                    <input type="hidden" name="class_id" value="<?php echo $sel_class; ?>">
+                    <input type="hidden" name="subject_id" value="<?php echo $sel_sub; ?>">
+                    <table class="data-table">
+                        <thead><tr><th>Roll No</th><th>Student Name</th><th>Marks Obtained (Max: <?php echo $max; ?>)</th><th>Absent</th></tr></thead>
+                        <tbody>
+                        <?php while ($s = mysqli_fetch_assoc($students)): 
+                            $sid = $s['student_id'];
+                            $em = isset($existing_marks[$sid]) ? $existing_marks[$sid] : null;
+                        ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($s['roll_number']); ?></td>
+                            <td><strong><?php echo htmlspecialchars($s['first_name'].' '.$s['last_name']); ?></strong></td>
+                            <td>
+                                <input type="number" name="marks[<?php echo $sid; ?>][obtained]" 
+                                       value="<?php echo $em ? $em['marks_obtained'] : ''; ?>" 
+                                       step="0.5" min="0" max="<?php echo $max; ?>" 
+                                       class="form-control" style="width:120px"
+                                       <?php echo ($em && $em['is_absent']) ? 'disabled' : ''; ?> id="m_<?php echo $sid; ?>">
+                            </td>
+                            <td>
+                                <input type="checkbox" name="marks[<?php echo $sid; ?>][absent]" 
+                                       onchange="document.getElementById('m_<?php echo $sid; ?>').disabled = this.checked"
+                                       <?php echo ($em && $em['is_absent']) ? 'checked' : ''; ?>>
+                            </td>
+                        </tr>
+                        <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                    <div style="padding:15px;text-align:right;">
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Save All Marks</button>
+                    </div>
+                </form>
+            </div>
+            <?php endif; ?>
+
             <?php elseif ($tab === 'results'): ?>
             <!-- ===================== VIEW RESULTS ===================== -->
             <div class="filter-bar">
@@ -325,28 +447,29 @@ $sel_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
             </div>
 
             <?php if ($sel_exam > 0 && $sel_class > 0): 
-                $res_query = @mysqli_query($conn, "SELECT s.roll_number, s.first_name, s.last_name, sub.subject_name, r.marks_obtained, r.is_absent, r.grade, sch.full_marks, sch.pass_marks
-                    FROM results r 
-                    JOIN students s ON r.student_id=s.student_id 
-                    JOIN subjects sub ON r.subject_id=sub.subject_id
-                    LEFT JOIN exam_schedules sch ON r.exam_id=sch.exam_id AND s.class_id=sch.class_id AND r.subject_id=sch.subject_id
-                    WHERE r.exam_id=$sel_exam AND s.class_id=$sel_class ORDER BY s.roll_number, sub.subject_name");
-                
-                if($res_query && mysqli_num_rows($res_query) > 0):
+                $view_mode = isset($_GET['view']) ? $_GET['view'] : 'summary';
+            ?>
+            <div class="tab-sub-nav" style="margin-bottom:15px;">
+                <a href="?tab=results&exam_id=<?php echo $sel_exam; ?>&class_id=<?php echo $sel_class; ?>&view=summary" class="btn btn-sm <?php echo $view_mode==='summary'?'btn-primary':'btn-outline'; ?>">Student Summary</a>
+                <a href="?tab=results&exam_id=<?php echo $sel_exam; ?>&class_id=<?php echo $sel_class; ?>&view=detailed" class="btn btn-sm <?php echo $view_mode==='detailed'?'btn-primary':'btn-outline'; ?>">Detailed View</a>
+            </div>
+
+            <?php 
+                if ($view_mode === 'detailed'):
+                    $res_query = mysqli_query($conn, "SELECT s.roll_number, s.first_name, s.last_name, sub.subject_name, r.marks_obtained, r.is_absent, r.grade, sch.full_marks, sch.pass_marks
+                        FROM results r 
+                        JOIN students s ON r.student_id=s.student_id 
+                        JOIN subjects sub ON r.subject_id=sub.subject_id
+                        LEFT JOIN exam_schedules sch ON r.exam_id=sch.exam_id AND s.class_id=sch.class_id AND r.subject_id=sch.subject_id
+                        WHERE r.exam_id=$sel_exam AND s.class_id=$sel_class ORDER BY s.roll_number, sub.subject_name");
             ?>
             <div class="table-container" id="reportTable">
-                <div class="table-header"><h2>Class Results</h2></div>
                 <table class="data-table">
                     <thead><tr><th>Roll No</th><th>Student Name</th><th>Subject</th><th>Total</th><th>Pass</th><th>Marks</th><th>Grade</th><th>Status</th></tr></thead>
                     <tbody>
                     <?php while ($r = mysqli_fetch_assoc($res_query)): 
-                        $status = 'Present';
-                        $marks = $r['marks_obtained'];
-                        if (isset($r['is_absent']) && $r['is_absent']) {
-                            $status = 'Absent';
-                            $marks = '—';
-                        }
-                        
+                        $status = ($r['is_absent']) ? 'Absent' : 'Present';
+                        $marks = ($r['is_absent']) ? '—' : $r['marks_obtained'];
                         $is_fail = ($marks !== '—' && isset($r['pass_marks']) && $marks < $r['pass_marks']);
                     ?>
                     <tr>
@@ -371,8 +494,49 @@ $sel_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
                     </tbody>
                 </table>
             </div>
-            <?php else: ?>
-                <div class="empty-state"><p>No results have been submitted by teachers for this class and exam yet.</p></div>
+            <?php else: 
+                // Summary View
+                $summary_query = mysqli_query($conn, "
+                    SELECT s.student_id, s.roll_number, s.first_name, s.last_name, 
+                           SUM(r.marks_obtained) as total_marks,
+                           COUNT(r.result_id) as subjects_count,
+                           SUM(IF(r.marks_obtained < sch.pass_marks OR r.is_absent=1, 1, 0)) as failed_subjects
+                    FROM students s
+                    JOIN results r ON s.student_id = r.student_id
+                    LEFT JOIN exam_schedules sch ON r.exam_id = sch.exam_id AND s.class_id = sch.class_id AND r.subject_id = sch.subject_id
+                    WHERE r.exam_id = $sel_exam AND s.class_id = $sel_class
+                    GROUP BY s.student_id
+                    ORDER BY s.roll_number
+                ");
+            ?>
+            <div class="table-container" id="reportTable">
+                <table class="data-table">
+                    <thead><tr><th>Roll No</th><th>Student Name</th><th>Subjects</th><th>Total Marks</th><th>Result</th><th>Action</th></tr></thead>
+                    <tbody>
+                    <?php while ($r = mysqli_fetch_assoc($summary_query)): 
+                        $res_status = ($r['failed_subjects'] > 0) ? 'FAILED' : 'PASSED';
+                    ?>
+                    <tr>
+                        <td><?php echo $r['roll_number']; ?></td>
+                        <td><strong><?php echo htmlspecialchars($r['first_name'].' '.$r['last_name']); ?></strong></td>
+                        <td><?php echo $r['subjects_count']; ?></td>
+                        <td><?php echo number_format($r['total_marks'], 1); ?></td>
+                        <td>
+                            <span class="badge badge-<?php echo ($res_status==='PASSED')?'success':'danger'; ?>">
+                                <?php echo $res_status; ?> (<?php echo $r['failed_subjects']; ?> Back)
+                            </span>
+                        </td>
+                        <td>
+                            <a href="marksheet.php?student_id=<?php echo $r['student_id']; ?>&exam_id=<?php echo $sel_exam; ?>" 
+                               target="_blank" class="btn btn-sm btn-primary">
+                                <i class="fa-solid fa-file-invoice"></i> Marksheet
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
             <?php endif; endif; ?>
 
             <?php endif; ?>
@@ -395,6 +559,25 @@ $sel_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
     
     <script src="<?php echo BASE_URL; ?>/assets/js/script.js"></script>
     <script>
+    function validateExamForm() {
+        const name = document.querySelector('input[name="exam_name"]').value;
+        const type = document.querySelector('select[name="exam_type"]').value;
+        const year = document.querySelector('input[name="academic_year"]').value;
+        const start = document.getElementById('exam_start_date').value;
+        const end = document.getElementById('exam_end_date').value;
+        const btn = document.querySelector('#addExamModal button[type="submit"]');
+        
+        if (name.trim() && type && year && start && end) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        } else {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        }
+    }
+
     function downloadReportPDF() {
         var element = document.getElementById('reportTable');
         var opt = {
@@ -471,7 +654,6 @@ $sel_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
                 btn.style.opacity = '0.5';
                 btn.style.cursor = 'not-allowed';
                 
-                // Add a visual cue if there's a duplicate date
                 if (hasDuplicateDate) {
                     btn.title = "Cannot schedule multiple subjects on the same date";
                 } else {
@@ -481,9 +663,14 @@ $sel_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
         }
     }
 
-    // Run on load in case of existing data
+    // Attach listeners for exam form
+    document.querySelectorAll('#addExamModal input, #addExamModal select').forEach(el => {
+        el.addEventListener('input', validateExamForm);
+    });
+
     window.addEventListener('DOMContentLoaded', (event) => {
         checkFormValidity();
+        validateExamForm();
     });
     </script>
 </body>

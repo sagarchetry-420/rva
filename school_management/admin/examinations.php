@@ -11,12 +11,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $ed = sanitize($conn, $_POST['end_date']);
         $ay = sanitize($conn, $_POST['academic_year']);
         mysqli_query($conn, "INSERT INTO examinations (exam_name,exam_type,start_date,end_date,academic_year) VALUES ('$n','$t','$sd','$ed','$ay')");
-        setFlashMessage('success', "Exam '$n' created!");
+        setFlashMessage('success', "Examination '$n' has been created successfully!");
         header('Location: examinations.php'); exit();
     }
     if ($a === 'delete_exam') {
         mysqli_query($conn, "DELETE FROM examinations WHERE exam_id=".intval($_POST['exam_id']));
-        setFlashMessage('success', 'Exam deleted!');
+        setFlashMessage('success', 'Examination has been deleted successfully.');
         header('Location: examinations.php'); exit();
     }
     if ($a === 'save_results') {
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
             $cnt++;
         }
-        setFlashMessage('success', "Results saved for $cnt students!");
+        setFlashMessage('success', "Results saved successfully for $cnt students!");
         header('Location: examinations.php?exam_id='.$eid.'&class_id='.$_POST['class_id'].'&subject_id='.$subid); exit();
     }
 }
@@ -66,7 +66,7 @@ if ($sel_exam > 0 && $sel_class > 0 && $sel_subj > 0) {
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Examinations - <?php echo APP_NAME; ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -75,7 +75,7 @@ if ($sel_exam > 0 && $sel_class > 0 && $sel_subj > 0) {
         <?php include dirname(__DIR__) . '/includes/sidebar.php'; ?>
         <div class="content">
             <div class="page-header">
-                <div><h1>📝 Examinations & Results</h1><p>Create exams and enter results</p></div>
+                <div><h1><i class="fa-solid fa-file-invoice"></i> Examinations & Results</h1><p>Create exams and enter results</p></div>
                 <button class="btn btn-primary" onclick="openModal('addExamModal')">+ Create Exam</button>
             </div>
 
@@ -93,8 +93,8 @@ if ($sel_exam > 0 && $sel_class > 0 && $sel_subj > 0) {
                         <td><?php echo $e['end_date'] ? date('M d, Y', strtotime($e['end_date'])) : '—'; ?></td>
                         <td><?php echo htmlspecialchars($e['academic_year']); ?></td>
                         <td class="actions-cell">
-                            <a href="?exam_id=<?php echo $e['exam_id']; ?>" class="btn btn-sm btn-info">📝 Enter Results</a>
-                            <form method="POST" style="display:inline" onsubmit="return confirmDelete()"><input type="hidden" name="action" value="delete_exam"><input type="hidden" name="exam_id" value="<?php echo $e['exam_id']; ?>"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                            <a href="?exam_id=<?php echo $e['exam_id']; ?>" class="btn btn-sm btn-info"><i class="fa-solid fa-file-invoice"></i> Enter Results</a>
+                            <form method="POST" style="display:inline" onsubmit="return confirmDelete()"><input type="hidden" name="action" value="delete_exam"><input type="hidden" name="exam_id" value="<?php echo $e['exam_id']; ?>"><button class="btn btn-sm btn-danger"><i class="fa-solid fa-trash-can"></i></button></form>
                         </td>
                     </tr>
                     <?php endwhile; ?>
@@ -152,7 +152,7 @@ if ($sel_exam > 0 && $sel_class > 0 && $sel_subj > 0) {
                         <?php endwhile; ?>
                         </tbody>
                     </table>
-                    <div style="padding:18px 22px;text-align:right;border-top:1px solid var(--border)"><button type="submit" class="btn btn-primary">💾 Save Results</button></div>
+                    <div style="padding:18px 22px;text-align:right;border-top:1px solid var(--border)"><button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Results</button></div>
                 </form>
             </div>
             <?php endif; ?>
@@ -174,3 +174,4 @@ if ($sel_exam > 0 && $sel_class > 0 && $sel_subj > 0) {
         </div>
     </div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('addExamModal')">Cancel</button><button type="submit" class="btn btn-primary">Create</button></div></form></div></div>
     <?php include dirname(__DIR__) . '/includes/footer.php'; ?>
+

@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $c = sanitize($conn, $_POST['subject_code']);
         $d = sanitize($conn, $_POST['description']);
         mysqli_query($conn, "INSERT INTO subjects (subject_name,subject_code,description) VALUES ('$n','$c','$d')");
-        setFlashMessage('success', "Subject '$n' added!");
+        setFlashMessage('success', "Subject '$n' has been added successfully!");
         header('Location: subjects.php'); exit();
     }
     if ($a === 'edit') {
@@ -18,12 +18,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $c = sanitize($conn, $_POST['subject_code']);
         $d = sanitize($conn, $_POST['description']);
         mysqli_query($conn, "UPDATE subjects SET subject_name='$n',subject_code='$c',description='$d' WHERE subject_id=$id");
-        setFlashMessage('success', 'Subject updated!');
+        setFlashMessage('success', 'Subject details updated successfully!');
         header('Location: subjects.php'); exit();
     }
     if ($a === 'delete') {
         mysqli_query($conn, "DELETE FROM subjects WHERE subject_id=".intval($_POST['subject_id']));
-        setFlashMessage('success', 'Subject deleted!');
+        setFlashMessage('success', 'Subject has been deleted successfully.');
         header('Location: subjects.php'); exit();
     }
 }
@@ -34,7 +34,7 @@ $subjects = mysqli_query($conn, "SELECT s.*, (SELECT COUNT(*) FROM class_subject
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Subjects - <?php echo APP_NAME; ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -43,7 +43,7 @@ $subjects = mysqli_query($conn, "SELECT s.*, (SELECT COUNT(*) FROM class_subject
         <?php include dirname(__DIR__) . '/includes/sidebar.php'; ?>
         <div class="content">
             <div class="page-header">
-                <div><h1>📖 Subjects Management</h1><p>Manage all subjects</p></div>
+                <div><h1><i class="fa-solid fa-book"></i> Subjects Management</h1><p>Manage all subjects</p></div>
                 <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Subject</button>
             </div>
             <div class="table-container">
@@ -57,8 +57,8 @@ $subjects = mysqli_query($conn, "SELECT s.*, (SELECT COUNT(*) FROM class_subject
                         <td><small><?php echo htmlspecialchars($s['description']); ?></small></td>
                         <td><span class="badge badge-paid"><?php echo $s['class_count']; ?></span></td>
                         <td class="actions-cell">
-                            <button class="btn btn-sm btn-info" onclick='openEdit(<?php echo json_encode($s); ?>)'>✏️</button>
-                            <form method="POST" style="display:inline" onsubmit="return confirmDelete()"><input type="hidden" name="action" value="delete"><input type="hidden" name="subject_id" value="<?php echo $s['subject_id']; ?>"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                            <button class="btn btn-sm btn-info" onclick="openEdit(<?php echo htmlspecialchars(json_encode($s)); ?>)"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <form method="POST" style="display:inline" onsubmit="return confirmDelete()"><input type="hidden" name="action" value="delete"><input type="hidden" name="subject_id" value="<?php echo $s['subject_id']; ?>"><button class="btn btn-sm btn-danger"><i class="fa-solid fa-trash-can"></i></button></form>
                         </td>
                     </tr>
                     <?php endwhile; ?>
@@ -81,3 +81,4 @@ $subjects = mysqli_query($conn, "SELECT s.*, (SELECT COUNT(*) FROM class_subject
     <script>function openEdit(d){document.getElementById('e_id').value=d.subject_id;document.getElementById('e_name').value=d.subject_name;document.getElementById('e_code').value=d.subject_code;document.getElementById('e_desc').value=d.description||'';openModal('editModal');}</script>
 </body>
 </html>
+

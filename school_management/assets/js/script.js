@@ -49,8 +49,25 @@ function confirmDelete(message) {
     return confirm(message || 'Are you sure you want to delete this item? This action cannot be undone.');
 }
 
-// ═══ FLASH MESSAGES AUTO-DISMISS ═══
+// ═══ TOAST NOTIFICATIONS AUTO-DISMISS ═══
+function dismissToast() {
+    const toast = document.getElementById('toastNotification');
+    if (toast) {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 400);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    const toast = document.getElementById('toastNotification');
+    if (toast) {
+        // Auto-dismiss after 4 seconds (matches the progress bar animation)
+        setTimeout(function() {
+            dismissToast();
+        }, 4000);
+    }
+
+    // Also handle old-style flash messages (for login pages etc.)
     const flash = document.getElementById('flashMessage');
     if (flash) {
         setTimeout(function() {

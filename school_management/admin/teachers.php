@@ -2,12 +2,42 @@
 require_once dirname(__DIR__) . '/config/database.php';
 requireAdmin();
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+require_once dirname(__DIR__) . '/includes/PHPMailer/Exception.php';
+require_once dirname(__DIR__) . '/includes/PHPMailer/PHPMailer.php';
+require_once dirname(__DIR__) . '/includes/PHPMailer/SMTP.php';
+
+function sendCredentialsEmail($toEmail, $firstName, $username, $plainPassword) {
+    global $conn;
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host       = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = getenv('SMTP_USER') ?: 'test@example.com';
+        $mail->Password   = getenv('SMTP_PASS') ?: 'password';
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = getenv('SMTP_PORT') ?: 587;
+
+        $mail->setFrom(getenv('SMTP_USER') ?: 'admin@school.com', APP_NAME);
+        $mail->addAddress($toEmail, $firstName);
+
+        $mail->isHTML(true);
+        $mail->Subject = 'Your School Account Credentials';
+        $mail->Body    = "Hello $firstName,<br><br>Your account has been created. Here are your login details:<br><b>Username:</b> $username<br><b>Password:</b> $plainPassword<br><br>Please log in and change your password.";
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = $_POST['action'];
     
     if ($action === 'add') {
-        $username = sanitize($conn, $_POST['username']);
-        $password = md5($_POST['password']);
         $first_name = sanitize($conn, $_POST['first_name']);
         $last_name = sanitize($conn, $_POST['last_name']);
         $gender = sanitize($conn, $_POST['gender']);
@@ -17,18 +47,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $specialization = sanitize($conn, $_POST['subject_specialization']);
         $dob = sanitize($conn, $_POST['date_of_birth']);
         
+        // Check if email already exists
+        if (!empty($email)) {
+            $email_check = mysqli_query($conn, "SELECT user_id FROM users WHERE email='$email'");
+            if (mysqli_num_rows($email_check) > 0) {
+                setFlashMessage('error', 'This email address is already registered. Please use a different email.');
+                header('Location: teachers.php'); exit();
+            }
+        }
+        
+        $username = strtolower($first_name . '.' . $last_name . rand(100, 999));
+        $plain_password = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$'), 0, 10);
+        $password = md5($plain_password);
+        
         $check = mysqli_query($conn, "SELECT user_id FROM users WHERE username='$username'");
         if (mysqli_num_rows($check) > 0) {
-            setFlashMessage('error', 'Username already exists!');
-        } else {
-            $q = "INSERT INTO users (username, password, user_type, email) VALUES ('$username', '$password', 'teacher', '$email')";
-            if (mysqli_query($conn, $q)) {
-                $uid = mysqli_insert_id($conn);
-                $q2 = "INSERT INTO teachers (user_id, first_name, last_name, date_of_birth, gender, phone, email, qualification, subject_specialization, joining_date) 
-                       VALUES ($uid, '$first_name', '$last_name', '$dob', '$gender', '$phone', '$email', '$qualification', '$specialization', CURDATE())";
-                mysqli_query($conn, $q2);
-                setFlashMessage('success', "Teacher '$first_name $last_name' added successfully!");
+            $username = $username . rand(1, 99);
+        }
+
+        $q = "INSERT INTO users (username, password, user_type, email) VALUES ('$username', '$password', 'teacher', '$email')";
+        if (mysqli_query($conn, $q)) {
+            $uid = mysqli_insert_id($conn);
+            $q2 = "INSERT INTO teachers (user_id, first_name, last_name, date_of_birth, gender, phone, email, qualification, subject_specialization, joining_date) 
+                   VALUES ($uid, '$first_name', '$last_name', '$dob', '$gender', '$phone', '$email', '$qualification', '$specialization', CURDATE())";
+            mysqli_query($conn, $q2);
+            
+            if (!empty($email)) {
+                sendCredentialsEmail($email, $first_name, $username, $plain_password);
             }
+            
+            setFlashMessage('success', 'Teacher registered successfully!');
         }
         header('Location: teachers.php'); exit();
     }
@@ -44,8 +92,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $specialization = sanitize($conn, $_POST['subject_specialization']);
         $dob = sanitize($conn, $_POST['date_of_birth']);
         
+        // Get current data to check for changes and get user_id
+        $current_res = mysqli_query($conn, "SELECT * FROM teachers WHERE teacher_id=$tid");
+        $current = mysqli_fetch_assoc($current_res);
+        $uid = $current['user_id'];
+        
+        // Check for duplicate email
+        if (!empty($email) && $email !== $current['email']) {
+            $email_check = mysqli_query($conn, "SELECT user_id FROM users WHERE email='$email' AND user_id != $uid");
+            if (mysqli_num_rows($email_check) > 0) {
+                setFlashMessage('error', 'This email address is already registered by another user.');
+                header('Location: teachers.php'); exit();
+            }
+        }
+        
+        // Check if anything actually changed
+        if ($first_name === $current['first_name'] && $last_name === $current['last_name'] && 
+            $gender === $current['gender'] && $phone === $current['phone'] && 
+            $email === $current['email'] && $qualification === $current['qualification'] && 
+            $specialization === $current['subject_specialization'] && $dob === $current['date_of_birth']) {
+            setFlashMessage('info', 'No changes were made.');
+            header('Location: teachers.php'); exit();
+        }
+        
         mysqli_query($conn, "UPDATE teachers SET first_name='$first_name', last_name='$last_name', date_of_birth='$dob', gender='$gender', phone='$phone', email='$email', qualification='$qualification', subject_specialization='$specialization' WHERE teacher_id=$tid");
-        setFlashMessage('success', 'Teacher updated successfully!');
+        mysqli_query($conn, "UPDATE users SET email='$email' WHERE user_id=$uid");
+        
+        setFlashMessage('success', 'Teacher details updated successfully!');
         header('Location: teachers.php'); exit();
     }
     
@@ -53,10 +126,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $tid = intval($_POST['teacher_id']);
         $r = mysqli_query($conn, "SELECT user_id FROM teachers WHERE teacher_id=$tid");
         if ($row = mysqli_fetch_assoc($r)) {
+            mysqli_query($conn, "DELETE FROM teachers WHERE teacher_id=$tid");
             mysqli_query($conn, "DELETE FROM users WHERE user_id=" . $row['user_id']);
         }
-        setFlashMessage('success', 'Teacher deleted successfully!');
+        setFlashMessage('success', 'Teacher record has been deleted successfully.');
         header('Location: teachers.php'); exit();
+    }
+    
+    if ($action === 'export_csv') {
+        $q = "SELECT t.first_name, t.last_name, t.date_of_birth, t.gender, t.phone, t.email, t.qualification, t.subject_specialization, u.username 
+              FROM teachers t 
+              LEFT JOIN users u ON t.user_id = u.user_id ORDER BY t.first_name";
+        $res = mysqli_query($conn, $q);
+        
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="teachers_export.csv"');
+        $output = fopen('php://output', 'w');
+        fputcsv($output, array('First Name', 'Last Name', 'Username', 'DOB', 'Gender', 'Phone', 'Email', 'Qualification', 'Specialization'));
+        while ($row = mysqli_fetch_assoc($res)) {
+            fputcsv($output, $row);
+        }
+        fclose($output);
+        exit();
     }
 }
 
@@ -68,8 +159,9 @@ $teachers_result = mysqli_query($conn, "SELECT t.*, u.username FROM teachers t L
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teachers - <?php echo APP_NAME; ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
     <?php include dirname(__DIR__) . '/includes/header.php'; ?>
@@ -77,11 +169,18 @@ $teachers_result = mysqli_query($conn, "SELECT t.*, u.username FROM teachers t L
         <?php include dirname(__DIR__) . '/includes/sidebar.php'; ?>
         <div class="content">
             <div class="page-header">
-                <div><h1>👨‍🏫 Teachers Management</h1><p>Manage all teacher records</p></div>
-                <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Teacher</button>
+                <div><h1><i class="fas fa-chalkboard-teacher"></i> Teachers Management</h1><p>Manage all teacher records</p></div>
+                <div style="display:flex; gap:10px;">
+                    <form method="POST" style="margin:0;">
+                        <input type="hidden" name="action" value="export_csv">
+                        <button type="submit" class="btn btn-success"><i class="fas fa-file-csv"></i> Download CSV</button>
+                        <button type="button" class="btn btn-danger" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                    </form>
+                    <button class="btn btn-primary" onclick="openModal('addModal')"><i class="fas fa-plus"></i> Add Teacher</button>
+                </div>
             </div>
             
-            <div class="table-container">
+            <div class="table-container" id="printableTable">
                 <div class="table-header">
                     <h2>All Teachers (<?php echo mysqli_num_rows($teachers_result); ?>)</h2>
                     <div class="search-box">
@@ -90,30 +189,31 @@ $teachers_result = mysqli_query($conn, "SELECT t.*, u.username FROM teachers t L
                 </div>
                 <table class="data-table" id="dataTable">
                     <thead>
-                        <tr><th>Name</th><th>Username</th><th>Specialization</th><th>Qualification</th><th>Phone</th><th>Email</th><th>Actions</th></tr>
+                        <tr><th>Name</th><th>Username</th><th>Specialization</th><th>Qualification</th><th>Phone</th><th>Email</th><th class="no-print">Actions</th></tr>
                     </thead>
                     <tbody>
                     <?php if (mysqli_num_rows($teachers_result) > 0): ?>
                         <?php while ($t = mysqli_fetch_assoc($teachers_result)): ?>
                         <tr>
-                            <td><strong><?php echo htmlspecialchars($t['first_name'] . ' ' . $t['last_name']); ?></strong></td>
-                            <td>@<?php echo htmlspecialchars($t['username']); ?></td>
-                            <td><?php echo htmlspecialchars($t['subject_specialization']); ?></td>
-                            <td><?php echo htmlspecialchars($t['qualification']); ?></td>
-                            <td><?php echo htmlspecialchars($t['phone']); ?></td>
-                            <td><?php echo htmlspecialchars($t['email']); ?></td>
-                            <td class="actions-cell">
-                                <button class="btn btn-sm btn-info" onclick='openEditModal(<?php echo json_encode($t); ?>)'>✏️ Edit</button>
+                            <td><strong><?php echo htmlspecialchars(($t['first_name'] ?? '') . ' ' . ($t['last_name'] ?? '')); ?></strong></td>
+                            <td>@<?php echo htmlspecialchars($t['username'] ?? 'N/A'); ?></td>
+                            <td><?php echo htmlspecialchars($t['subject_specialization'] ?? ''); ?></td>
+                            <td><?php echo htmlspecialchars($t['qualification'] ?? ''); ?></td>
+                            <td><?php echo htmlspecialchars($t['phone'] ?? ''); ?></td>
+                            <td><?php echo htmlspecialchars($t['email'] ?? ''); ?></td>
+                            <td class="actions-cell no-print">
+                                <button class="btn btn-sm btn-info" onclick="openEditModal(<?php echo htmlspecialchars(json_encode($t)); ?>)"><i class="fas fa-edit"></i> Edit</button>
+                                <button class="btn btn-sm btn-secondary" onclick="viewDetails(<?php echo htmlspecialchars(json_encode($t)); ?>)"><i class="fas fa-eye"></i> View</button>
                                 <form method="POST" style="display:inline" onsubmit="return confirmDelete('Delete this teacher?')">
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="teacher_id" value="<?php echo $t['teacher_id']; ?>">
-                                    <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                                    <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
-                        <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👨‍🏫</div><p>No teachers found.</p></div></td></tr>
+                        <tr><td colspan="7"><div class="empty-state"><div class="empty-icon"><i class="fas fa-chalkboard-teacher"></i></div><p>No teachers found.</p></div></td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
@@ -128,23 +228,20 @@ $teachers_result = mysqli_query($conn, "SELECT t.*, u.username FROM teachers t L
             <form method="POST">
                 <input type="hidden" name="action" value="add">
                 <div class="modal-body">
+
                     <div class="form-row">
                         <div class="form-group"><label>First Name *</label><input type="text" name="first_name" required></div>
                         <div class="form-group"><label>Last Name *</label><input type="text" name="last_name" required></div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group"><label>Username *</label><input type="text" name="username" required></div>
-                        <div class="form-group"><label>Password *</label><input type="password" name="password" required></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth"></div>
+                        <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth" max="<?php echo date('Y-m-d', strtotime('-18 years')); ?>"></div>
                         <div class="form-group"><label>Gender *</label>
                             <select name="gender" required><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>Email</label><input type="email" name="email"></div>
-                        <div class="form-group"><label>Phone</label><input type="text" name="phone"></div>
+                        <div class="form-group"><label>Phone</label><input type="text" name="phone" pattern="[0-9]{10}" maxlength="10" title="Please enter exactly 10 digits"></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>Qualification</label><input type="text" name="qualification" placeholder="e.g. M.Sc. Mathematics"></div>
@@ -172,14 +269,14 @@ $teachers_result = mysqli_query($conn, "SELECT t.*, u.username FROM teachers t L
                         <div class="form-group"><label>Last Name *</label><input type="text" name="last_name" id="edit_last_name" required></div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth" id="edit_dob"></div>
+                        <div class="form-group"><label>Date of Birth</label><input type="date" name="date_of_birth" id="edit_dob" max="<?php echo date('Y-m-d', strtotime('-18 years')); ?>"></div>
                         <div class="form-group"><label>Gender</label>
                             <select name="gender" id="edit_gender"><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>Email</label><input type="email" name="email" id="edit_email"></div>
-                        <div class="form-group"><label>Phone</label><input type="text" name="phone" id="edit_phone"></div>
+                        <div class="form-group"><label>Phone</label><input type="text" name="phone" id="edit_phone" pattern="[0-9]{10}" maxlength="10" title="Please enter exactly 10 digits"></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>Qualification</label><input type="text" name="qualification" id="edit_qualification"></div>
@@ -194,8 +291,41 @@ $teachers_result = mysqli_query($conn, "SELECT t.*, u.username FROM teachers t L
         </div>
     </div>
 
+    <!-- View Details Modal -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content" id="teacherDetailsPDF">
+            <div class="modal-header no-print">
+                <h2>Teacher Details</h2>
+                <span class="close" onclick="closeModal('viewModal')">&times;</span>
+            </div>
+            <div class="modal-body profile-card">
+                <div class="profile-header">
+                    <div class="profile-avatar"><i class="fas fa-chalkboard-teacher"></i></div>
+                    <h2 id="view_name">Name</h2>
+                    <p id="view_username">@username</p>
+                </div>
+                <div class="profile-body profile-info-grid">
+                    <div class="info-item"><label>Specialization</label><span id="view_specialization"></span></div>
+                    <div class="info-item"><label>Qualification</label><span id="view_qualification"></span></div>
+                    <div class="info-item"><label>Date of Birth</label><span id="view_dob"></span></div>
+                    <div class="info-item"><label>Gender</label><span id="view_gender"></span></div>
+                    <div class="info-item"><label>Phone</label><span id="view_phone"></span></div>
+                    <div class="info-item"><label>Email</label><span id="view_email"></span></div>
+                </div>
+            </div>
+            <div class="modal-footer no-print">
+                <button type="button" class="btn btn-danger" onclick="downloadSinglePDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                <!-- Simple client-side CSV download hack for single teacher -->
+                <button type="button" class="btn btn-success" onclick="downloadSingleCSV()"><i class="fas fa-file-csv"></i> Download CSV</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('viewModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="<?php echo BASE_URL; ?>/assets/js/script.js"></script>
     <script>
+    let currentTeacherData = null;
+
     function openEditModal(d) {
         document.getElementById('edit_teacher_id').value = d.teacher_id;
         document.getElementById('edit_first_name').value = d.first_name;
@@ -207,6 +337,68 @@ $teachers_result = mysqli_query($conn, "SELECT t.*, u.username FROM teachers t L
         document.getElementById('edit_qualification').value = d.qualification || '';
         document.getElementById('edit_specialization').value = d.subject_specialization || '';
         openModal('editModal');
+    }
+    
+    function viewDetails(data) {
+        currentTeacherData = data;
+        document.getElementById('view_name').innerText = data.first_name + ' ' + data.last_name;
+        document.getElementById('view_username').innerText = '@' + data.username;
+        document.getElementById('view_specialization').innerText = data.subject_specialization || 'N/A';
+        document.getElementById('view_qualification').innerText = data.qualification || 'N/A';
+        document.getElementById('view_dob').innerText = data.date_of_birth || 'N/A';
+        document.getElementById('view_gender').innerText = data.gender || 'N/A';
+        document.getElementById('view_phone').innerText = data.phone || 'N/A';
+        document.getElementById('view_email').innerText = data.email || 'N/A';
+        openModal('viewModal');
+    }
+
+    function downloadPDF() {
+        var element = document.getElementById('printableTable');
+        var opt = {
+            margin:       0.5,
+            filename:     'teachers_list.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+        };
+        const noPrintEls = element.querySelectorAll('.no-print');
+        noPrintEls.forEach(el => el.style.display = 'none');
+        
+        html2pdf().set(opt).from(element).save().then(() => {
+            noPrintEls.forEach(el => el.style.display = '');
+        });
+    }
+
+    function downloadSinglePDF() {
+        var element = document.getElementById('teacherDetailsPDF');
+        var opt = {
+            margin:       0.5,
+            filename:     'teacher_details.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+        const noPrintEls = element.querySelectorAll('.no-print');
+        noPrintEls.forEach(el => el.style.display = 'none');
+        
+        html2pdf().set(opt).from(element).save().then(() => {
+            noPrintEls.forEach(el => el.style.display = '');
+        });
+    }
+
+    function downloadSingleCSV() {
+        if (!currentTeacherData) return;
+        const d = currentTeacherData;
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + "First Name,Last Name,Username,Specialization,Qualification,DOB,Gender,Phone,Email\n"
+            + `"${d.first_name}","${d.last_name}","${d.username}","${d.subject_specialization}","${d.qualification}","${d.date_of_birth}","${d.gender}","${d.phone}","${d.email}"\n`;
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "teacher_details.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
     </script>
 </body>

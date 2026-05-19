@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $amt = floatval($_POST['amount']);
         $due = sanitize($conn, $_POST['due_date']);
         mysqli_query($conn, "INSERT INTO fees (student_id,fee_type,amount,due_date,payment_status) VALUES ($sid,'$type',$amt,'$due','Pending')");
-        setFlashMessage('success', 'Fee assigned!');
+        setFlashMessage('success', 'Fee has been assigned to the student successfully!');
         header('Location: fees.php'); exit();
     }
     if ($a === 'pay') {
@@ -18,12 +18,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $method = sanitize($conn, $_POST['payment_method']);
         $receipt = sanitize($conn, $_POST['receipt_number']);
         mysqli_query($conn, "UPDATE fees SET payment_status='Paid', payment_date=CURDATE(), payment_method='$method', receipt_number='$receipt' WHERE fee_id=$fid");
-        setFlashMessage('success', 'Payment recorded!');
+        setFlashMessage('success', 'Payment has been recorded successfully!');
         header('Location: fees.php'); exit();
     }
     if ($a === 'delete') {
         mysqli_query($conn, "DELETE FROM fees WHERE fee_id=".intval($_POST['fee_id']));
-        setFlashMessage('success', 'Fee record deleted!');
+        setFlashMessage('success', 'Fee record has been deleted successfully.');
         header('Location: fees.php'); exit();
     }
 }
@@ -48,7 +48,7 @@ $r = mysqli_query($conn, "SELECT COALESCE(SUM(amount),0) as t FROM fees WHERE pa
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fees - <?php echo APP_NAME; ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -57,13 +57,13 @@ $r = mysqli_query($conn, "SELECT COALESCE(SUM(amount),0) as t FROM fees WHERE pa
         <?php include dirname(__DIR__) . '/includes/sidebar.php'; ?>
         <div class="content">
             <div class="page-header">
-                <div><h1>💰 Fee Management</h1><p>Assign and collect fees</p></div>
+                <div><h1><i class="fa-solid fa-money-bill-wave"></i> Fee Management</h1><p>Assign and collect fees</p></div>
                 <button class="btn btn-primary" onclick="openModal('assignModal')">+ Assign Fee</button>
             </div>
 
             <div class="stats-grid">
-                <div class="stat-card"><div class="stat-icon classes-icon">✅</div><div class="stat-details"><h3>₹<?php echo number_format($total_collected); ?></h3><p>Total Collected</p></div></div>
-                <div class="stat-card"><div class="stat-icon fees-icon">⏳</div><div class="stat-details"><h3>₹<?php echo number_format($total_pending); ?></h3><p>Total Pending</p></div></div>
+                <div class="stat-card"><div class="stat-icon classes-icon"><i class="fa-solid fa-chalkboard"></i></div><div class="stat-details"><h3>₹<?php echo number_format($total_collected); ?></h3><p>Total Collected</p></div></div>
+                <div class="stat-card"><div class="stat-icon fees-icon"><i class="fa-solid fa-hourglass-half"></i></div><div class="stat-details"><h3>₹<?php echo number_format($total_pending); ?></h3><p>Total Pending</p></div></div>
             </div>
 
             <div class="filter-bar">
@@ -87,11 +87,11 @@ $r = mysqli_query($conn, "SELECT COALESCE(SUM(amount),0) as t FROM fees WHERE pa
                         <td><span class="badge badge-<?php echo strtolower($f['payment_status']); ?>"><?php echo $f['payment_status']; ?></span></td>
                         <td class="actions-cell">
                             <?php if ($f['payment_status'] !== 'Paid'): ?>
-                            <button class="btn btn-sm btn-success" onclick="openPayModal(<?php echo $f['fee_id']; ?>)">💳 Pay</button>
+                            <button  class="btn btn-sm btn-success" onclick="openPayModal(<?php echo $f['fee_id']; ?>)"><i class="fa-solid fa-credit-card"></i> Pay</button>
                             <?php else: ?>
                             <small>Receipt: <?php echo htmlspecialchars($f['receipt_number']); ?></small>
                             <?php endif; ?>
-                            <form method="POST" style="display:inline" onsubmit="return confirmDelete()"><input type="hidden" name="action" value="delete"><input type="hidden" name="fee_id" value="<?php echo $f['fee_id']; ?>"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                            <form method="POST" style="display:inline" onsubmit="return confirmDelete()"><input type="hidden" name="action" value="delete"><input type="hidden" name="fee_id" value="<?php echo $f['fee_id']; ?>"><button class="btn btn-sm btn-danger"><i class="fa-solid fa-trash-can"></i></button></form>
                         </td>
                     </tr>
                     <?php endwhile; ?>
@@ -123,3 +123,4 @@ $r = mysqli_query($conn, "SELECT COALESCE(SUM(amount),0) as t FROM fees WHERE pa
     <script>function openPayModal(id){document.getElementById('pay_fee_id').value=id;openModal('payModal');}</script>
 </body>
 </html>
+

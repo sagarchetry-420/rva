@@ -18,12 +18,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             mysqli_query($conn, "INSERT INTO timetable (class_id,subject_id,teacher_id,day_of_week,period_number,start_time,end_time) VALUES ($cid,$subid,$tid,'$day',$period,'$st','$et')");
         }
-        setFlashMessage('success', 'Timetable entry saved!');
+        setFlashMessage('success', 'Timetable entry has been saved successfully!');
         header('Location: timetable.php?class_id='.$cid); exit();
     }
     if ($_POST['action'] === 'delete_slot') {
         mysqli_query($conn, "DELETE FROM timetable WHERE timetable_id=".intval($_POST['timetable_id']));
-        setFlashMessage('success', 'Slot removed!');
+        setFlashMessage('success', 'Timetable slot has been removed successfully.');
         header('Location: timetable.php?class_id='.$_POST['class_id']); exit();
     }
 }
@@ -56,7 +56,7 @@ $period_times = [
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timetable - <?php echo APP_NAME; ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -65,7 +65,7 @@ $period_times = [
         <?php include dirname(__DIR__) . '/includes/sidebar.php'; ?>
         <div class="content">
             <div class="page-header">
-                <div><h1>🕐 Timetable Management</h1><p>Create and manage class timetables</p></div>
+                <div><h1><i class="fa-solid fa-clock"></i> Timetable Management</h1><p>Create and manage class timetables</p></div>
                 <?php if ($sel_class > 0): ?>
                 <button class="btn btn-primary" onclick="openModal('addSlotModal')">+ Add Period</button>
                 <?php endif; ?>
@@ -114,7 +114,7 @@ $period_times = [
                 </table>
             </div>
             <?php else: ?>
-            <div class="dashboard-section"><div class="empty-state"><div class="empty-icon">🕐</div><p>Select a class to view/edit timetable.</p></div></div>
+            <div class="dashboard-section"><div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-clipboard-list"></i></div><p>Select a class to view/edit timetable.</p></div></div>
             <?php endif; ?>
         </div>
     </div>
@@ -135,3 +135,4 @@ $period_times = [
     </div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('addSlotModal')">Cancel</button><button type="submit" class="btn btn-primary">Save</button></div></form></div></div>
     <?php endif; ?>
     <?php include dirname(__DIR__) . '/includes/footer.php'; ?>
+

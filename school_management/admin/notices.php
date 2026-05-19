@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $target = sanitize($conn, $_POST['target_audience']);
         $uid = getUserId();
         mysqli_query($conn, "INSERT INTO notices (title,description,notice_date,target_audience,posted_by) VALUES ('$title','$desc','$date','$target',$uid)");
-        setFlashMessage('success', 'Notice published!');
+        setFlashMessage('success', 'Notice has been published successfully!');
         header('Location: notices.php'); exit();
     }
     if ($a === 'edit') {
@@ -20,12 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $desc = sanitize($conn, $_POST['description']);
         $target = sanitize($conn, $_POST['target_audience']);
         mysqli_query($conn, "UPDATE notices SET title='$title', description='$desc', target_audience='$target' WHERE notice_id=$nid");
-        setFlashMessage('success', 'Notice updated!');
+        setFlashMessage('success', 'Notice updated successfully!');
         header('Location: notices.php'); exit();
     }
     if ($a === 'delete') {
         mysqli_query($conn, "DELETE FROM notices WHERE notice_id=".intval($_POST['notice_id']));
-        setFlashMessage('success', 'Notice deleted!');
+        setFlashMessage('success', 'Notice has been deleted successfully.');
         header('Location: notices.php'); exit();
     }
 }
@@ -37,7 +37,7 @@ $notices = mysqli_query($conn, "SELECT n.*, u.username as posted_by_name FROM no
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notices - <?php echo APP_NAME; ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -46,7 +46,7 @@ $notices = mysqli_query($conn, "SELECT n.*, u.username as posted_by_name FROM no
         <?php include dirname(__DIR__) . '/includes/sidebar.php'; ?>
         <div class="content">
             <div class="page-header">
-                <div><h1>📢 Notice Board</h1><p>Create and manage notices</p></div>
+                <div><h1><i class="fa-solid fa-bullhorn"></i> Notice Board</h1><p>Create and manage notices</p></div>
                 <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Notice</button>
             </div>
             <div class="table-container">
@@ -61,8 +61,8 @@ $notices = mysqli_query($conn, "SELECT n.*, u.username as posted_by_name FROM no
                         <td><span class="badge badge-paid"><?php echo $n['target_audience']; ?></span></td>
                         <td><?php echo htmlspecialchars($n['posted_by_name']); ?></td>
                         <td class="actions-cell">
-                            <button class="btn btn-sm btn-info" onclick='openEdit(<?php echo json_encode($n); ?>)'>✏️</button>
-                            <form method="POST" style="display:inline" onsubmit="return confirmDelete()"><input type="hidden" name="action" value="delete"><input type="hidden" name="notice_id" value="<?php echo $n['notice_id']; ?>"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                            <button class="btn btn-sm btn-info" onclick="openEdit(<?php echo htmlspecialchars(json_encode($n)); ?>)"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <form method="POST" style="display:inline" onsubmit="return confirmDelete()"><input type="hidden" name="action" value="delete"><input type="hidden" name="notice_id" value="<?php echo $n['notice_id']; ?>"><button class="btn btn-sm btn-danger"><i class="fa-solid fa-trash-can"></i></button></form>
                         </td>
                     </tr>
                     <?php endwhile; ?>
@@ -92,3 +92,4 @@ $notices = mysqli_query($conn, "SELECT n.*, u.username as posted_by_name FROM no
     <script>function openEdit(d){document.getElementById('e_nid').value=d.notice_id;document.getElementById('e_title').value=d.title;document.getElementById('e_desc').value=d.description;document.getElementById('e_target').value=d.target_audience;openModal('editModal');}</script>
 </body>
 </html>
+

@@ -11,6 +11,23 @@ if (!defined('APP_ROOT')) {
     define('APP_ROOT', dirname(__DIR__));
 }
 
+// ─── Load .env Variables ───
+$env_path = APP_ROOT . '/.env';
+if (file_exists($env_path)) {
+    $env_lines = file($env_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($env_lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        list($name, $value) = explode('=', $line, 2);
+        $name = trim($name);
+        $value = trim($value);
+        if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
+            putenv(sprintf('%s=%s', $name, $value));
+            $_ENV[$name] = $value;
+            $_SERVER[$name] = $value;
+        }
+    }
+}
+
 // ─── Database Credentials ───
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
@@ -18,7 +35,7 @@ define('DB_PASS', '');
 define('DB_NAME', 'school_management');
 
 // ─── App Settings ───
-define('APP_NAME', 'School Management System');
+define('APP_NAME', 'Rose Valley Academy');
 define('APP_VERSION', '1.0.0');
 define('BASE_URL', '/rva/school_management');
 

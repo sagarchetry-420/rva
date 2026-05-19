@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         $count++;
     }
-    setFlashMessage('success', "Attendance marked for $count students!");
+    setFlashMessage('success', "Attendance has been marked successfully for $count students!");
     header('Location: attendance.php?class_id=' . $class_id . '&date=' . $date); exit();
 }
 
@@ -42,7 +42,7 @@ if ($sel_class > 0) {
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance - <?php echo APP_NAME; ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -50,7 +50,7 @@ if ($sel_class > 0) {
     <div class="main-container">
         <?php include dirname(__DIR__) . '/includes/sidebar.php'; ?>
         <div class="content">
-            <div class="page-header"><div><h1>✅ Attendance Management</h1><p>Mark and view daily attendance</p></div></div>
+            <div class="page-header"><div><h1><i class="fa-solid fa-check-to-slot"></i> Attendance Management</h1><p>Mark and view daily attendance</p></div></div>
             
             <div class="filter-bar">
                 <form method="GET" style="display:flex;gap:15px;align-items:flex-end;flex-wrap:wrap">
@@ -102,15 +102,16 @@ if ($sel_class > 0) {
                         </tbody>
                     </table>
                     <div style="padding:18px 22px;text-align:right;border-top:1px solid var(--border)">
-                        <button type="submit" class="btn btn-primary">💾 Save Attendance</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Attendance</button>
                     </div>
                 </form>
             </div>
             <?php elseif ($sel_class > 0): ?>
-                <div class="dashboard-section"><div class="empty-state"><div class="empty-icon">📋</div><p>No students found in this class.</p></div></div>
+                <div class="dashboard-section"><div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-clipboard-list"></i></div><p>No students found in this class.</p></div></div>
             <?php else: ?>
-                <div class="dashboard-section"><div class="empty-state"><div class="empty-icon">📋</div><p>Select a class and date to mark attendance.</p></div></div>
+                <div class="dashboard-section"><div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-clipboard-list"></i></div><p>Select a class and date to mark attendance.</p></div></div>
             <?php endif; ?>
         </div>
     </div>
     <?php include dirname(__DIR__) . '/includes/footer.php'; ?>
+

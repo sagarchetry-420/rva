@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $tid = !empty($_POST['class_teacher_id']) ? intval($_POST['class_teacher_id']) : 'NULL';
         $ay = sanitize($conn, $_POST['academic_year']);
         mysqli_query($conn, "INSERT INTO classes (class_name,section,class_teacher_id,academic_year) VALUES ('$cn','$sec',$tid,'$ay')");
-        setFlashMessage('success', "Class '$cn $sec' created!");
+        setFlashMessage('success', "Class '$cn $sec' has been created successfully!");
         header('Location: classes.php'); exit();
     }
     if ($action === 'edit') {
@@ -20,12 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $tid = !empty($_POST['class_teacher_id']) ? intval($_POST['class_teacher_id']) : 'NULL';
         $ay = sanitize($conn, $_POST['academic_year']);
         mysqli_query($conn, "UPDATE classes SET class_name='$cn',section='$sec',class_teacher_id=$tid,academic_year='$ay' WHERE class_id=$cid");
-        setFlashMessage('success', 'Class updated!');
+        setFlashMessage('success', 'Class details updated successfully!');
         header('Location: classes.php'); exit();
     }
     if ($action === 'delete') {
         mysqli_query($conn, "DELETE FROM classes WHERE class_id=".intval($_POST['class_id']));
-        setFlashMessage('success', 'Class deleted!');
+        setFlashMessage('success', 'Class has been deleted successfully.');
         header('Location: classes.php'); exit();
     }
     if ($action === 'assign_subject') {
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             mysqli_query($conn, "INSERT INTO class_subjects (class_id,subject_id,teacher_id) VALUES ($cid,$sid,$tid)");
         }
-        setFlashMessage('success', 'Subject assigned!');
+        setFlashMessage('success', 'Subject has been assigned to the class successfully!');
         header('Location: classes.php'); exit();
     }
 }
@@ -52,7 +52,7 @@ $subjects_r = mysqli_query($conn, "SELECT * FROM subjects ORDER BY subject_name"
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Classes - <?php echo APP_NAME; ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -61,9 +61,9 @@ $subjects_r = mysqli_query($conn, "SELECT * FROM subjects ORDER BY subject_name"
         <?php include dirname(__DIR__) . '/includes/sidebar.php'; ?>
         <div class="content">
             <div class="page-header">
-                <div><h1>📚 Classes Management</h1><p>Manage classes and assign subjects</p></div>
+                <div><h1><i class="fa-solid fa-chalkboard"></i> Classes Management</h1><p>Manage classes and assign subjects</p></div>
                 <div style="display:flex;gap:10px">
-                    <button class="btn btn-success" onclick="openModal('assignModal')">📖 Assign Subject</button>
+                    <button class="btn btn-success" onclick="openModal('assignModal')"><i class="fa-solid fa-book"></i> Assign Subject</button>
                     <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Class</button>
                 </div>
             </div>
@@ -83,8 +83,8 @@ $subjects_r = mysqli_query($conn, "SELECT * FROM subjects ORDER BY subject_name"
                         <td><span class="badge badge-paid"><?php echo $c['student_count']; ?></span></td>
                         <td><small><?php echo $subs ? implode(', ',$subs) : '—'; ?></small></td>
                         <td class="actions-cell">
-                            <button class="btn btn-sm btn-info" onclick='openEditClass(<?php echo json_encode($c); ?>)'>✏️</button>
-                            <form method="POST" style="display:inline" onsubmit="return confirmDelete()"><input type="hidden" name="action" value="delete"><input type="hidden" name="class_id" value="<?php echo $c['class_id']; ?>"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                            <button class="btn btn-sm btn-info" onclick="openEditClass(<?php echo htmlspecialchars(json_encode($c)); ?>)"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <form method="POST" style="display:inline" onsubmit="return confirmDelete()"><input type="hidden" name="action" value="delete"><input type="hidden" name="class_id" value="<?php echo $c['class_id']; ?>"><button class="btn btn-sm btn-danger"><i class="fa-solid fa-trash-can"></i></button></form>
                         </td>
                     </tr>
                     <?php endwhile; ?>
@@ -118,3 +118,4 @@ $subjects_r = mysqli_query($conn, "SELECT * FROM subjects ORDER BY subject_name"
     <script>function openEditClass(d){document.getElementById('e_cid').value=d.class_id;document.getElementById('e_cn').value=d.class_name;document.getElementById('e_sec').value=d.section;document.getElementById('e_tid').value=d.class_teacher_id||'';document.getElementById('e_ay').value=d.academic_year||'';openModal('editModal');}</script>
 </body>
 </html>
+

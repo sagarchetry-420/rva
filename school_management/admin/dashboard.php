@@ -28,7 +28,7 @@ $pending_fees = mysqli_fetch_assoc($r)['total'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - <?php echo APP_NAME; ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -40,7 +40,7 @@ $pending_fees = mysqli_fetch_assoc($r)['total'];
         <div class="content">
             <div class="page-header">
                 <div>
-                    <h1>📊 Admin Dashboard</h1>
+                    <h1><i class="fa-solid fa-chart-line"></i> Admin Dashboard</h1>
                     <p>Welcome back, <?php echo htmlspecialchars(getUsername()); ?>! Here's your overview.</p>
                 </div>
             </div>
@@ -48,28 +48,28 @@ $pending_fees = mysqli_fetch_assoc($r)['total'];
             <!-- Stats Cards -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-icon students-icon">👨‍🎓</div>
+                    <div class="stat-icon students-icon"><i class="fa-solid fa-user-graduate"></i></div>
                     <div class="stat-details">
                         <h3><?php echo $stats['students']; ?></h3>
                         <p>Total Students</p>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon teachers-icon">👨‍🏫</div>
+                    <div class="stat-icon teachers-icon"><i class="fa-solid fa-chalkboard-teacher"></i></div>
                     <div class="stat-details">
                         <h3><?php echo $stats['teachers']; ?></h3>
                         <p>Total Teachers</p>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon classes-icon">📚</div>
+                    <div class="stat-icon classes-icon"><i class="fa-solid fa-chalkboard"></i></div>
                     <div class="stat-details">
                         <h3><?php echo $stats['classes']; ?></h3>
                         <p>Total Classes</p>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon subjects-icon">📖</div>
+                    <div class="stat-icon subjects-icon"><i class="fa-solid fa-book"></i></div>
                     <div class="stat-details">
                         <h3><?php echo $stats['subjects']; ?></h3>
                         <p>Total Subjects</p>
@@ -81,7 +81,7 @@ $pending_fees = mysqli_fetch_assoc($r)['total'];
             <div class="dashboard-grid">
                 <!-- Recent Notices -->
                 <div class="dashboard-section">
-                    <h2>📢 Recent Notices</h2>
+                    <h2><i class="fa-solid fa-bullhorn"></i> Recent Notices</h2>
                     <div class="notices-list">
                         <?php if (mysqli_num_rows($notices_result) > 0): ?>
                             <?php while ($notice = mysqli_fetch_assoc($notices_result)): ?>
@@ -101,7 +101,7 @@ $pending_fees = mysqli_fetch_assoc($r)['total'];
                 
                 <!-- Quick Info -->
                 <div class="dashboard-section">
-                    <h2>📋 Quick Summary</h2>
+                    <h2><i class="fa-solid fa-clipboard-list"></i> Quick Summary</h2>
                     <div class="notices-list">
                         <div class="notice-item">
                             <div class="notice-date">Today</div>
@@ -111,7 +111,7 @@ $pending_fees = mysqli_fetch_assoc($r)['total'];
                             </div>
                         </div>
                         <div class="notice-item">
-                            <div class="notice-date">💰</div>
+                            <div class="notice-date"><i class="fa-solid fa-money-bill-wave"></i></div>
                             <div class="notice-content">
                                 <h4>Pending Fees</h4>
                                 <p>₹<?php echo number_format($pending_fees, 2); ?> total pending</p>
@@ -124,3 +124,4 @@ $pending_fees = mysqli_fetch_assoc($r)['total'];
     </div>
     
     <?php include dirname(__DIR__) . '/includes/footer.php'; ?>
+

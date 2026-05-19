@@ -16,13 +16,13 @@ if (isLoggedIn()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = sanitize($conn, $_POST['username']);
+    $mobile = sanitize($conn, $_POST['mobile']);
     $password = md5($_POST['password']);
     
-    $query = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
+    $query = "SELECT DISTINCT u.* FROM users u LEFT JOIN students s ON u.user_id = s.user_id LEFT JOIN teachers t ON u.user_id = t.user_id WHERE (s.phone = '$mobile' OR s.parent_phone = '$mobile' OR t.phone = '$mobile') AND u.password = '$password' AND u.user_type IN ('student', 'teacher')";
     $result = mysqli_query($conn, $query);
     
-    if ($result && mysqli_num_rows($result) === 1) {
+    if ($result && mysqli_num_rows($result) > 0) {
         $user = mysqli_fetch_assoc($result);
         
         // Set session variables
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . BASE_URL . '/index.php');
         exit();
     } else {
-        $error = 'Invalid username or password. Please try again.';
+        $error = 'Invalid mobile number or password. Please try again.';
     }
 }
 ?>
@@ -47,6 +47,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Login - School Management System</title>
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .login-box h1 {
+        color: white;
+    }
+    .input-with-icon input {
+        padding-left: 45px !important;
+    }
+    .input-with-icon {
+        position: relative;
+    }
+    .toggle-password {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #666;
+        z-index: 10;
+    }
+    .input-with-icon input[type="password"],
+    .input-with-icon input#password {
+        padding-right: 45px !important;
+    }
+    .forgot-password-link {
+        text-align: right;
+        margin-top: 8px;
+    }
+    .forgot-password-link a {
+        color: #1e3c72;
+        font-size: 14px;
+        text-decoration: none;
+    }
+    .forgot-password-link a:hover {
+        text-decoration: underline;
+    }
+</style>
 </head>
 <body class="login-page">
     <div class="login-container">
@@ -65,11 +101,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <form method="POST" action="" class="login-form" id="loginForm">
                 <div class="form-group">
-                    <label for="username">Username</label>
+                    <label for="mobile">Mobile Number</label>
                     <div class="input-with-icon">
-                        <span class="input-icon"><i class="fa-solid fa-user"></i></span>
-                        <input type="text" id="username" name="username" placeholder="Enter your username" required 
-                               value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>">
+                        <span class="input-icon"><i class="fa-solid fa-mobile-screen"></i></span>
+                        <input type="text" id="mobile" name="mobile" placeholder="Enter mobile number" required 
+                               value="<?php echo isset($_POST['mobile']) ? htmlspecialchars($_POST['mobile']) : ''; ?>">
                     </div>
                 </div>
                 
@@ -78,6 +114,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="input-with-icon">
                         <span class="input-icon"><i class="fa-solid fa-lock"></i></span>
                         <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                        <span class="toggle-password" onclick="togglePasswordVisibility()">
+                            <i class="fa-solid fa-eye" id="togglePasswordIcon"></i>
+                        </span>
+                    </div>
+                    <div class="forgot-password-link">
+                        <a href="forgot_password.php">Forgot Password?</a>
                     </div>
                 </div>
                 
@@ -86,23 +128,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
             </form>
             
-            <div class="login-footer">
-                <p><strong>Default Login Credentials:</strong></p>
-                <div class="credentials-grid">
-                    <div class="credential-item">
-                        <span class="credential-role admin">Admin</span>
-                        <span>admin / admin123</span>
-                    </div>
-                    <div class="credential-item">
-                        <span class="credential-role teacher">Teacher</span>
-                        <span>teacher1 / teacher123</span>
-                    </div>
-                    <div class="credential-item">
-                        <span class="credential-role student">Student</span>
-                        <span>student1 / student123</span>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
     
@@ -127,6 +152,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             });
             
+            // Toggle password visibility
+            window.togglePasswordVisibility = function() {
+                const passwordInput = document.getElementById('password');
+                const toggleIcon = document.getElementById('togglePasswordIcon');
+                
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    toggleIcon.classList.remove('fa-eye');
+                    toggleIcon.classList.add('fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    toggleIcon.classList.remove('fa-eye-slash');
+                    toggleIcon.classList.add('fa-eye');
+                }
+            };
+
             // Auto-dismiss alerts after 5 seconds
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(alert => {

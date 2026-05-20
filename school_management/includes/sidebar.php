@@ -69,21 +69,35 @@ $currentFolder = getCurrentFolder();
                     </a>
                 </li>
                 
+                <li class="nav-section-title">Admissions</li>
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/admin/applications.php"
+                       class="nav-link <?php echo $currentPage === 'applications.php' ? 'active' : ''; ?>">
+                        <span class="icon"><i class="fa-solid fa-pen-to-square"></i></span> Student Applications
+                    </a>
+                </li>
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/admin/admission_settings.php"
+                       class="nav-link <?php echo $currentPage === 'admission_settings.php' ? 'active' : ''; ?>">
+                        <span class="icon"><i class="fa-solid fa-sliders"></i></span> Admission Settings
+                    </a>
+                </li>
+
                 <li class="nav-section-title">Finance & Info</li>
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/admin/fees.php" 
+                    <a href="<?php echo BASE_URL; ?>/admin/fees.php"
                        class="nav-link <?php echo $currentPage === 'fees.php' ? 'active' : ''; ?>">
                         <span class="icon"><i class="fa-solid fa-money-bill-wave"></i></span> Fees
                     </a>
                 </li>
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/admin/notices.php" 
+                    <a href="<?php echo BASE_URL; ?>/admin/notices.php"
                        class="nav-link <?php echo $currentPage === 'notices.php' ? 'active' : ''; ?>">
                         <span class="icon"><i class="fa-solid fa-bullhorn"></i></span> Notices
                     </a>
                 </li>
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/admin/timetable.php" 
+                    <a href="<?php echo BASE_URL; ?>/admin/timetable.php"
                        class="nav-link <?php echo $currentPage === 'timetable.php' ? 'active' : ''; ?>">
                         <span class="icon"><i class="fa-solid fa-clock"></i></span> Timetable
                     </a>

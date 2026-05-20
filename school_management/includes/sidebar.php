@@ -8,10 +8,8 @@ $currentPage = getCurrentPage();
 $currentFolder = getCurrentFolder();
 ?>
 <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-        <h3><?php echo APP_NAME; ?></h3>
-        <p class="sidebar-subtitle"><?php echo ucfirst($userType); ?> Panel</p>
-    </div>
+    <!-- Sidebar header removed as requested -->
+    
     
     <nav class="sidebar-nav">
         <ul>
@@ -53,15 +51,21 @@ $currentFolder = getCurrentFolder();
                 
                 <li class="nav-section-title">Academic</li>
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/admin/attendance.php" 
+                    <a href="<?php echo BASE_URL; ?>/admin/attendance.php"
                        class="nav-link <?php echo $currentPage === 'attendance.php' ? 'active' : ''; ?>">
                         <span class="icon"><i class="fa-solid fa-check-to-slot"></i></span> Attendance
                     </a>
                 </li>
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/admin/examinations.php" 
+                    <a href="<?php echo BASE_URL; ?>/admin/examinations.php"
                        class="nav-link <?php echo $currentPage === 'examinations.php' ? 'active' : ''; ?>">
                         <span class="icon"><i class="fa-solid fa-file-pen"></i></span> Examinations
+                    </a>
+                </li>
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/admin/promotion_panel.php"
+                       class="nav-link <?php echo $currentPage === 'promotion_panel.php' ? 'active' : ''; ?>">
+                        <span class="icon"><i class="fa-solid fa-arrow-up"></i></span> Student Promotions
                     </a>
                 </li>
                 
@@ -109,6 +113,12 @@ $currentFolder = getCurrentFolder();
                     </a>
                 </li>
                 <li>
+                    <a href="<?php echo BASE_URL; ?>/teacher/examinations.php" 
+                       class="nav-link <?php echo $currentPage === 'examinations.php' ? 'active' : ''; ?>">
+                        <span class="icon"><i class="fa-solid fa-file-signature"></i></span> Class Tests
+                    </a>
+                </li>
+                <li>
                     <a href="<?php echo BASE_URL; ?>/teacher/results.php" 
                        class="nav-link <?php echo $currentPage === 'results.php' ? 'active' : ''; ?>">
                         <span class="icon"><i class="fa-solid fa-file-pen"></i></span> Results
@@ -153,9 +163,21 @@ $currentFolder = getCurrentFolder();
                     </a>
                 </li>
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/student/results.php" 
+                    <a href="<?php echo BASE_URL; ?>/student/results.php"
                        class="nav-link <?php echo $currentPage === 'results.php' ? 'active' : ''; ?>">
                         <span class="icon"><i class="fa-solid fa-file-pen"></i></span> My Results
+                    </a>
+                </li>
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/student/results_improved.php"
+                       class="nav-link <?php echo $currentPage === 'results_improved.php' ? 'active' : ''; ?>">
+                        <span class="icon"><i class="fa-solid fa-chart-line"></i></span> Academic Results (Enhanced)
+                    </a>
+                </li>
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/student/download_transcript.php"
+                       class="nav-link <?php echo $currentPage === 'download_transcript.php' ? 'active' : ''; ?>">
+                        <span class="icon"><i class="fa-solid fa-file-download"></i></span> Download Transcript
                     </a>
                 </li>
                 <li>

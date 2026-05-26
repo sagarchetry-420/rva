@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rose Valley Academy - Excellence in Education</title>
-    <link rel="icon" type="image/png" href="/rva/assets/logo/logo_png.png">
+    <link rel="icon" type="image/png" href="/rva/assets/logo/logo_small.png">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +35,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: #ffffff;
+            background-color: #800000;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -71,79 +71,33 @@
             margin-top: 10px;
         }
 
-        .dash {
-            margin: 0 15px;
-            width: 35px;
-            height: 15px;
-            border-radius: 8px;
-            background: #800000;
-            box-shadow: 0 0 10px 0 rgba(128, 0, 0, 0.4);
+        .loader {
+            position: relative;
+            width: 108px;
+            display: flex;
+            justify-content: space-between;
         }
-
-        .uno {
-            margin-right: -18px;
-            transform-origin: center left;
-            animation: spin 3s linear infinite;  
+        .loader::after, .loader::before {
+            content: '';
+            display: inline-block;
+            width: 48px;
+            height: 48px;
+            background-color: #FFF;
+            background-image: radial-gradient(circle 14px, #0d161b 100%, transparent 0);
+            background-repeat: no-repeat;
+            border-radius: 50%;
+            animation: eyeMove 10s infinite, blink 10s infinite;
         }
-
-        .dos {
-            transform-origin: center right;
-            animation: spin2 3s linear infinite;
-            animation-delay: .2s;
+        @keyframes eyeMove {
+            0%, 10% { background-position: 0px 0px; }
+            13%, 40% { background-position: -15px 0px; }
+            43%, 70% { background-position: 15px 0px; }
+            73%, 90% { background-position: 0px 15px; }
+            93%, 100% { background-position: 0px 0px; }
         }
-
-        .tres {
-            transform-origin: center right;
-            animation: spin3 3s linear infinite;
-            animation-delay: .3s;
-        }
-
-        .cuatro {
-            transform-origin: center right;
-            animation: spin4 3s linear infinite;
-            animation-delay: .4s;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            25% { transform: rotate(360deg); }
-            30% { transform: rotate(370deg); }
-            35% { transform: rotate(360deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes spin2 {
-            0% { transform: rotate(0deg); }
-            20% { transform: rotate(0deg); }
-            30% { transform: rotate(-180deg); }
-            35% { transform: rotate(-190deg); }
-            40% { transform: rotate(-180deg); }
-            78% { transform: rotate(-180deg); }
-            95% { transform: rotate(-360deg); }
-            98% { transform: rotate(-370deg); }
-            100% { transform: rotate(-360deg); }
-        }
-
-        @keyframes spin3 {
-            0% { transform: rotate(0deg); }
-            27% { transform: rotate(0deg); }
-            40% { transform: rotate(180deg); }
-            45% { transform: rotate(190deg); }
-            50% { transform: rotate(180deg); }
-            62% { transform: rotate(180deg); }
-            75% { transform: rotate(360deg); }
-            80% { transform: rotate(370deg); }
-            85% { transform: rotate(360deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes spin4 {
-            0% { transform: rotate(0deg); }
-            38% { transform: rotate(0deg); }
-            60% { transform: rotate(-360deg); }
-            65% { transform: rotate(-370deg); }
-            75% { transform: rotate(-360deg); }
-            100% { transform: rotate(-360deg); }
+        @keyframes blink {
+            0%, 10%, 12%, 20%, 22%, 40%, 42%, 60%, 62%, 70%, 72%, 90%, 92%, 98%, 100% { height: 48px; }
+            11%, 21%, 41%, 61%, 71%, 91%, 99% { height: 18px; }
         }
         
         body.loading-active {
@@ -156,12 +110,9 @@
     <!-- IN-PAGE LOADER -->
     <div class="loader-wrapper" id="pageLoaderWrapper">
         <div class="loader-container">
-            <img src="../assets/logo/logo_png.png" alt="RVA Logo" class="loader-logo">
+            <img src="../assets/logo/logo_small.png" alt="RVA Logo" class="loader-logo">
             <div class="spinner-container">
-                <div class="dash uno"></div>
-                <div class="dash dos"></div>
-                <div class="dash tres"></div>
-                <div class="dash cuatro"></div>
+                <span class="loader"></span>
             </div>
         </div>
     </div>
@@ -179,7 +130,7 @@
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-logo">
-                <img src="../assets/logo/logo_png.png" alt="Rose Valley Academy Logo" class="logo-img">
+                <img src="../assets/logo/logo_small.png" alt="Rose Valley Academy Logo" class="logo-img">
                 <div class="school-info">
                     <h1>Rose Valley Academy</h1>
                     <p class="school-details">Affiliated to ASSEB | Kekuri Bongali Gaon, Dibrugarh</p>
@@ -224,7 +175,7 @@
             <div class="hero-scroll-down">Scroll Down</div>
         </div>
         <div class="hero-right">
-            <div class="hero-background" style="background-image: url('../assets/school_image/img4.png');"></div>
+            <div class="hero-background" style="background-image: url('../assets/school_image/img4_compressed.jpg');"></div>
         </div>
 
         <!-- Overlay Layer for exact white overlap -->
@@ -256,7 +207,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('../school_management/api/notices')
+            fetch('../school_management/index.php?module=api&action=notices')
                 .then(response => response.json())
                 .then(data => {
                     const marquee = document.getElementById('dynamic-notice-marquee');
@@ -395,7 +346,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('../school_management/api/hall-of-fame')
+            fetch('../school_management/index.php?module=api&action=hall-of-fame')
                 .then(response => response.json())
                 .then(data => {
                     const fameGrid = document.getElementById('dynamic-fame-grid');

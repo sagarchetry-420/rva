@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    fetch('../school_management/api/gallery')
+    fetch('../school_management/index.php?module=api&action=gallery')
         .then(response => response.json())
         .then(data => {
             const galleryGrid = document.getElementById('galleryGrid');

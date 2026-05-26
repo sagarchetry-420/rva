@@ -1,6 +1,6 @@
 console.log("Quotes JS initializing...");
 
-fetch('../school_management/api/quotes')
+fetch('../school_management/index.php?module=api&action=quotes')
     .then(response => response.json())
     .then(fetchedQuotes => {
         let quotes = [];

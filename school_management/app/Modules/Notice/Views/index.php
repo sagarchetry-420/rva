@@ -87,7 +87,7 @@
                         <td><?php echo isset($n['created_at']) ? date('d M Y', strtotime($n['created_at'])) : 'N/A'; ?></td>
                         <td>
                             <?php if (!empty($n['attachment_path'])): ?>
-                                <a href="/rva/<?php echo htmlspecialchars($n['attachment_path']); ?>" target="_blank" download class="btn btn-sm btn-primary" title="Download Attachment">
+                                <a href="/RVA/<?php echo htmlspecialchars($n['attachment_path']); ?>" target="_blank" download class="btn btn-sm btn-primary" title="Download Attachment">
                                     <i class="fas fa-download"></i> Download
                                 </a>
                             <?php else: ?>

@@ -36,7 +36,7 @@ try {
     } else {
         echo "<p style='color: red;'><strong>✗ ERROR:</strong> attachment_path column NOT found in database</p>";
         echo "<p>You need to run the migration first:</p>";
-        echo "<p><a href='/rva/school_management/database/run_attachment_migration.php' target='_blank'>Run Attachment Migration</a></p>";
+        echo "<p><a href='/RVA/school_management/database/run_attachment_migration.php' target='_blank'>Run Attachment Migration</a></p>";
     }
 
     // Check if uploads directory exists

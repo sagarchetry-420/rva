@@ -11,7 +11,7 @@ $pageTitle = $pageTitle ?? 'Rose Valley Academy';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle); ?> - <?php echo APP_NAME; ?></title>
-    <link rel="icon" type="image/png" href="/rva/assets/logo/logo_png.png">
+    <link rel="icon" type="image/png" href="/RVA/assets/logo/logo_png.png">
     <link rel="stylesheet" href="<?php echo asset('css/admin.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <?php if (isset($extraCss)): ?><style><?php echo $extraCss; ?></style><?php endif; ?>

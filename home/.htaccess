@@ -1,5 +1,5 @@
 RewriteEngine On
-RewriteBase /rva/home/
+RewriteBase /RVA/home/
 
 # Remove index.html from URLs
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -7,11 +7,11 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.html [QSA,L]
 
 # Rewrite gallery requests
-RewriteCond %{REQUEST_URI} ^/rva/home/gallery/?$
+RewriteCond %{REQUEST_URI} ^/RVA/home/gallery/?$
 RewriteRule ^gallery/?$ gallery.html [QSA,L]
 
 # Rewrite notices requests
-RewriteCond %{REQUEST_URI} ^/rva/home/notices/?$
+RewriteCond %{REQUEST_URI} ^/RVA/home/notices/?$
 RewriteRule ^notices/?$ notices.html [QSA,L]
 
 # Prevent directory listing

@@ -1,18 +1,16 @@
 RewriteEngine On
 RewriteBase /RVA/home/
 
-# Remove index.html from URLs
+# Rewrite gallery requests
+RewriteRule ^gallery/?$ gallery.html [NC,QSA,L]
+
+# Rewrite notices requests
+RewriteRule ^notices/?$ notices.html [NC,QSA,L]
+
+# Fallback all other non-existent paths to index.html
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.html [QSA,L]
-
-# Rewrite gallery requests
-RewriteCond %{REQUEST_URI} ^/RVA/home/gallery/?$
-RewriteRule ^gallery/?$ gallery.html [QSA,L]
-
-# Rewrite notices requests
-RewriteCond %{REQUEST_URI} ^/RVA/home/notices/?$
-RewriteRule ^notices/?$ notices.html [QSA,L]
 
 # Prevent directory listing
 Options -Indexes

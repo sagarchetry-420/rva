@@ -1,0 +1,23 @@
+RewriteEngine On
+RewriteBase /rva/home/
+
+# Remove index.html from URLs
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.html [QSA,L]
+
+# Rewrite gallery requests
+RewriteCond %{REQUEST_URI} ^/rva/home/gallery/?$
+RewriteRule ^gallery/?$ gallery.html [QSA,L]
+
+# Rewrite notices requests
+RewriteCond %{REQUEST_URI} ^/rva/home/notices/?$
+RewriteRule ^notices/?$ notices.html [QSA,L]
+
+# Prevent directory listing
+Options -Indexes
+
+# Enable gzip compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript
+</IfModule>

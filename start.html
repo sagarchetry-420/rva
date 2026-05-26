@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>RVA - Loading</title>
+    <link rel="icon" type="image/png" href="/RVA/assets/logo/logo_png.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1e293b;
+            --accent-color: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            /* A slightly off-white background so the pure white slide-in is visible */
+            background-color: #f1f5f9; 
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        /* The wrapper that mimics the navbar slide down animation */
+        .loader-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            
+            /* EXACT animation copied from your navbar.css menu! */
+            transform: translateY(-100%);
+            transition: transform 0.8s cubic-bezier(0.785, 0.135, 0.15, 0.86);
+        }
+
+        /* Triggers the slide down */
+        .loader-wrapper.active {
+            transform: translateY(0);
+        }
+
+        /* Triggers the slide back up */
+        .loader-wrapper.slide-out {
+            transform: translateY(-100%);
+        }
+
+        .loader-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5rem;
+        }
+
+        /* Pulsing logo effect */
+        .logo {
+            width: 160px;
+            max-width: 80vw;
+            height: auto;
+            animation: pulse 2s infinite ease-in-out;
+            filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.08));
+        }
+
+        .loading-text {
+            color: var(--text-color);
+            font-size: 1.1rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .loading-text::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -100%;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            animation: slide 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 8px 25px rgba(59, 130, 246, 0.2)); }
+            100% { transform: scale(0.95); }
+        }
+
+        @keyframes slide {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Wrapper that handles the slide animation -->
+    <div class="loader-wrapper" id="loaderWrapper">
+        <div class="loader-container">
+            <img src="/RVA/assets/logo/logo_png.png" alt="RVA Logo" class="logo">
+            <div class="loading-text">Loading</div>
+        </div>
+    </div>
+
+    <script>
+        const loaderWrapper = document.getElementById('loaderWrapper');
+
+        // Slide the loading screen IN as soon as the page opens
+        setTimeout(() => {
+            loaderWrapper.classList.add('active');
+        }, 50);
+
+        console.log("Loading screen started. Preloading assets...");
+
+        // List of all heavy images used on the home page
+        const imagesToPreload = [
+            '/RVA/assets/school_image/img4.png',
+            '/RVA/assets/principal_image/principal_image2.jpeg',
+            '/RVA/assets/managing director/managing director1.jpg',
+            '/RVA/assets/dean/dean1.jpg',
+            '/RVA/assets/deputy dean/deputy deans.jpg',
+            '/RVA/assets/administrative coordinator/administrative coordinator.jpg'
+        ];
+
+        // 1. Force the screen to show for a minimum of 3 seconds
+        const minLoadingTime = new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // 2. Set an absolute maximum timeout of 8 seconds
+        const maxLoadingTime = new Promise(resolve => setTimeout(resolve, 8000));
+
+        // 3. Preload all images silently
+        const preloadImages = Promise.all(imagesToPreload.map(src => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = resolve;
+                img.onerror = resolve; 
+                img.src = src;
+            });
+        }));
+
+        // When ready to redirect...
+        Promise.race([
+            Promise.all([minLoadingTime, preloadImages]),
+            maxLoadingTime
+        ]).then(() => {
+            // 1. Trigger the exact slide-out animation (Slide back UP)
+            loaderWrapper.classList.remove('active');
+            loaderWrapper.classList.add('slide-out');
+            
+            // 2. Wait 0.8 seconds for the animation to finish before actually redirecting to home
+            setTimeout(() => {
+                window.location.href = 'home/';
+            }, 800);
+        });
+    </script>
+</body>
+</html>

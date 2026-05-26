@@ -1,0 +1,190 @@
+/* ═══ HERO SECTION ═══ */
+.hero {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+    background: #ffffff;
+    padding: 0;
+    align-items: center;
+    overflow: hidden;
+}
+
+.hero-left {
+    flex: 0 0 60%;
+    padding: 0 0 0 10%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+    height: 100vh;
+}
+
+.hero-top-circle {
+    display: none;
+}
+
+.hero-kicker {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 25px;
+    color: #555;
+}
+
+.hero-title {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 85px;
+    font-weight: 700;
+    line-height: 1.05;
+    margin: 0;
+    max-width: 900px;
+    letter-spacing: -2px;
+    position: relative;
+    color: #800000;
+}
+
+/* Animation Classes for Staggered Text */
+.hero-title {
+    /* remove keyframe animations, handle via transitions */
+}
+
+.hero-line-wrapper {
+    display: block;
+    overflow: hidden;
+}
+
+.hero-line-inner {
+    display: block;
+    transform: translateY(100%);
+    transition: transform 0.8s cubic-bezier(0.785, 0.135, 0.15, 0.86);
+}
+
+/* Staggered Delays for both in and out */
+.hero-line-wrapper:nth-of-type(1) .hero-line-inner { transition-delay: 0.1s; }
+.hero-line-wrapper:nth-of-type(2) .hero-line-inner { transition-delay: 0.2s; }
+.hero-line-wrapper:nth-of-type(3) .hero-line-inner { transition-delay: 0.3s; }
+
+/* When sliding in, transform to 0 */
+.hero-title.slide-in .hero-line-inner {
+    transform: translateY(0);
+}
+
+/* When sliding out, transform up to -100% or down to 100% */
+.hero-title.slide-out .hero-line-inner {
+    transform: translateY(-100%); /* Slides up and out */
+}
+
+.hero-scroll-down {
+    position: absolute;
+    bottom: 40px;
+    left: 10%;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: #555;
+}
+
+/* Overlay Layer for White Text on Image */
+.hero-left-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    clip-path: inset(0 120px 0 calc(45% - 120px));
+}
+
+.hero-left-overlay-inner {
+    width: 60%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 0 0 10%;
+    position: relative;
+}
+
+.hero-left-overlay .hero-kicker, 
+.hero-left-overlay .hero-title, 
+.hero-left-overlay .hero-scroll-down {
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
+    background: none;
+}
+
+.hero-right {
+    position: absolute;
+    top: 0;
+    right: 120px; /* Keep white space on the far right */
+    width: 55%; /* Expands to the left without moving the right edge */
+    height: 100%;
+    z-index: 1;
+}
+
+.hero-background {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    will-change: transform;
+}
+
+
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .hero-title {
+        font-size: 60px;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero {
+        display: block; /* Use simple block stacking for mobile to prevent flex bugs */
+        min-height: auto;
+    }
+    
+    .hero-left {
+        position: relative;
+        width: 100%;
+        height: auto;
+        padding: 120px 20px 60px 20px;
+        background: white;
+        z-index: 2;
+    }
+
+    .hero-scroll-down {
+        display: none;
+    }
+
+    .hero-title {
+        font-size: 45px;
+        min-height: 230px; /* Reserves space so the image below doesn't jump up when shorter text rotates in */
+    }
+
+    .hero-right {
+        position: relative;
+        width: 100%;
+        height: 400px; /* Foolproof fixed height */
+        right: 0;
+        z-index: 1;
+        display: block;
+    }
+    
+    .hero-background {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%;
+        height: 100%;
+        background-position: center center;
+    }
+    
+    .hero-left-overlay {
+        display: none;
+    }
+}

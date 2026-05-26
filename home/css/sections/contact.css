@@ -1,0 +1,80 @@
+/* ═══ CONTACT SECTION ═══ */
+section.contact {
+    padding: 0; /* Removed padding so map touches edges */
+    background-color: #ffffff;
+}
+
+.contact-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch; /* Makes right side match map height */
+}
+
+.contact-content {
+    padding: 50px 8%;
+    display: flex;
+    flex-direction: column;
+}
+
+.contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px 30px;
+    flex-grow: 1;
+    align-content: space-evenly;
+}
+
+.contact-info {
+    text-align: center;
+    background: transparent;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.contact-info h3 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    color: var(--primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.contact-icon {
+    width: 26px;
+    height: 26px;
+    color: var(--primary);
+    stroke-width: 1.5;
+}
+
+.contact-info p {
+    color: var(--gray);
+    line-height: 1.7;
+    font-size: 13.5px;
+    margin: 0;
+}
+
+/* Left aligned Contact Title */
+.contact-title {
+    text-align: left;
+    margin-left: 0;
+    margin-bottom: 28px;
+}
+
+.contact-title::after {
+    left: 0;
+    transform: translateX(0);
+}
+
+@media (max-width: 900px) {
+    .contact-layout {
+        grid-template-columns: 1fr;
+    }
+}

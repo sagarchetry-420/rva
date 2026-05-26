@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Rose Valley Academy</title>
+    <link rel="icon" type="image/png" href="/rva/assets/logo/logo_png.png">
+    <!-- Prevent transition flash if not explicitly triggered -->
+    <script>
+        if (sessionStorage.getItem('pageTransition') !== 'true') {
+            document.documentElement.classList.add('skip-transition');
+        }
+        sessionStorage.removeItem('pageTransition');
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/sections/navbar.css?v=4">
+    <link rel="stylesheet" href="css/sections/notices.css?v=4"> <!-- For page transition styles -->
+    <link rel="stylesheet" href="css/sections/gallery.css?v=7">
+    <link rel="stylesheet" href="css/sections/footer.css">
+    <link rel="stylesheet" href="css/sections/social.css">
+    <!-- Font Awesome for Social Icons -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+    <style>
+        /* Force navbar to be solid white on this inner page */
+        .navbar {
+            background-color: #ffffff !important;
+            box-shadow: var(--shadow) !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating Social Strip -->
+    <div class="social-sidebar">
+        <ul>
+            <li><a href="#"><i class="fab fa-facebook-f icon"></i></a></li>
+            <li><a href="#"><i class="fab fa-twitter icon"></i></a></li>
+            <li><a href="#"><i class="fab fa-linkedin-in icon"></i></a></li>
+            <li><a href="#"><i class="fab fa-youtube icon"></i></a></li>
+            <li><a href="#"><i class="fab fa-instagram icon"></i></a></li>
+        </ul>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="../assets/logo/logo_png.png" alt="Rose Valley Academy Logo" class="logo-img">
+                <div class="school-info">
+                    <h1>Rose Valley Academy</h1>
+                    <p class="school-details">Affiliated to ASSEB | Kekuri Bongali Gaon, Dibrugarh</p>
+                </div>
+            </div>
+            <div class="menu-trigger">
+                <div class="bars">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <div class="menu">
+                    <ul>
+                        <li><p><a href="/rva/home/" style="text-decoration: none; color: inherit;">Home</a></p></li>
+                        <li><p><a href="/rva/home/notices" style="text-decoration: none; color: inherit;">Notices</a></p></li>
+                        <li><p><a href="/rva/home/gallery" style="text-decoration: none; color: inherit;">Gallery</a></p></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Gallery Hero Section -->
+    <section class="gallery-hero">
+        <div class="gallery-hero-bg" style="background-image: url('../assets/school_image/img3.jpg');"></div>
+        <div class="gallery-hero-content">
+            <h1>School Moments</h1>
+            <p>Capturing memories of learning, growth, and celebrations</p>
+        </div>
+    </section>
+
+    <!-- Gallery Container -->
+    <section class="gallery-section">
+        <div class="container">
+            <!-- Gallery Grid -->
+            <div class="gallery-grid" id="galleryGrid">
+                <p style="text-align: center; grid-column: 1 / -1;">Loading Gallery...</p>
+            </div>
+
+            <!-- Load More Pagination -->
+            <div class="load-more-container">
+                <button id="loadMoreBtn" class="btn-load-more">Load More Photos</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Lightbox Modal -->
+    <div class="gallery-lightbox" id="galleryLightbox">
+        <span class="lightbox-close" id="lightboxClose">&times;</span>
+        <div class="lightbox-content">
+            <button class="lightbox-nav lightbox-prev" id="lightboxPrev">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <div class="lightbox-img-wrapper">
+                <img id="lightboxImg" src="" alt="" class="lightbox-img">
+            </div>
+            <button class="lightbox-nav lightbox-next" id="lightboxNext">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+        </div>
+        <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>About School</h4>
+                <p>Rose Valley Academy a pre-primary to senior secondary school class nursery to class X : English
+                    Medium class XI & class XII : Assamese & English Medium (ARTS)</p>
+            </div>
+            <div class="footer-section">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#principal">Principal</a></li>
+                    <li><a href="/rva/home/notices">Notices</a></li>
+                    <li><a href="/rva/home/gallery">Gallery</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Portal</h4>
+                <ul>
+                    <li><a href="http://localhost/rva/school_management/auth/login" target="_blank"
+                            style="text-decoration: none; color: inherit;">Login</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Rose Valley Academy. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/sections/navbar.js?v=7"></script>
+
+    <!-- Seamless Page Load Overlay -->
+    <div class="notice-transition active" id="notice-transition-in">
+        <div class="nt-content">
+            <div class="nt-item"><span class="revealed">Loading</span></div>
+            <div class="nt-item"><span class="revealed">Gallery...</span></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Trigger exit animation for seamless transition
+            const transitionIn = document.getElementById('notice-transition-in');
+            if(transitionIn) {
+                setTimeout(() => {
+                    transitionIn.classList.add('slide-out');
+                    setTimeout(() => transitionIn.remove(), 800);
+                }, 50);
+            }
+        });
+    </script>
+    <script src="js/gallery.js?v=3"></script>
+</body>
+</html>

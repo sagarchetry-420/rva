@@ -1,37 +1,31 @@
 <?php
 /**
  * ============================================================
- * School Management System - Main Entry Point / Router
+ * Front Controller — Application Entry Point
  * ============================================================
- * Redirects users to their role-based dashboard
+ * All requests are routed through this file.
+ * URL format: index.php?module=auth&action=login
  */
 
-require_once __DIR__ . '/config/database.php';
+// Bootstrap the application
+require_once __DIR__ . '/app/Core/App.php';
+App::boot();
 
-// If not logged in, go to login page
-if (!isLoggedIn()) {
-    header('Location: ' . BASE_URL . '/auth/login.php');
-    exit();
-}
+// Load core classes
+require_once APP_ROOT . '/app/Core/Database.php';
+require_once APP_ROOT . '/app/Core/Router.php';
+require_once APP_ROOT . '/app/Core/Controller.php';
+require_once APP_ROOT . '/app/Core/Validator.php';
+require_once APP_ROOT . '/app/Core/Middleware/AuthMiddleware.php';
+require_once APP_ROOT . '/app/Core/Middleware/RoleMiddleware.php';
 
-// Route to the correct dashboard based on user type
-$userType = getUserType();
+// Create router and register middleware
+$router = new Router();
+$router->addGlobalMiddleware('AuthMiddleware');
+$router->addGlobalMiddleware('RoleMiddleware');
 
-switch ($userType) {
-    case 'admin':
-        header('Location: ' . BASE_URL . '/admin/dashboard.php');
-        break;
-    case 'teacher':
-        header('Location: ' . BASE_URL . '/teacher/dashboard.php');
-        break;
-    case 'student':
-        header('Location: ' . BASE_URL . '/student/dashboard.php');
-        break;
-    default:
-        // Unknown role — destroy session and redirect to login
-        session_destroy();
-        header('Location: ' . BASE_URL . '/auth/login.php');
-        break;
-}
-exit();
-?>
+// Load route definitions
+require_once APP_ROOT . '/config/routes.php';
+
+// Dispatch the request
+$router->dispatch();

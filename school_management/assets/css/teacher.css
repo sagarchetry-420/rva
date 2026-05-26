@@ -541,6 +541,7 @@ a { text-decoration: none; color: inherit; }
 .badge-late { background: #fef3c7; color: #92400e; }
 .badge-excused { background: #dbeafe; color: #1e40af; }
 .badge-info { background: #dbeafe; color: #1e40af; }
+.badge-f { background: #dc2626; color: #ffffff; font-weight: bold; }
 
 .empty-state {
     text-align: center;

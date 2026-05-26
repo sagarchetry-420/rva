@@ -1,0 +1,115 @@
+section.hall-of-fame {
+    background-color: #ffffff !important;
+    position: relative;
+    padding-bottom: 80px; /* Standard padding */
+}
+
+.fame-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    margin-top: 40px;
+}
+
+.fame-card {
+    height: 400px; /* Fixed height since image takes full height */
+    background: white;
+    border-radius: 0;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    position: relative;
+}
+
+.fame-card:hover {
+    transform: scale(0.95) !important;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.fame-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--primary);
+    z-index: 10;
+    pointer-events: none;
+    transform: translateX(0); /* Fully covers image */
+    transition: transform 1.2s cubic-bezier(0.785, 0.135, 0.15, 0.86) 0.3s;
+}
+
+.fame-card.animated::after {
+    transform: translateX(100%);
+}
+
+.fame-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    transform: scale(1.2);
+    transition: transform 1.5s cubic-bezier(0.785, 0.135, 0.15, 0.86) 0.3s;
+}
+
+.fame-card.animated .fame-image {
+    transform: scale(1);
+}
+
+.fame-card.animated:hover .fame-image {
+    transform: scale(1.1);
+    transition: transform 0.5s ease;
+}
+
+.fame-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 60px 20px 20px 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.6), transparent);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.fame-overlay h3 {
+    color: white;
+    font-size: 24px;
+    margin: 0 0 5px 0;
+}
+
+.fame-overlay .fame-achievement {
+    color: #D4AF37;
+    font-size: 15px;
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.fame-overlay .fame-percentage {
+    color: white;
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+    /* Removed fame-year-badge */
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .fame-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .fame-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+}

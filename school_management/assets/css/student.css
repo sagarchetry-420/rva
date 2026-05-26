@@ -540,6 +540,7 @@ a { text-decoration: none; color: inherit; }
 .badge-absent { background: #fee2e2; color: #991b1b; }
 .badge-late { background: #fef3c7; color: #92400e; }
 .badge-excused { background: #dbeafe; color: #1e40af; }
+.badge-f { background: #dc2626; color: #ffffff; font-weight: bold; }
 
 .empty-state {
     text-align: center;

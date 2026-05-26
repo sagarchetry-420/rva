@@ -1,0 +1,14 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /RVA/
+
+    # Explicitly redirect root requests to the /RVA/home/ directory
+    RewriteRule ^$ home/ [R=301,L]
+
+    # Internally serve .html files for clean URLs
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME}\.html -f
+    RewriteRule ^(.*)$ $1.html [L]
+</IfModule>
+
+DirectoryIndex index.html

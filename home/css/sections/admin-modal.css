@@ -1,0 +1,114 @@
+/* ═══ ADMIN MODAL ═══ */
+.admin-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.admin-modal.active {
+    display: flex;
+}
+
+.admin-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    animation: modalSlide 0.3s ease;
+}
+
+.admin-modal-close {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    font-size: 28px;
+    cursor: pointer;
+    color: var(--gray);
+    font-weight: bold;
+    transition: var(--transition);
+    z-index: 10;
+}
+
+.admin-modal-close:hover {
+    color: var(--primary);
+}
+
+.admin-modal-body {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: 40px;
+    padding: 40px;
+}
+
+.admin-modal-image {
+    display: flex;
+    align-items: center;
+    min-height: 400px;
+}
+
+.admin-modal-image img {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: var(--shadow-lg);
+    object-fit: cover;
+}
+
+.admin-modal-info h2 {
+    font-size: 28px;
+    color: var(--primary);
+    margin-bottom: 5px;
+    margin-top: 0;
+}
+
+.admin-position {
+    color: var(--warning);
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 20px !important;
+}
+
+.admin-message {
+    color: var(--gray);
+    line-height: 1.8;
+    font-size: 15px;
+    text-align: justify;
+}
+
+@keyframes modalSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-modal-body {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .admin-modal-close {
+        right: 10px;
+        top: 10px;
+        font-size: 24px;
+    }
+}

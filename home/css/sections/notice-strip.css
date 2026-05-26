@@ -1,0 +1,101 @@
+/* ═══ NOTICE STRIP ═══ */
+.notice-strip {
+    background-color: #000000;
+    color: #ffffff;
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 50px;
+    z-index: 10;
+}
+
+.notice-strip-label {
+    background-color: var(--primary); /* #800000 */
+    color: #ffffff;
+    padding: 0 25px;
+    font-weight: 800;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    z-index: 11;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.2);
+}
+
+.notice-marquee-container {
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    padding-left: 180px; /* Space for the label */
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.notice-marquee {
+    display: flex;
+    align-items: center;
+    min-width: 100%;
+    flex-shrink: 0;
+    animation: marquee 30s linear infinite;
+    /* Added to ensure no layout collapse */
+}
+
+.notice-marquee:hover {
+    animation-play-state: paused;
+}
+
+.notice-item {
+    display: inline-block;
+    margin-right: 50px;
+    font-size: 15px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    color: var(--primary); /* Deep Maroon (#800000) */
+    white-space: nowrap;
+}
+
+.notice-item:hover {
+    text-decoration: underline;
+}
+
+.notice-item::before {
+    content: "•";
+    margin-right: 15px;
+    color: var(--warning);
+    font-size: 20px;
+    vertical-align: middle;
+}
+
+@keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+}
+
+@media (max-width: 768px) {
+    .notice-strip {
+        height: 25px; /* Extremely slim height for mobile */
+    }
+    .notice-strip-label {
+        font-size: 9px;
+        padding: 0 8px;
+        letter-spacing: 0.5px;
+    }
+    .notice-marquee-container {
+        padding-left: 90px;
+    }
+    .notice-item {
+        font-size: 11px;
+    }
+    .notice-item::before {
+        font-size: 14px;
+        margin-right: 8px;
+    }
+}

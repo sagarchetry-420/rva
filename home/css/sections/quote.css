@@ -1,0 +1,101 @@
+/* ═══ QUOTE SECTION ═══ */
+section.quote-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('../../../assets/school_image/img3.jpg') no-repeat center center;
+    background-size: cover;
+    background-attachment: fixed; /* Parallax effect */
+    background-blend-mode: luminosity; /* Makes the image black and white */
+    color: white;
+    text-align: center;
+    padding: 70px 20px;
+    position: relative;
+    overflow: hidden;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Ccircle cx='32' cy='32' r='30' fill='rgba(255,255,255,0.9)'/%3E%3Ctext x='32' y='36' font-family='sans-serif' font-size='16' font-weight='bold' fill='black' text-anchor='middle'%3EDRAG%3C/text%3E%3C/svg%3E") 32 32, auto;
+}
+
+section.quote-section:active {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Ccircle cx='32' cy='32' r='28' fill='rgba(255,255,255,1)'/%3E%3Ctext x='32' y='36' font-family='sans-serif' font-size='16' font-weight='bold' fill='black' text-anchor='middle'%3EDRAG%3C/text%3E%3C/svg%3E") 32 32, grabbing;
+}
+
+.quote-content {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+    user-select: none; /* Prevent text selection while dragging */
+}
+
+.quote-icon {
+    font-size: 120px;
+    line-height: 1;
+    font-family: 'Georgia', serif;
+    color: white;
+    opacity: 0.3;
+    display: block;
+    margin-bottom: -40px;
+}
+
+.quote-text {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 40px;
+    font-weight: 300;
+    line-height: 1.4;
+    margin-bottom: 30px;
+    color: white;
+}
+
+.quote-author {
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+/* Slider Dots */
+.quote-dots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 40px;
+}
+
+.quote-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.quote-dot.active {
+    background: white;
+    transform: scale(1.2);
+}
+
+.quote-dot:hover {
+    background: rgba(255, 255, 255, 0.7);
+}
+
+section.quote-section::before {
+    content: '"';
+    position: absolute;
+    top: -50px;
+    right: 10%;
+    font-size: 400px;
+    font-family: 'Georgia', serif;
+    color: rgba(255, 255, 255, 0.05);
+    line-height: 1;
+    z-index: 1;
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .quote-text {
+        font-size: 28px;
+    }
+    .quote-icon {
+        font-size: 80px;
+        margin-bottom: -20px;
+    }
+}

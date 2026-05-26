@@ -1,0 +1,164 @@
+/* ═══ NAVBAR ═══ */
+.navbar {
+    background: transparent;
+    color: var(--dark);
+    padding: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    box-shadow: none;
+    border-bottom: none;
+    transition: all 0.3s ease;
+}
+
+.navbar.scrolled {
+    background: white;
+    box-shadow: var(--shadow);
+    /* border-bottom removed as requested */
+}
+
+.nav-container {
+    max-width: 100%;
+    margin: 0;
+    padding: 15px 2% 15px 5%; /* 5% left for logo, 2% right for hamburger menu */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: auto;
+}
+
+.nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: bold;
+}
+
+.logo-img {
+    height: 50px;
+    width: auto;
+    object-fit: contain;
+}
+
+.school-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.school-info h1 {
+    font-size: 14px;
+    color: var(--primary);
+    margin: 0;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+.school-details {
+    font-size: 8px;
+    color: var(--gray);
+    margin: 0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+/* New Animated Menu styles */
+.menu-trigger {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 101;
+}
+
+.menu-trigger .bars {
+    display: flex;
+    width: 25px;
+    height: 30px;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 10;
+}
+
+.menu-trigger .bars > span {
+    width: 3px;
+    height: 25px;
+    background: var(--primary);
+    transition: all 0.4s ease;
+    transform-origin: center;
+}
+
+/* X Animation on active */
+.menu-trigger.active .bars > span:nth-of-type(1) {
+    transform: translateX(11px) rotate(45deg);
+}
+
+.menu-trigger.active .bars > span:nth-of-type(2) {
+    opacity: 0;
+}
+
+.menu-trigger.active .bars > span:nth-of-type(3) {
+    transform: translateX(-11px) rotate(-45deg);
+}
+
+.menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.98);
+    transform: translateY(-100%);
+    transition: all 0.8s cubic-bezier(0.785, 0.135, 0.15, 0.86);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    will-change: transform;
+    z-index: 5;
+}
+
+.menu-trigger.active .menu {
+    transform: translateY(0);
+}
+
+.menu > ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+}
+
+.menu > ul > li {
+    color: #2b2b2b;
+    font-size: 3.5rem;
+    cursor: pointer;
+    padding: 15px 0;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+}
+
+.menu > ul > li > p {
+    margin: 0;
+    transform: translateY(calc(100% + 10px));
+}
+
+.menu-trigger.active .menu > ul > li:nth-of-type(1) > p { transition: transform 0.6s cubic-bezier(0.785,0.135,0.15,0.86) 0.1s; transform: translateY(0); }
+.menu-trigger.active .menu > ul > li:nth-of-type(2) > p { transition: transform 0.6s cubic-bezier(0.785,0.135,0.15,0.86) 0.2s; transform: translateY(0); }
+.menu-trigger.active .menu > ul > li:nth-of-type(3) > p { transition: transform 0.6s cubic-bezier(0.785,0.135,0.15,0.86) 0.3s; transform: translateY(0); }
+.menu-trigger.active .menu > ul > li:nth-of-type(4) > p { transition: transform 0.6s cubic-bezier(0.785,0.135,0.15,0.86) 0.4s; transform: translateY(0); }
+
+/* Responsive Navbar */
+@media (max-width: 480px) {
+    .nav-logo h1 {
+        font-size: 18px;
+    }
+}

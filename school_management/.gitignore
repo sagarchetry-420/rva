@@ -1,0 +1,36 @@
+# Configuration and secrets
+.env
+*.env.backup
+*.env.local
+
+# User uploaded content
+/uploads/*
+!/uploads/.gitkeep
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.gemini/
+
+# Composer dependencies (if any)
+/vendor/
+
+# Node dependencies (if any)
+/node_modules/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Logs and Caches
+*.log
+error_log
+/cache/

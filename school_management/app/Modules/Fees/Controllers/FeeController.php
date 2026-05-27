@@ -61,7 +61,7 @@ class FeeController extends \Controller
         $catRepo = new FeeCategoryRepository();
         $categories = $catRepo->findAll();
         
-        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY class_name");
+        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name");
         $exams = $this->db->fetchAll("SELECT * FROM examinations WHERE session_id = ? AND exam_type != 'Class Test' ORDER BY start_date DESC", [$session['session_id']]);
 
         $this->render('Modules/Fees/Views/collection', [

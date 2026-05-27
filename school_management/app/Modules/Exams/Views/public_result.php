@@ -94,7 +94,8 @@
     
     <div class="marksheet" id="marksheet-card">
         <div class="ms-header">
-            <h2>Rose Valley Academy</h2>
+            <img src="<?php echo BASE_URL; ?>/assets/img/logo.png" alt="Rose Valley Academy Logo" style="height: 70px; margin-bottom: 10px; object-fit: contain;">
+            <h2 style="margin-top: 0;">Rose Valley Academy</h2>
             <p><strong><?php echo htmlspecialchars($result_data['exam_name']); ?> Marksheet</strong></p>
         </div>
         <div class="ms-info">

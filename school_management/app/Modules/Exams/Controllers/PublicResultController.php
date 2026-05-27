@@ -16,7 +16,7 @@ class PublicResultController extends \Controller
         
         $exams = $db->fetchAll("SELECT * FROM examinations ORDER BY start_date DESC");
         // Using classes from db directly for simplicity, but better via repo
-        $classes = $db->fetchAll("SELECT * FROM classes ORDER BY class_name");
+        $classes = $db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name");
 
         $result_data = null;
         $error = null;
@@ -47,11 +47,11 @@ class PublicResultController extends \Controller
                     // Fetch results
                     $sql = "SELECT sub.subject_name, r.marks_obtained, r.is_absent, r.grade, sch.full_marks, sch.pass_marks
                             FROM results r 
-                            JOIN subjects sub ON r.subject_id = sub.subject_id
-                            LEFT JOIN exam_schedules sch ON r.exam_id = sch.exam_id AND r.subject_id = sch.subject_id AND sch.class_id = ?
-                            WHERE r.exam_id = ? AND r.student_id = ? 
+                            JOIN exam_schedules sch ON r.schedule_id = sch.schedule_id
+                            JOIN subjects sub ON sch.subject_id = sub.subject_id
+                            WHERE sch.exam_id = ? AND sch.class_id = ? AND r.student_id = ? 
                             ORDER BY sub.subject_name";
-                    $res = $db->fetchAll($sql, [$cid, $eid, $sid]);
+                    $res = $db->fetchAll($sql, [$eid, $cid, $sid]);
                         
                     if (empty($res)) {
                         $error = "No results found for this student in the selected examination.";

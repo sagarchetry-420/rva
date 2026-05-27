@@ -8,7 +8,7 @@ class TimetableController extends \Controller
 {
     public function index(): void
     {
-        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY class_name, section");
+        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name, section");
         $selectedClassId = (int)$this->input('class_id', 0);
 
         $timetable = [];

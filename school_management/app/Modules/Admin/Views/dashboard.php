@@ -83,6 +83,16 @@
                     <p><?php echo $stats['total_notices']; ?> notices posted</p>
                 </div>
             </div>
+            <div class="notice-item">
+                <div class="notice-date"><i class="fa-solid fa-square-poll-vertical"></i></div>
+                <div class="notice-content">
+                    <h4>
+                        <a href="<?php echo baseUrl('public/check-result'); ?>" target="_blank" style="text-decoration: none; color: inherit;">Public Result Portal <i class="fa-solid fa-external-link-alt" style="font-size: 12px;"></i></a>
+                        <button onclick="navigator.clipboard.writeText('<?php echo baseUrl('public/check-result'); ?>'); alert('Link copied to clipboard!');" style="margin-left: 10px; background: none; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; cursor: pointer; color: var(--text); font-size: 12px;" title="Copy Shareable Link"><i class="fa-regular fa-copy"></i> Copy Link</button>
+                    </h4>
+                    <p>Shareable link to view results without login</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>

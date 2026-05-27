@@ -47,7 +47,7 @@ class AdmissionController extends \Controller
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $paginatedApplications = $this->db->paginate($query, $params, $page, 20);
         
-        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY class_name");
+        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name");
 
         $this->render('Modules/Admission/Views/applications', [
             'pageTitle'    => 'Student Applications',

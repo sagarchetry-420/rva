@@ -97,7 +97,14 @@ class App
         if (!defined('DB_CHARSET')) define('DB_CHARSET', self::env('DB_CHARSET', 'utf8mb4'));
         if (!defined('APP_NAME'))   define('APP_NAME',   self::env('APP_NAME', 'Rose Valley Academy'));
         if (!defined('APP_VERSION'))define('APP_VERSION', self::env('APP_VERSION', '2.0.0'));
-        if (!defined('BASE_URL'))   define('BASE_URL',   self::env('BASE_URL', '/RVA/school_management'));
+
+        if (!defined('BASE_URL')) {
+            $env = self::env('APP_ENV', 'development');
+            $baseUrl = $env === 'production' 
+                ? self::env('PROD_BASE_URL', 'https://rosevalleyacademy.page.gd/RVA/school_management') 
+                : self::env('DEV_BASE_URL', 'http://localhost/RVA/school_management');
+            define('BASE_URL', rtrim($baseUrl, '/'));
+        }
     }
 
     /**

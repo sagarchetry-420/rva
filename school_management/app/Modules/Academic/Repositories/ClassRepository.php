@@ -25,7 +25,7 @@ class ClassRepository
         $sql = "SELECT c.*, t.first_name, t.last_name 
                 FROM classes c
                 LEFT JOIN teachers t ON c.class_teacher_id = t.teacher_id
-                ORDER BY c.class_name, c.section";
+                ORDER BY LENGTH(c.class_name), c.class_name, c.section";
         return $this->db->fetchAll($sql);
     }
 

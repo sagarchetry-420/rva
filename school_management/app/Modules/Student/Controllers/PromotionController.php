@@ -10,7 +10,7 @@ class PromotionController extends \Controller
     {
         $academicRepo = new \App\Modules\Academic\Repositories\ClassSubjectRepository();
         $session = $academicRepo->getActiveSession();
-        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY class_name, section");
+        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name, section");
 
         $students = [];
         $selectedClassId = (int)$this->input('class_id', 0);

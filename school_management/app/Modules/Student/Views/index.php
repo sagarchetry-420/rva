@@ -82,7 +82,16 @@ tbody tr:nth-last-child(3) .action-menu-content { top: auto; bottom: 100%; }
                 <td>
                     <strong><?php echo htmlspecialchars(($s['first_name'] ?? '') . ' ' . ($s['last_name'] ?? '')); ?></strong>
                     <?php if (!empty($s['leaving_date'])): ?>
-                        <span class="badge" style="background:#ef4444; color:white; padding:2px 6px; font-size:10px; border-radius:4px; margin-left:5px;">Left School</span>
+                        <?php 
+                        $statusText = 'Left School';
+                        $statusColor = '#ef4444';
+                        $reason = $s['leaving_reason'] ?? '';
+                        if (stripos($reason, 'Pass') !== false) {
+                            $statusText = 'Passed Out';
+                            $statusColor = '#3b82f6';
+                        }
+                        ?>
+                        <span class="badge" style="background:<?php echo $statusColor; ?>; color:white; padding:2px 6px; font-size:10px; border-radius:4px; margin-left:5px;"><?php echo $statusText; ?></span>
                     <?php endif; ?>
                     <br><small style="color:var(--gray)">@<?php echo htmlspecialchars($s['username'] ?? 'N/A'); ?></small>
                 </td>
@@ -392,6 +401,7 @@ tbody tr:nth-last-child(3) .action-menu-content { top: auto; bottom: 100%; }
                     <label>Reason *</label>
                     <select name="leaving_reason" required>
                         <option value="">Select Reason</option>
+                        <option value="Passed Out">Passed Out</option>
                         <option value="TC Issued">TC Issued</option>
                         <option value="Withdrawn">Withdrawn</option>
                         <option value="Expelled">Expelled</option>

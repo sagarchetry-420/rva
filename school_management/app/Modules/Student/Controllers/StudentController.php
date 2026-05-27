@@ -29,7 +29,7 @@ class StudentController extends \Controller
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 
         $paginatedStudents = $this->repo->findAll($filterClass > 0 ? $filterClass : null, $page, 20);
-        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY class_name");
+        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name");
         $services = $this->db->fetchAll("SELECT * FROM services WHERE is_active = 1 ORDER BY service_name");
 
         $this->render('Modules/Student/Views/index', [

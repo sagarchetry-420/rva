@@ -38,7 +38,7 @@ class PublicAdmissionController extends \Controller
         }
 
         // Get classes for the dropdown
-        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY class_name, section");
+        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name, section");
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->validateCsrf();

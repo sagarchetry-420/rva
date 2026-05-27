@@ -15,6 +15,9 @@ $pageTitle = $pageTitle ?? 'Dashboard';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <?php if (isset($extraCss)): ?><style><?php echo $extraCss; ?></style><?php endif; ?>
+    <!-- Compression Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+    <script src="<?php echo asset('js/compression.js'); ?>"></script>
 </head>
 <body>
     <?php require APP_ROOT . '/app/Views/partials/header.php'; ?>

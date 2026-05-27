@@ -15,6 +15,9 @@ $pageTitle = $pageTitle ?? 'Rose Valley Academy';
     <link rel="stylesheet" href="<?php echo asset('css/admin.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <?php if (isset($extraCss)): ?><style><?php echo $extraCss; ?></style><?php endif; ?>
+    <!-- Compression Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+    <script src="<?php echo asset('js/compression.js'); ?>"></script>
 </head>
 <body>
     <?php

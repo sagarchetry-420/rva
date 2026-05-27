@@ -26,7 +26,7 @@ window.triggerPageTransition = function(targetUrl, pageName) {
     // Set the dynamic text based on the destination
     let textHTML = `
         <div class="nt-content" style="text-align: center;">
-            <img src="../assets/logo/logo_png.png" alt="Rose Valley Academy Logo" style="width: 80px; margin-bottom: 20px; animation: pulse 2s infinite;">
+            <img src="/RVA/assets/logo/logo_small.png" alt="Rose Valley Academy Logo" style="width: 80px; margin-bottom: 20px; animation: pulse 2s infinite;">
             <div class="nt-item"><span>Loading</span></div>`;
     
     if (pageName) {

@@ -31,6 +31,7 @@ $userType = getUserType();
                 <li><a href="<?php echo moduleUrl('admin', 'admission-settings'); ?>" class="nav-link <?php echo isActivePage('admin', 'admission-settings') ? 'active' : ''; ?>"><span class="icon"><i class="fa-solid fa-sliders"></i></span> Admission Settings</a></li>
 
                 <li class="nav-section-title">Finance & Info</li>
+                <li><a href="<?php echo moduleUrl('admin', 'fee_config'); ?>" class="nav-link <?php echo isActivePage('admin', 'fee_config') ? 'active' : ''; ?>"><span class="icon"><i class="fa-solid fa-gears"></i></span> Fee Config</a></li>
                 <li><a href="<?php echo moduleUrl('admin', 'fee_collection'); ?>" class="nav-link <?php echo isActivePage('admin', 'fee_collection') ? 'active' : ''; ?>"><span class="icon"><i class="fa-solid fa-file-invoice-dollar"></i></span> Fee Collection</a></li>
                 <li><a href="<?php echo moduleUrl('admin', 'services'); ?>" class="nav-link <?php echo isActivePage('admin', 'services') ? 'active' : ''; ?>"><span class="icon"><i class="fa-solid fa-hand-holding-dollar"></i></span> Student Services</a></li>
                 <li><a href="<?php echo moduleUrl('admin', 'notices'); ?>" class="nav-link <?php echo isActivePage('admin', 'notices') ? 'active' : ''; ?>"><span class="icon"><i class="fa-solid fa-bullhorn"></i></span> Notices</a></li>
@@ -49,7 +50,7 @@ $userType = getUserType();
                 <li class="nav-section-title">Teaching</li>
                 <li><a href="<?php echo moduleUrl('teacher', 'my-classes'); ?>" class="nav-link <?php echo isActivePage('teacher', 'my-classes') ? 'active' : ''; ?>"><span class="icon"><i class="fa-solid fa-book-open"></i></span> My Classes</a></li>
                 <li><a href="<?php echo moduleUrl('teacher', 'attendance'); ?>" class="nav-link <?php echo isActivePage('teacher', 'attendance') ? 'active' : ''; ?>"><span class="icon"><i class="fa-solid fa-check-to-slot"></i></span> Attendance</a></li>
-                <li><a href="<?php echo moduleUrl('teacher', 'examinations'); ?>" class="nav-link <?php echo isActivePage('teacher', 'examinations') ? 'active' : ''; ?>"><span class="icon"><i class="fa-solid fa-file-signature"></i></span> Class Tests</a></li>
+                <li><a href="<?php echo moduleUrl('teacher', 'examinations'); ?>" class="nav-link <?php echo isActivePage('teacher', 'examinations') ? 'active' : ''; ?>"><span class="icon"><i class="fa-solid fa-file-signature"></i></span> Exams</a></li>
                 <li><a href="<?php echo moduleUrl('teacher', 'results'); ?>" class="nav-link <?php echo isActivePage('teacher', 'results') ? 'active' : ''; ?>"><span class="icon"><i class="fa-solid fa-file-pen"></i></span> Results</a></li>
 
                 <li class="nav-section-title">Info</li>

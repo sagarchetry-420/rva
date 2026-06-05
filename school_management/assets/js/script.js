@@ -59,13 +59,6 @@ function dismissToast() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const toast = document.getElementById('toastNotification');
-    if (toast) {
-        // Auto-dismiss after 4 seconds (matches the progress bar animation)
-        setTimeout(function() {
-            dismissToast();
-        }, 4000);
-    }
 
     // Also handle old-style flash messages (for login pages etc.)
     const flash = document.getElementById('flashMessage');
@@ -102,6 +95,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (form.classList.contains('no-auto-validate')) return;
         
         form.addEventListener('submit', function(e) {
+            // If another script (like inline onsubmit) already prevented submission, do nothing.
+            if (e.defaultPrevented) return;
+            
             // Check HTML5 validity
             if (!form.checkValidity()) {
                 e.preventDefault();
@@ -120,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Prevent multiple submissions and show loading state
-            const submitBtn = form.querySelector('button[type="submit"]');
+            const submitBtn = e.submitter || form.querySelector('button[type="submit"]');
             if (submitBtn) {
                 // Save original text if not already saved
                 if (!submitBtn.dataset.originalHtml) {
@@ -154,3 +150,24 @@ function toggleSelectAll(source) {
     const checkboxes = document.querySelectorAll('.row-checkbox');
     checkboxes.forEach(cb => cb.checked = source.checked);
 }
+
+// ═══ SIDEBAR SCROLL POSITION PRESERVATION ═══
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarNav = document.querySelector('.sidebar-nav');
+    
+    [sidebar, sidebarNav].forEach(el => {
+        if (el) {
+            const key = 'scrollPos_' + (el.id || 'nav');
+            const scrollPos = sessionStorage.getItem(key);
+            if (scrollPos) {
+                // Use a small timeout to ensure DOM is fully rendered before setting scroll
+                setTimeout(() => el.scrollTop = parseInt(scrollPos, 10), 0);
+            }
+            
+            el.addEventListener('scroll', () => {
+                sessionStorage.setItem(key, el.scrollTop);
+            });
+        }
+    });
+});

@@ -26,6 +26,20 @@
     $dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     ?>
     
+    <style>
+        .day-group:hover td.day-cell {
+            background-color: #e2f0e9 !important;
+            color: #245e54;
+            transition: all 0.2s ease;
+        }
+        .data-table tr:hover td:not(.day-cell) {
+            background-color: #f8fafc;
+        }
+        /* Add a bold line to visually separate different days */
+        .day-group + .day-group tr:first-child td {
+            border-top: 3px solid #cbd5e1 !important;
+        }
+    </style>
     <div class="table-container">
         <table class="data-table">
             <thead>
@@ -36,27 +50,30 @@
                     <th>Class</th>
                 </tr>
             </thead>
-            <tbody>
-                <?php foreach ($dayOrder as $day): ?>
-                    <?php if (isset($byDay[$day])): ?>
+            <?php foreach ($dayOrder as $day): ?>
+                <?php if (isset($byDay[$day])): ?>
+                    <tbody class="day-group">
                         <?php $first = true; foreach ($byDay[$day] as $entry): ?>
                             <tr>
                                 <?php if ($first): ?>
-                                    <td rowspan="<?php echo count($byDay[$day]); ?>" style="vertical-align: middle; font-weight: bold; background: #f8f9fa;">
+                                    <td class="day-cell hide-on-mobile" rowspan="<?php echo count($byDay[$day]); ?>" style="vertical-align: middle; font-weight: bold; background: #fdfbfb;">
                                         <?php echo htmlspecialchars($day); ?>
                                     </td>
                                 <?php $first = false; endif; ?>
-                                <td>
+                                <td class="day-cell show-on-mobile" style="display:none;">
+                                    <?php echo htmlspecialchars($day); ?>
+                                </td>
+                                <td class="td-time">
                                     <?php echo date('h:i A', strtotime($entry['start_time'])); ?> - 
                                     <?php echo date('h:i A', strtotime($entry['end_time'])); ?>
                                 </td>
-                                <td><?php echo htmlspecialchars($entry['subject_name']); ?></td>
-                                <td><?php echo htmlspecialchars($entry['class_name'] . ' ' . $entry['section']); ?></td>
+                                <td class="td-subject"><?php echo htmlspecialchars($entry['subject_name']); ?></td>
+                                <td class="td-class"><?php echo htmlspecialchars($entry['class_name'] . ' ' . $entry['section']); ?></td>
                             </tr>
                         <?php endforeach; ?>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            </tbody>
+                    </tbody>
+                <?php endif; ?>
+            <?php endforeach; ?>
         </table>
     </div>
 <?php endif; ?>

@@ -39,25 +39,29 @@ $oldEmail = old('email', '');
             <?php echo csrf_field(); ?>
 
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+                    <label for="email" style="margin-bottom: 0;">Email Address</label>
+                    <span id="emailError" class="field-error" style="display: none; margin-top: 0;"></span>
+                </div>
                 <div class="input-with-icon">
                     <span class="input-icon"><i class="fa-solid fa-envelope"></i></span>
                     <input type="email" id="email" name="email" placeholder="Enter your email" required
                            value="<?php echo htmlspecialchars($oldEmail); ?>" maxlength="255">
-                    <span id="emailError" class="field-error" style="display: none;"></span>
                 </div>
                 <small class="form-text">Enter your registered email address</small>
             </div>
 
             <div class="form-group">
-                <label for="password">Password</label>
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+                    <label for="password" style="margin-bottom: 0;">Password</label>
+                    <span id="passwordError" class="field-error" style="display: none; margin-top: 0;"></span>
+                </div>
                 <div class="input-with-icon">
                     <span class="input-icon"><i class="fa-solid fa-lock"></i></span>
                     <input type="password" id="password" name="password" placeholder="Enter your password" required maxlength="255">
                     <span class="toggle-password" onclick="togglePasswordVisibility()">
                         <i class="fa-solid fa-eye" id="togglePasswordIcon"></i>
                     </span>
-                    <span id="passwordError" class="field-error" style="display: none;"></span>
                 </div>
                 <small class="form-text">Enter your password</small>
                 <div class="forgot-password-link">

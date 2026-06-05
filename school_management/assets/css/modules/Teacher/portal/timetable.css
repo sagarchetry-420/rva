@@ -1,0 +1,18 @@
+/* Responsive Compact Table Layout for Timetable */
+@media (max-width: 768px) {
+    /* Keep the tabular structure, but make everything compact */
+    .data-table th, 
+    .data-table td {
+        padding: 8px 4px !important;
+        font-size: 11px !important;
+    }
+    
+    .data-table th {
+        font-size: 10px !important;
+        letter-spacing: 0px !important;
+    }
+    
+    /* Ensure the helper classes we added previously don't break the native table layout */
+    .show-on-mobile { display: none !important; }
+    .hide-on-mobile { display: table-cell !important; }
+}

@@ -14,7 +14,27 @@
     </div>
 </div>
 
-<div class="table-container">
+<!-- Search Bar -->
+<div style="margin-bottom: 25px;">
+    <form method="GET" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+        <input type="hidden" name="module" value="admin">
+        <input type="hidden" name="action" value="subjects">
+        
+        <div style="flex: 1; min-width: 250px; position: relative;">
+            <i class="fas fa-search" style="position: absolute; left: 12px; top: 12px; color: var(--gray);"></i>
+            <input type="text" name="search" class="form-control" value="<?php echo htmlspecialchars($search ?? ''); ?>" placeholder="Search by Subject Name or Code..." style="width: 100%; border: 1px solid var(--border-color); background: #fff; padding: 10px 10px 10px 35px; border-radius: 4px;" maxlength="100">
+        </div>
+        
+        <div>
+            <button type="submit" class="btn btn-primary" style="padding: 10px 20px; border-radius: 4px;"><i class="fas fa-search"></i> Search</button>
+            <?php if (!empty($search)): ?>
+                <a href="<?php echo moduleUrl('admin', 'subjects'); ?>" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 4px; text-decoration: none;">Clear</a>
+            <?php endif; ?>
+        </div>
+    </form>
+</div>
+
+<div class="table-container" style="padding-bottom: 100px;">
     <table class="data-table">
         <thead>
             <tr>
@@ -29,16 +49,21 @@
             <?php foreach ($subjects as $s): ?>
             <tr>
                 <td><strong><?php echo htmlspecialchars($s['subject_name']); ?></strong></td>
-                <td><span style="background:var(--primary-light); color:var(--primary); padding:2px 6px; border-radius:4px; font-weight:bold; font-size:12px;"><?php echo htmlspecialchars($s['subject_code']); ?></span></td>
+                <td><span style="background:var(--primary); color:#ffffff; padding:4px 8px; border-radius:4px; font-weight:bold; font-size:12px;"><?php echo htmlspecialchars($s['subject_code']); ?></span></td>
                 <td><?php echo htmlspecialchars($s['description'] ?? '—'); ?></td>
-                <td class="actions-cell">
-                    <button class="btn btn-sm btn-info" onclick='openEditModal(<?php echo htmlspecialchars(json_encode($s)); ?>)'><i class="fas fa-edit"></i> Edit</button>
-                    <form method="POST" action="<?php echo moduleUrl('admin', 'subjects'); ?>" style="display:inline" onsubmit="return confirmDelete('Delete this subject? This will also remove it from any assigned classes.')">
-                        <?php echo csrf_field(); ?>
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="subject_id" value="<?php echo $s['subject_id']; ?>">
-                        <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-                    </form>
+                <td class="actions-cell" style="display:flex; gap:5px; justify-content:flex-start;">
+                    <button class="btn btn-sm btn-primary" onclick='openEditModal(<?php echo htmlspecialchars(json_encode($s)); ?>)'><i class="fas fa-edit"></i> Edit</button>
+                    <details class="action-menu" style="position:relative;">
+                        <summary style="list-style:none; cursor:pointer; padding:4px 10px; background:transparent; border:none; color:var(--text-color); font-size:16px; margin-top:2px;"><i class="fas fa-ellipsis-v"></i></summary>
+                        <div style="position:absolute; right:0; top:100%; background:white; border:1px solid #ddd; box-shadow:0 2px 8px rgba(0,0,0,0.15); border-radius:4px; padding:5px; z-index:100; min-width:100px; margin-top:2px;">
+                            <form method="POST" action="<?php echo moduleUrl('admin', 'subjects'); ?>" style="margin:0;" onsubmit="return confirmDelete('Delete this subject? This will also remove it from any assigned classes.')">
+                                <?php echo csrf_field(); ?>
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="subject_id" value="<?php echo $s['subject_id']; ?>">
+                                <button type="submit" style="border:none; background:none; color:#dc3545; width:100%; text-align:left; padding:8px; cursor:pointer; font-size:13px; font-weight:bold;"><i class="fas fa-trash"></i> Delete</button>
+                            </form>
+                        </div>
+                    </details>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -47,6 +72,16 @@
         <?php endif; ?>
         </tbody>
     </table>
+
+    <!-- Pagination -->
+    <?php if (isset($pagination)): ?>
+        <div class="no-print" style="padding: 15px 20px; border-top: 1px solid var(--border-color);">
+            <?php echo renderPagination($pagination); ?>
+            <div style="text-align: center; margin-top: 10px; color: var(--gray); font-size: 13px;">
+                Showing page <?php echo $pagination['current_page']; ?> of <?php echo $pagination['pages']; ?> (Total: <?php echo $pagination['total']; ?> subjects)
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <!-- Add Modal -->
@@ -62,15 +97,15 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label>Subject Name *</label>
-                    <input type="text" name="subject_name" id="add_subject_name" required maxlength="100" placeholder="e.g. Mathematics">
+                    <input type="text" name="subject_name" id="add_subject_name" required maxlength="100" pattern="^[a-zA-Z0-9\s\-\&]+$" title="Only letters, numbers, spaces, hyphens, and ampersands are allowed." placeholder="e.g. Mathematics">
                 </div>
                 <div class="form-group">
                     <label>Subject Code (Auto-generated)</label>
-                    <input type="text" name="subject_code" id="add_subject_code" required maxlength="20" placeholder="Automatically generated" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                    <input type="text" name="subject_code" id="add_subject_code" required maxlength="20" pattern="^[a-zA-Z0-9\-]+$" title="Only letters, numbers, and hyphens are allowed." placeholder="Automatically generated" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
                 </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea name="description" rows="3" placeholder="Optional description..."></textarea>
+                    <textarea name="description" rows="3" maxlength="255" placeholder="Optional description..."></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -95,15 +130,15 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label>Subject Name *</label>
-                    <input type="text" name="subject_name" id="edit_subject_name" required maxlength="100">
+                    <input type="text" name="subject_name" id="edit_subject_name" required maxlength="100" pattern="^[a-zA-Z0-9\s\-\&]+$" title="Only letters, numbers, spaces, hyphens, and ampersands are allowed.">
                 </div>
                 <div class="form-group">
                     <label>Subject Code (Auto-generated)</label>
-                    <input type="text" name="subject_code" id="edit_subject_code" required maxlength="20" readonly style="background-color: #f8f9fa; cursor: not-allowed;">
+                    <input type="text" name="subject_code" id="edit_subject_code" required maxlength="20" pattern="^[a-zA-Z0-9\-]+$" title="Only letters, numbers, and hyphens are allowed." readonly style="background-color: #f8f9fa; cursor: not-allowed;">
                 </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea name="description" id="edit_description" rows="3"></textarea>
+                    <textarea name="description" id="edit_description" rows="3" maxlength="255"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -151,4 +186,20 @@ function openEditModal(s) {
         });
     }
 })();
+</script>
+<style>
+details.action-menu > summary::-webkit-details-marker {
+    display: none;
+}
+</style>
+<script>
+// Close action menus when clicking outside
+document.addEventListener('click', function(event) {
+    const menus = document.querySelectorAll('details.action-menu');
+    menus.forEach(menu => {
+        if (menu.hasAttribute('open') && !menu.contains(event.target)) {
+            menu.removeAttribute('open');
+        }
+    });
+});
 </script>

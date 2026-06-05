@@ -23,16 +23,11 @@ window.triggerPageTransition = function(targetUrl, pageName) {
         document.body.appendChild(overlay);
     }
     
-    // Set the dynamic text based on the destination
+    // Set the transition content to the eye animation
     let textHTML = `
-        <div class="nt-content" style="text-align: center;">
-            <img src="/RVA/assets/logo/logo_small.png" alt="Rose Valley Academy Logo" style="width: 80px; margin-bottom: 20px; animation: pulse 2s infinite;">
-            <div class="nt-item"><span>Loading</span></div>`;
-    
-    if (pageName) {
-        textHTML += `<div class="nt-item"><span>${pageName}...</span></div>`;
-    }
-    textHTML += `</div>`;
+        <div class="nt-content">
+            <span class="loader"></span>
+        </div>`;
     overlay.innerHTML = textHTML;
 
     // Set flag so the incoming page knows to play its half of the animation

@@ -5,11 +5,24 @@
  */
 ?>
 <div class="page-header">
-    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 15px;">
         <div>
             <h1><i class="fas fa-money-bill-wave"></i> <?php echo htmlspecialchars($pageTitle); ?></h1>
-            <p>Your fee records for <?php echo htmlspecialchars($session['session_name'] ?? 'N/A'); ?></p>
+            <p>Your fee records</p>
         </div>
+        <form method="GET" style="display: flex; align-items: center; gap: 10px;">
+            <label for="session_id" style="margin: 0; font-weight: 500;">Session:</label>
+            <select name="session_id" id="session_id" class="form-select form-select-sm" style="width: auto; min-width: 150px;" onchange="this.form.submit()">
+                <?php foreach ($sessions as $sess): ?>
+                    <option value="<?php echo $sess['session_id']; ?>" <?php echo $selectedSessionId == $sess['session_id'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($sess['session_name']); ?>
+                    </option>
+                <?php endforeach; ?>
+                <?php if(empty($sessions)): ?>
+                    <option value="">No sessions found</option>
+                <?php endif; ?>
+            </select>
+        </form>
     </div>
 </div>
 
@@ -20,12 +33,6 @@
     </div>
 <?php else: ?>
     <?php
-    $totalAmount = 0;
-    $totalPaid = 0;
-    foreach ($fees as $f) {
-        $totalAmount += $f['amount'];
-        $totalPaid += $f['paid_amount'];
-    }
     $totalBalance = $totalAmount - $totalPaid;
     ?>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
@@ -43,8 +50,30 @@
         </div>
     </div>
 
-    <div class="table-container">
-        <table class="data-table">
+    <style>
+        /* Force traditional tabular layout on mobile but smaller */
+        @media (max-width: 768px) {
+            .fees-table {
+                display: table !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+            .fees-table thead { display: table-header-group !important; }
+            .fees-table tbody { display: table-row-group !important; }
+            .fees-table tfoot { display: table-footer-group !important; }
+            .fees-table tr { display: table-row !important; }
+            .fees-table th, .fees-table td {
+                display: table-cell !important;
+                padding: 6px 3px !important;
+                font-size: 11px !important;
+                white-space: normal !important;
+                word-wrap: break-word !important;
+            }
+            .fees-table td::before { display: none !important; }
+        }
+    </style>
+    <div class="table-container" style="overflow-x: auto;">
+        <table class="data-table fees-table">
             <thead>
                 <tr>
                     <th>Service / Description</th>
@@ -99,4 +128,24 @@
             </tbody>
         </table>
     </div>
+    
+    <?php if ($totalPages > 1): ?>
+    <style>
+        .pagination { display: flex; padding-left: 0; list-style: none; justify-content: center; gap: 5px; margin-top: 20px; }
+        .page-item { margin: 0; }
+        .page-link { position: relative; display: block; padding: 8px 16px; color: #0d6efd; text-decoration: none; background-color: #fff; border: 1px solid #dee2e6; border-radius: 4px; transition: all 0.2s; }
+        .page-link:hover { z-index: 2; color: #0a58ca; background-color: #e9ecef; border-color: #dee2e6; }
+        .page-item.active .page-link { z-index: 3; color: #fff; background-color: #0d6efd; border-color: #0d6efd; }
+    </style>
+    <nav aria-label="Fees pagination">
+        <ul class="pagination">
+            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                    <a class="page-link" href="?session_id=<?php echo htmlspecialchars($selectedSessionId); ?>&page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                </li>
+            <?php endfor; ?>
+        </ul>
+    </nav>
+    <?php endif; ?>
+
 <?php endif; ?>

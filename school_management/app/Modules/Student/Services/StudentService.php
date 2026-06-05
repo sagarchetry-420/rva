@@ -255,10 +255,70 @@ class StudentService
     }
 
     /**
+     * Export students as PDF
+     */
+    public function exportPdf(?int $classId = null): void
+    {
+        $students = $this->studentRepo->getForExport($classId);
+
+        require_once APP_ROOT . '/includes/fpdf/fpdf.php';
+        $pdf = new \FPDF('L', 'mm', 'A4'); // Landscape for tables
+        $pdf->SetAutoPageBreak(true, 15);
+        $pdf->AddPage();
+
+        // Header
+        $pdf->SetFont('Arial', 'B', 16);
+        $pdf->Cell(0, 10, APP_NAME . ' - Students List', 0, 1, 'C');
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->Cell(0, 7, 'Generated: ' . date('d M Y'), 0, 1, 'C');
+        $pdf->Ln(5);
+
+        // Table Header
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->SetFillColor(41, 128, 185);
+        $pdf->SetTextColor(255);
+        $pdf->Cell(30, 8, 'Roll No', 1, 0, 'L', true);
+        $pdf->Cell(50, 8, 'Name', 1, 0, 'L', true);
+        $pdf->Cell(40, 8, 'Class', 1, 0, 'L', true);
+        $pdf->Cell(25, 8, 'Gender', 1, 0, 'L', true);
+        $pdf->Cell(60, 8, 'Email', 1, 0, 'L', true);
+        $pdf->Cell(60, 8, 'Parent', 1, 1, 'L', true);
+
+        // Table Data
+        $pdf->SetFont('Arial', '', 10);
+        $pdf->SetTextColor(0);
+        $fill = false;
+
+        foreach ($students as $row) {
+            $name = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
+            $cls = trim(($row['class_name'] ?? '') . ' ' . ($row['section'] ?? ''));
+
+            if ($fill) {
+                $pdf->SetFillColor(245, 245, 245);
+            }
+
+            $pdf->Cell(30, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($row['roll_number'] ?? '', 0, 15)), 1, 0, 'L', $fill);
+            $pdf->Cell(50, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($name, 0, 25)), 1, 0, 'L', $fill);
+            $pdf->Cell(40, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($cls, 0, 20)), 1, 0, 'L', $fill);
+            $pdf->Cell(25, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $row['gender'] ?? ''), 1, 0, 'L', $fill);
+            $pdf->Cell(60, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($row['email'] ?? '', 0, 30)), 1, 0, 'L', $fill);
+            $pdf->Cell(60, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($row['parent_name'] ?? '', 0, 25)), 1, 1, 'L', $fill);
+            
+            $fill = !$fill;
+        }
+
+        $pdf->Output('D', 'students_export_' . date('Y-m-d') . '.pdf');
+        exit;
+    }
+
+    /**
      * Import students from CSV
      */
     public function importCsv(array $file, int $classId, bool $sendEmails): array
     {
+        // Prevent PHP from timing out when uploading 100+ students and sending emails
+        set_time_limit(0);
+
         $db = \Database::getInstance();
         $handle = fopen($file['tmp_name'], 'r');
         
@@ -266,58 +326,103 @@ class StudentService
             return ['success' => false, 'message' => 'Could not read the uploaded CSV file.'];
         }
 
-        // Read header
+        // Read Warning Row (Row 1)
+        $warningRow = fgetcsv($handle);
+        // Read Instructions Row (Row 2)
+        $instructionRow = fgetcsv($handle);
+        // Read actual Header Row (Row 3)
         $header = fgetcsv($handle);
+        
         if (!$header) {
             fclose($handle);
-            return ['success' => false, 'message' => 'The CSV file is empty.'];
+            return ['success' => false, 'message' => 'The CSV file is empty or missing the header row.'];
         }
 
-        // Validate template headers
-        $expectedHeaders = ['First Name', 'Last Name', 'Gender (Male/Female/Other)', 'Date of Birth (YYYY-MM-DD)', 'Email', 'Phone', 'Parent Name', 'Parent Phone'];
+        // Validate template headers strictly (Dynamic Template)
+        $expectedHeaders = [
+            'First Name', 'Last Name', 'Gender (Male/Female/Other)', 'Date of Birth (YYYY-MM-DD)', 
+            'Email', 'Phone', 'Parent Name', 'Parent Phone', 
+            'Admission Fee Paid (Yes/No)', 'Admission Payment Method (Cash/Card/Online)', 'Admission Transaction ID / Remarks'
+        ];
+        
+        $services = $db->fetchAll("SELECT service_name, fee_amount FROM services ORDER BY service_name ASC");
+        if ($services) {
+            foreach ($services as $service) {
+                $expectedHeaders[] = 'Service: ' . $service['service_name'] . ' (Yes/No)';
+            }
+        }
+        
+        $expectedHeaders[] = 'Services Payment Method (Cash/Card/Online)';
+        $expectedHeaders[] = 'Services Transaction ID / Remarks';
+
         $isTemplateValid = true;
-        foreach ($expectedHeaders as $index => $expectedColumn) {
-            if (!isset($header[$index]) || trim($header[$index]) !== $expectedColumn) {
-                $isTemplateValid = false;
-                break;
+        if (count($header) !== count($expectedHeaders)) {
+            $isTemplateValid = false;
+        } else {
+            foreach ($expectedHeaders as $index => $expectedColumn) {
+                if (!isset($header[$index]) || trim($header[$index]) !== $expectedColumn) {
+                    $isTemplateValid = false;
+                    break;
+                }
             }
         }
 
         if (!$isTemplateValid) {
             fclose($handle);
-            return ['success' => false, 'message' => 'Invalid CSV template. Please download and use the official CSV Template.'];
+            return ['success' => false, 'message' => 'Invalid CSV template. Please download the latest template.'];
+        }
+
+        // Dynamically parse Service columns from header
+        $serviceColumns = [];
+        foreach ($header as $index => $colName) {
+            $colName = trim($colName);
+            if (strpos($colName, 'Service: ') === 0) {
+                // Extracts "Transport" from "Service: Transport (Yes/No)"
+                $serviceName = str_replace(['Service: ', ' (Yes/No)'], '', $colName);
+                $serviceInfo = $db->fetch("SELECT service_id, fee_amount FROM services WHERE service_name = ?", [$serviceName]);
+                if ($serviceInfo) {
+                    $override = $db->fetch("SELECT fee_amount FROM class_service_fees WHERE service_id = ? AND class_id = ?", [$serviceInfo['service_id'], $classId]);
+                    $finalFee = $override ? (float)$override['fee_amount'] : (float)$serviceInfo['fee_amount'];
+                    
+                    $serviceColumns[$index] = [
+                        'id' => $serviceInfo['service_id'],
+                        'fee' => $finalFee
+                    ];
+                }
+            }
         }
 
         $importedCount = 0;
         $failedCount = 0;
         $duplicateCount = 0;
         
-        $db->transaction(function() use ($handle, $classId, $sendEmails, &$importedCount, &$failedCount, &$duplicateCount) {
+        $paymentMethodColIndex = count($expectedHeaders) - 2;
+        $txnIdColIndex = count($expectedHeaders) - 1;
+        
+        // Dynamically find or create the Service Fee category
+        $serviceCat = $db->fetch("SELECT category_id FROM fee_categories WHERE category_name = 'Service Fee'");
+        if (!$serviceCat) {
+            $db->insert('fee_categories', ['category_name' => 'Service Fee', 'description' => 'System generated service fees']);
+            $serviceCatId = (int)$db->getConnection()->lastInsertId();
+        } else {
+            $serviceCatId = (int)$serviceCat['category_id'];
+        }
+        
+        $db->transaction(function() use ($handle, $classId, $sendEmails, &$importedCount, &$failedCount, &$duplicateCount, $serviceColumns, $paymentMethodColIndex, $txnIdColIndex, $serviceCatId) {
             while (($data = fgetcsv($handle)) !== false) {
-                // Expected format: First Name, Last Name, Gender, Date of Birth, Email, Phone, Parent Name, Parent Phone
-                $firstName = trim($data[0] ?? '');
-                $lastName = trim($data[1] ?? '');
+                // Strict Backend Sanitization to prevent Injections/XSS
+                $firstName = preg_replace('/[^a-zA-Z\s]/', '', trim($data[0] ?? ''));
+                $lastName = preg_replace('/[^a-zA-Z\s]/', '', trim($data[1] ?? ''));
                 $gender = trim($data[2] ?? '');
                 $dob = trim($data[3] ?? '') ?: null;
-                $email = trim($data[4] ?? '');
-                $phone = trim($data[5] ?? '');
-                $parentName = trim($data[6] ?? '') ?: null;
-                $parentPhone = trim($data[7] ?? '');
+                $email = filter_var(trim($data[4] ?? ''), FILTER_SANITIZE_EMAIL);
+                $phone = preg_replace('/[^0-9]/', '', trim($data[5] ?? ''));
+                $parentName = preg_replace('/[^a-zA-Z\s.]/', '', trim($data[6] ?? '')) ?: null;
+                $parentPhone = preg_replace('/[^0-9]/', '', trim($data[7] ?? ''));
 
-                // Sanitize phone numbers to match chk_student_phone and chk_parent_phone constraints
-                if ($phone) {
-                    $phone = preg_replace('/[^0-9]/', '', $phone);
-                    if (strlen($phone) < 7 || strlen($phone) > 15) $phone = null;
-                } else {
-                    $phone = null;
-                }
-
-                if ($parentPhone) {
-                    $parentPhone = preg_replace('/[^0-9]/', '', $parentPhone);
-                    if (strlen($parentPhone) < 7 || strlen($parentPhone) > 15) $parentPhone = null;
-                } else {
-                    $parentPhone = null;
-                }
+                // Validate phone lengths to exactly 10 digits
+                if ($phone && strlen($phone) !== 10) $phone = null;
+                if ($parentPhone && strlen($parentPhone) !== 10) $parentPhone = null;
 
                 if (empty($firstName) || empty($email) || empty($gender)) {
                     $failedCount++;
@@ -382,23 +487,98 @@ class StudentService
                     ]);
                 }
 
-                // Automatically generate Admission Fee invoice if > 0
+                // Always generate Admission Fee invoice if class has an admission fee configured
                 $classInfo = $this->db->fetch("SELECT admission_fee FROM classes WHERE class_id = ?", [(int)$classId]);
                 if ($classInfo && $classInfo['admission_fee'] > 0) {
                     $category = $this->db->fetch("SELECT category_id FROM fee_categories WHERE category_name = 'Admission Fee'");
-                    $categoryId = $category ? $category['category_id'] : 1; // Fallback to 1
+                    $categoryId = $category ? $category['category_id'] : 1; 
 
                     $dueDate = date('Y-m-d', strtotime('+30 days'));
-                    $adminUserId = $_SESSION['user_id'] ?? 1; // Fallback to 1 if not set
+                    $adminUserId = $_SESSION['user_id'] ?? 1;
+                    
+                    $admissionPaid = strtolower(trim($data[8] ?? ''));
+                    $paymentMethod = trim($data[9] ?? '');
+                    $txnId = trim($data[10] ?? '');
+                    
+                    $paymentStatus = 'Pending';
+                    $paymentDate = null;
+                    $receiptNumber = null;
+                    
+                    // If they typed 'Yes', mark as Paid instantly. If 'No', it stays 'Pending'.
+                    if (in_array($admissionPaid, ['yes', 'y', '1', 'true'])) {
+                        $paymentStatus = 'Paid';
+                        $paymentDate = date('Y-m-d');
+                        $receiptNumber = 'RVA-' . date('Ymd') . '-' . rand(1000, 9999);
+                        if (empty($paymentMethod)) {
+                            $paymentMethod = 'Cash'; // Default to cash if left blank but marked as Yes
+                        }
+                    } else {
+                        // If they said No (not paid), clear out the payment method so it's clean
+                        $paymentMethod = null;
+                    }
+
                     $this->db->insert('fees', [
                         'student_id'     => $studentId,
                         'session_id'     => $sessionId,
                         'category_id'    => $categoryId,
                         'amount'         => $classInfo['admission_fee'],
                         'due_date'       => $dueDate,
-                        'payment_status' => 'Pending',
+                        'payment_status' => $paymentStatus,
+                        'payment_date'   => $paymentDate,
+                        'payment_method' => $paymentMethod ?: null,
+                        'receipt_number' => $receiptNumber,
+                        'remarks'        => $txnId ?: null,
                         'created_by'     => $adminUserId,
                     ]);
+                }
+
+                // Global Service Payment details
+                $globalServicePaymentMethod = trim($data[$paymentMethodColIndex] ?? '');
+                $globalServiceTxnId = trim($data[$txnIdColIndex] ?? '');
+
+                // Automatically assign dynamic services based on CSV columns and charge them
+                foreach ($serviceColumns as $colIndex => $svc) {
+                    $assignService = strtolower(trim($data[$colIndex] ?? ''));
+                    
+                    if (in_array($assignService, ['yes', 'y', '1', 'true'])) {
+                        $this->db->insert('student_services', [
+                            'student_id'      => $studentId,
+                            'service_id'      => $svc['id'],
+                            'session_id'      => $sessionId,
+                            'enrollment_date' => date('Y-m-d'),
+                            'is_active'       => 1
+                        ]);
+                        
+                        // Instantly generate paid invoice for the service if there is a fee
+                        if ($svc['fee'] > 0) {
+                            $dueDate = date('Y-m-d', strtotime('+30 days'));
+                            $adminUserId = $_SESSION['user_id'] ?? 1;
+                            
+                            $paymentStatus = 'Paid'; // Force paid because Yes = taken and paid
+                            $paymentDate = date('Y-m-d');
+                            $receiptNumber = 'RVA-' . date('Ymd') . '-' . rand(1000, 9999);
+                            
+                            $paymentMethod = $globalServicePaymentMethod;
+                            if (empty($paymentMethod)) {
+                                $paymentMethod = 'Cash'; // Default method for auto-paid service
+                            }
+
+                            $this->db->insert('fees', [
+                                'student_id'     => $studentId,
+                                'session_id'     => $sessionId,
+                                'category_id'    => $serviceCatId,
+                                'service_id'     => $svc['id'],
+                                'amount'         => $svc['fee'],
+                                'due_date'       => $dueDate,
+                                'payment_status' => $paymentStatus,
+                                'payment_date'   => $paymentDate,
+                                'payment_method' => $paymentMethod,
+                                'receipt_number' => $receiptNumber,
+                                'remarks'        => 'Service Auto-charge. ' . ($globalServiceTxnId ?: ''),
+                                'created_by'     => $adminUserId,
+                            ]);
+                        }
+                    }
                 }
                 
                 // 4. Send Email if requested
@@ -435,22 +615,25 @@ class StudentService
         }
 
         $this->db->transaction(function() use ($studentId, $leavingDate, $leavingReason, $student) {
-            // Update student record
+            // Update student record with future or current leaving date
             $this->db->update('students', [
                 'leaving_date' => $leavingDate,
                 'leaving_reason' => $leavingReason
             ], 'student_id = ?', [$studentId]);
 
-            // Disable login
-            if (!empty($student['user_id'])) {
-                $this->db->update('users', ['is_active' => 0], 'user_id = ?', [(int)$student['user_id']]);
-            }
+            // If the leaving date is today or in the past, instantly deactivate them
+            if (strtotime($leavingDate) <= strtotime(date('Y-m-d'))) {
+                // Disable login
+                if (!empty($student['user_id'])) {
+                    $this->db->update('users', ['is_active' => 0], 'user_id = ?', [(int)$student['user_id']]);
+                }
 
-            // Update current academic session admission_status
-            if (!empty($student['current_session_id'])) {
-                $this->db->update('student_academics', [
-                    'admission_status' => 'Left'
-                ], 'student_id = ? AND session_id = ?', [$studentId, $student['current_session_id']]);
+                // Update current academic session admission_status
+                if (!empty($student['current_session_id'])) {
+                    $this->db->update('student_academics', [
+                        'admission_status' => 'Left'
+                    ], 'student_id = ? AND session_id = ?', [$studentId, $student['current_session_id']]);
+                }
             }
         });
 

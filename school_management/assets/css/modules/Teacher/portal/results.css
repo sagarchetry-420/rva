@@ -1,0 +1,48 @@
+/* Responsive Table-to-Card Layout for Results */
+@media (max-width: 768px) {
+    .data-table thead { display: none; }
+    .data-table, .data-table tbody, .data-table tr, .data-table td { 
+        display: block; 
+        width: 100%; 
+        box-sizing: border-box; 
+    }
+    .data-table tr {
+        margin-bottom: 15px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 5px;
+        background: #fff;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .data-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: right;
+        border-bottom: 1px dashed #eee;
+        padding: 12px 15px;
+    }
+    .data-table td:last-child { border-bottom: none; }
+    
+    .data-table td::before {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-right: 15px;
+        text-align: left;
+    }
+
+    /* Column Mapping */
+    .data-table td:nth-child(1)::before { content: "Roll No"; }
+    .data-table td:nth-child(2)::before { content: "Student Name"; }
+    .data-table td:nth-child(3)::before { content: "Marks"; }
+    .data-table td:nth-child(4)::before { content: "Absent"; }
+    .data-table td:nth-child(5)::before { content: "Remarks"; }
+    
+    /* Input tweaks for mobile */
+    .data-table td input[type="number"], .data-table td input[type="text"] {
+        max-width: 120px;
+        text-align: right;
+    }
+}

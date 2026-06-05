@@ -30,12 +30,31 @@
                     <input type="text" name="exam_name" required maxlength="150" placeholder="e.g. Unit 1 Math Test">
                 </div>
                 <div class="form-group">
+                    <label>Select Classes *</label>
+                    <label style="display:block; margin-bottom:8px; cursor:pointer; font-weight:bold; color:var(--primary);">
+                        <input type="checkbox" id="selectAllClassesTeacher" onclick="toggleAllClasses(this, 'teacherClassList')"> Select All Classes
+                    </label>
+                    <div id="teacherClassList" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border); padding: 10px; border-radius: 4px;">
+                        <?php if (!empty($teacherClasses)): ?>
+                            <?php foreach ($teacherClasses as $c): ?>
+                                <label class="teacher-class-item" data-class-id="<?php echo $c['class_id']; ?>" style="display:block; margin-bottom:5px; cursor:pointer;">
+                                    <input type="checkbox" name="class_ids[]" value="<?php echo $c['class_id']; ?>" onchange="filterTeacherSubjects()"> 
+                                    <?php echo htmlspecialchars($c['class_name'] . ' ' . $c['section']); ?>
+                                </label>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <p style="color:var(--gray); margin:0;">No classes assigned to you.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <div class="form-group">
                     <label>Subject * <small style="color:var(--gray);">(Class Tests are for one subject only)</small></label>
-                    <select name="subject_id" required>
-                        <option value="">-- Select Subject --</option>
+                    <select name="subject_id" id="testSubjectSelect" required>
+                        <option value="">-- Select Classes First --</option>
                         <?php if (!empty($teacherSubjects)): ?>
                             <?php foreach ($teacherSubjects as $s): ?>
-                                <option value="<?php echo $s['subject_id']; ?>">
+                                <option value="<?php echo $s['subject_id']; ?>" style="display:none;" disabled>
                                     <?php echo htmlspecialchars($s['subject_name'] . ' (' . $s['subject_code'] . ')'); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -62,24 +81,7 @@
                         <input type="number" name="pass_marks" required value="17" min="0" max="200">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Assign to Your Classes *</label>
-                    <label style="display:block; margin-bottom:8px; cursor:pointer; font-weight:bold; color:var(--primary);">
-                        <input type="checkbox" id="selectAllClassesTeacher" onclick="toggleAllClasses(this, 'teacherClassList')"> Select All Classes
-                    </label>
-                    <div id="teacherClassList" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border); padding: 10px; border-radius: 4px;">
-                        <?php if (!empty($teacherClasses)): ?>
-                            <?php foreach ($teacherClasses as $c): ?>
-                                <label style="display:block; margin-bottom:5px; cursor:pointer;">
-                                    <input type="checkbox" name="class_ids[]" value="<?php echo $c['class_id']; ?>"> 
-                                    <?php echo htmlspecialchars($c['class_name'] . ' ' . $c['section']); ?>
-                                </label>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <p style="color:var(--gray); margin:0;">No classes assigned to you.</p>
-                        <?php endif; ?>
-                    </div>
-                </div>
+
                 <div class="alert alert-info" style="margin-top:15px; padding:10px;">
                     <i class="fas fa-info-circle"></i> Class Tests require Administrator approval before results can be finalized.
                 </div>
@@ -115,7 +117,7 @@
                 <?php foreach ($exams as $exam): ?>
                     <tr>
                         <td><strong><?php echo htmlspecialchars($exam['exam_name']); ?></strong></td>
-                        <td><span class="badge" style="background: var(--primary-light, #e3f2fd); padding: 3px 8px; border-radius: 4px;"><?php echo htmlspecialchars($exam['exam_type']); ?></span></td>
+                        <td><span class="badge" style="background: var(--primary-light, #e3f2fd); color: white; padding: 3px 8px; border-radius: 4px;"><?php echo htmlspecialchars($exam['exam_type']); ?></span></td>
                         <td><?php echo date('d M Y', strtotime($exam['start_date'])); ?></td>
                         <td><?php echo date('d M Y', strtotime($exam['end_date'])); ?></td>
                         <td>
@@ -170,16 +172,72 @@
 <?php endif; ?>
 
 <script>
+const subjectClassMap = <?php echo json_encode($subjectClassMap ?? []); ?>;
+
+function filterTeacherSubjects() {
+    const classCheckboxes = document.querySelectorAll('input[name="class_ids[]"]:checked');
+    const subjectSelect = document.getElementById('testSubjectSelect');
+    
+    if (classCheckboxes.length === 0) {
+        // If no classes selected, hide and disable all subjects
+        Array.from(subjectSelect.options).forEach(opt => {
+            if (opt.value !== "") {
+                opt.style.display = 'none';
+                opt.disabled = true;
+            } else {
+                opt.text = "-- Select Classes First --";
+            }
+        });
+        subjectSelect.value = "";
+        return;
+    }
+    
+    // Check if a subject is taught in ALL selected classes
+    const selectedClassIds = Array.from(classCheckboxes).map(cb => String(cb.value));
+    
+    let hasValidSubject = false;
+    Array.from(subjectSelect.options).forEach(opt => {
+        if (opt.value === "") {
+            opt.text = "-- Select Subject --";
+            return;
+        }
+        
+        const subjectId = opt.value;
+        const allowedClasses = (subjectClassMap[subjectId] || []).map(String);
+        
+        const isValid = selectedClassIds.every(cid => allowedClasses.includes(cid));
+        
+        if (isValid) {
+            opt.style.display = 'block';
+            opt.disabled = false;
+            hasValidSubject = true;
+        } else {
+            opt.style.display = 'none';
+            opt.disabled = true;
+            if (subjectSelect.value === subjectId) {
+                subjectSelect.value = ""; // Deselect if invalidated
+            }
+        }
+    });
+    
+    if (!hasValidSubject) {
+        subjectSelect.options[0].text = "-- No common subjects for selected classes --";
+    }
+}
+
 function toggleAllClasses(masterCheckbox, containerId) {
     var container = document.getElementById(containerId);
-    var checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    var checkboxes = container.querySelectorAll('input[name="class_ids[]"]');
     checkboxes.forEach(function(cb) {
         cb.checked = masterCheckbox.checked;
     });
+    filterTeacherSubjects();
 }
 
 // Sync start date with end date min
 document.addEventListener('DOMContentLoaded', function() {
+    filterTeacherSubjects(); // Run once on load to set initial state
+    
     var startDate = document.getElementById('teacherExamStartDate');
     var endDate = document.getElementById('teacherExamEndDate');
     if (startDate && endDate) {

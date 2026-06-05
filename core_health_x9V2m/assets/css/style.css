@@ -1,0 +1,83 @@
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: #0f172a;
+    color: #f8fafc;
+}
+.layout {
+    display: flex;
+    min-height: 100vh;
+}
+.sidebar {
+    width: 250px;
+    background: #1e293b;
+    border-right: 1px solid #334155;
+    padding: 20px;
+}
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 40px;
+}
+.logo {
+    width: 40px; height: 40px; background: #0ea5e9; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px;
+}
+nav a {
+    display: block; color: #94a3b8; text-decoration: none; padding: 12px 15px;
+    border-radius: 8px; margin-bottom: 5px; transition: 0.2s;
+}
+nav a:hover, nav a.active {
+    background: #334155; color: white;
+}
+nav a.logout { color: #ef4444; margin-top: 30px; }
+
+.content {
+    flex: 1; padding: 40px; overflow-y: auto;
+}
+.topbar {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;
+}
+h1 { margin: 0; font-weight: 600; font-size: 1.5rem; }
+.status-badge {
+    padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+    background: #10b981; color: #022c22;
+}
+.metrics-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;
+}
+.metric-card {
+    background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155;
+}
+.metric-card h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: #94a3b8; font-weight: 500; }
+.metric-card .value { margin: 0; font-size: 1.5rem; font-weight: 600; color: white; }
+.progress { background: #334155; height: 6px; border-radius: 3px; margin-top: 15px; overflow: hidden; }
+.progress-bar { background: #0ea5e9; height: 100%; width: 0%; transition: width 0.5s; }
+.progress-bar.danger { background: #ef4444; }
+
+.charts-container {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px;
+}
+.chart-box {
+    background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155;
+}
+.chart-box h3 { margin: 0 0 20px 0; font-size: 1rem; }
+
+.logs-container {
+    background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155;
+    overflow-x: auto;
+}
+.logs-table {
+    width: 100%; border-collapse: collapse; text-align: left;
+}
+.logs-table th { padding: 12px; color: #94a3b8; font-size: 0.85rem; border-bottom: 1px solid #334155; }
+.logs-table td { padding: 12px; font-size: 0.85rem; border-bottom: 1px solid #334155; color: #cbd5e1; }
+.logs-table tr:last-child td { border-bottom: none; }
+.badge-type { background: #475569; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; }
+
+.pagination { display: flex; gap: 15px; justify-content: flex-end; align-items: center; margin-top: 20px; }
+.pagination .btn { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: 500;}
+.pagination .btn:hover:not(:disabled) { background: #475569; }
+.pagination .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pagination #pageInfo { font-size: 0.85rem; color: #94a3b8; }

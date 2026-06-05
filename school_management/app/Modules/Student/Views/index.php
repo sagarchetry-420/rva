@@ -45,22 +45,31 @@ tbody tr:nth-last-child(3) .action-menu-content { top: auto; bottom: 100%; }
             </select>
         </div>
     </form>
-    <form method="POST" action="<?php echo moduleUrl('admin', 'students'); ?>" class="no-auto-validate" style="display:flex; gap:10px; align-items: center;">
+    <form id="exportForm" method="POST" action="<?php echo moduleUrl('admin', 'students'); ?>" class="no-auto-validate" style="display:flex; gap:10px; align-items: center;" onsubmit="return validateDownload()">
         <?php echo csrf_field(); ?>
         <input type="hidden" name="action" value="export_csv">
-        <input type="hidden" name="filter_class" value="<?php echo $filterClass; ?>">
+        <input type="hidden" name="filter_class" value="<?php echo $filterClass; ?>" id="export_filter_class">
         <button type="submit" class="btn btn-success"><i class="fas fa-file-csv"></i> Download CSV</button>
-        <button type="button" class="btn btn-danger" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+        <button type="button" class="btn btn-danger" onclick="submitPdfExport()"><i class="fas fa-file-pdf"></i> Download PDF</button>
     </form>
 </div>
 
 <!-- Students Table -->
 <div class="table-container" id="printableTable">
     <div class="table-header">
-        <h2>All Students (<?php echo count($students); ?>)</h2>
-        <div class="search-box no-print" data-html2canvas-ignore="true">
-            <input type="text" id="searchInput" placeholder="Search students..." onkeyup="searchTable('searchInput','dataTable')">
-        </div>
+        <h2 style="display: flex; align-items: center;">All Students <span style="background-color: #800000; color: white; border-radius: 16px; min-width: 28px; height: 28px; padding: 0 8px; font-size: 15px; font-weight: 600; margin-left: 10px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(128,0,0,0.25);"><?php echo $pagination['total'] ?? count($students); ?></span></h2>
+        <form method="GET" action="<?php echo moduleUrl('admin', 'students'); ?>" class="search-box no-print" data-html2canvas-ignore="true" style="margin: 0; display: flex;">
+            <input type="hidden" name="module" value="admin">
+            <input type="hidden" name="action" value="students">
+            <?php if ($filterClass): ?>
+                <input type="hidden" name="class_id" value="<?php echo $filterClass; ?>">
+            <?php endif; ?>
+            <input type="text" name="search" placeholder="Search students..." 
+                   pattern="[a-zA-Z0-9\s]+" title="Only letters and numbers allowed"
+                   oninput="this.value = this.value.replace(/[^a-zA-Z0-9\s]/g, '')"
+                   value="<?php echo htmlspecialchars($searchQuery ?? ''); ?>">
+            <button type="submit" class="btn btn-primary" style="margin-left: 5px; padding: 6px 12px; border-radius: 4px;"><i class="fas fa-search"></i></button>
+        </form>
     </div>
     <table class="data-table" id="dataTable">
         <thead>
@@ -71,7 +80,7 @@ tbody tr:nth-last-child(3) .action-menu-content { top: auto; bottom: 100%; }
                 <th>Gender</th>
                 <th>Email</th>
                 <th>Parent</th>
-                <th class="no-print" data-html2canvas-ignore="true">Actions</th>
+                <th class="no-print" data-html2canvas-ignore="true">Action</th>
             </tr>
         </thead>
         <tbody>
@@ -99,25 +108,8 @@ tbody tr:nth-last-child(3) .action-menu-content { top: auto; bottom: 100%; }
                 <td><?php echo htmlspecialchars($s['gender'] ?? ''); ?></td>
                 <td><?php echo htmlspecialchars($s['email'] ?? ''); ?></td>
                 <td><?php echo htmlspecialchars($s['parent_name'] ?? ''); ?></td>
-                <td class="actions-cell no-print" data-html2canvas-ignore="true" style="overflow: visible; white-space: nowrap;">
-                    <div style="display: inline-flex; align-items: center; gap: 5px;">
-                        <button class="btn btn-sm btn-info" onclick='openEditModal(<?php echo htmlspecialchars(json_encode($s)); ?>)' style="border-radius: 4px;"><i class="fas fa-edit"></i> Edit</button>
-                        <div class="action-menu">
-                            <button class="action-menu-btn"><i class="fas fa-ellipsis-v"></i></button>
-                            <div class="action-menu-content">
-                                <button onclick='viewDetails(<?php echo htmlspecialchars(json_encode($s)); ?>)'><i class="fas fa-eye" style="width: 20px;"></i> View Details</button>
-                            <button onclick='openServicesModal(<?php echo $s['student_id']; ?>)'><i class="fas fa-hand-holding-usd" style="width: 20px;"></i> Services</button>
-                            <button style="color: #f97316;" onclick='openWithdrawModal(<?php echo $s['student_id']; ?>)'><i class="fas fa-sign-out-alt" style="width: 20px;"></i> TC / Withdraw</button>
-                            <hr style="margin: 5px 0; border: none; border-top: 1px solid var(--border);">
-                            <form method="POST" action="<?php echo moduleUrl('admin', 'students'); ?>" onsubmit="return confirmDelete('Delete this student? This action cannot be undone.')">
-                                <?php echo csrf_field(); ?>
-                                <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="student_id" value="<?php echo $s['student_id']; ?>">
-                                <button type="submit" class="text-danger"><i class="fas fa-trash" style="width: 20px;"></i> Delete</button>
-                            </form>
-                        </div>
-                    </div>
-                    </div>
+                <td class="no-print" data-html2canvas-ignore="true">
+                    <a href="<?php echo moduleUrl('admin', 'student_details', ['id' => $s['student_id']]); ?>" class="btn btn-sm btn-primary" style="border-radius: 4px;"><i class="fas fa-eye"></i> View Profile</a>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -196,7 +188,7 @@ tbody tr:nth-last-child(3) .action-menu-content { top: auto; bottom: 100%; }
                 <div class="form-row">
                     <div class="form-group">
                         <label>Parent Name</label>
-                        <input type="text" name="parent_name" maxlength="100">
+                        <input type="text" name="parent_name" pattern="[a-zA-Z\s.]+" title="Letters, spaces, and dots only" maxlength="100">
                     </div>
                     <div class="form-group">
                         <label>Parent Phone</label>
@@ -212,207 +204,59 @@ tbody tr:nth-last-child(3) .action-menu-content { top: auto; bottom: 100%; }
     </div>
 </div>
 
-<!-- Edit Student Modal -->
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Edit Student</h2>
-            <span class="close" onclick="closeModal('editModal')">&times;</span>
-        </div>
-        <form method="POST" action="<?php echo moduleUrl('admin', 'students'); ?>">
-            <?php echo csrf_field(); ?>
-            <input type="hidden" name="action" value="edit">
-            <input type="hidden" name="student_id" id="edit_student_id">
-            <div class="modal-body">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>First Name *</label>
-                        <input type="text" name="first_name" id="edit_first_name" required pattern="[a-zA-Z\s]+" maxlength="50">
-                    </div>
-                    <div class="form-group">
-                        <label>Last Name *</label>
-                        <input type="text" name="last_name" id="edit_last_name" required pattern="[a-zA-Z\s]+" maxlength="50">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Date of Birth</label>
-                        <input type="date" name="date_of_birth" id="edit_dob" max="<?php echo $today; ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>Gender *</label>
-                        <select name="gender" id="edit_gender" required>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Class *</label>
-                        <select name="class_id" id="edit_class_id" required>
-                            <?php foreach ($classes as $c): ?>
-                            <option value="<?php echo $c['class_id']; ?>"><?php echo htmlspecialchars($c['class_name'] . ' ' . ($c['section'] ?? '')); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Roll Number</label>
-                        <input type="text" name="roll_number" id="edit_roll_number" maxlength="20">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Email Address *</label>
-                        <input type="email" name="email" id="edit_email" required maxlength="150">
-                    </div>
-                    <div class="form-group">
-                        <label>Phone</label>
-                        <input type="text" name="phone" id="edit_phone" pattern="[0-9]{10}" maxlength="10">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Parent Name</label>
-                        <input type="text" name="parent_name" id="edit_parent_name" maxlength="100">
-                    </div>
-                    <div class="form-group">
-                        <label>Parent Phone</label>
-                        <input type="text" name="parent_phone" id="edit_parent_phone" pattern="[0-9]{10}" maxlength="10">
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- View Student Modal -->
-<div id="viewModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Student Details</h2>
-            <span class="close" onclick="closeModal('viewModal')">&times;</span>
-        </div>
-        <div class="modal-body" id="viewModalBody"></div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('viewModal')">Close</button>
-        </div>
-    </div>
-</div>
-
 <!-- Import Modal -->
 <div id="importModal" class="modal">
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header">
-            <h2>Bulk Import Students</h2>
-            <span class="close" onclick="closeModal('importModal')">&times;</span>
+    <div class="modal-content" style="max-width: 550px; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; max-height: 90vh;">
+        <div class="modal-header" style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 20px 24px; flex-shrink: 0;">
+            <h2 style="margin: 0; color: #1e293b; font-size: 20px;"><i class="fas fa-file-import" style="color: #3b82f6; margin-right: 8px;"></i> Bulk Import Students</h2>
+            <span class="close" onclick="closeModal('importModal')" style="font-size: 24px; color: #64748b; cursor: pointer;">&times;</span>
         </div>
-        <form method="POST" action="<?php echo moduleUrl('admin', 'students'); ?>" enctype="multipart/form-data">
+        <form id="importForm" method="POST" action="<?php echo moduleUrl('admin', 'students'); ?>" enctype="multipart/form-data" onsubmit="return validateImportFile()" style="display: flex; flex-direction: column; overflow: hidden;">
             <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="import_csv">
-            <div class="modal-body">
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Assign to Class *</label>
-                    <select name="class_id" required>
-                        <option value="">Select Class</option>
+            <div class="modal-body" style="padding: 24px; overflow-y: auto; flex-grow: 1;">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; color: #475569; display: block; margin-bottom: 8px;">Assign to Class *</label>
+                    <select name="class_id" required style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background-color: #fff;">
+                        <option value="">-- Select Destination Class --</option>
                         <?php foreach ($classes as $c): ?>
                         <option value="<?php echo $c['class_id']; ?>"><?php echo htmlspecialchars($c['class_name'] . ' ' . ($c['section'] ?? '')); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label>CSV File *</label>
-                    <input type="file" name="csv_file" accept=".csv" required style="padding: 10px 0;">
-                    <small>
-                        <button type="button" onclick="document.getElementById('downloadTemplateForm').submit();" style="background:none;border:none;color:#3b82f6;text-decoration:underline;cursor:pointer;padding:0;font-size:inherit;">
-                            <i class="fas fa-download"></i> Download CSV Template
-                        </button>
-                    </small>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; color: #475569; display: block; margin-bottom: 8px;">Upload Data File *</label>
+                    <div style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 30px; text-align: center; background-color: #f8fafc; transition: all 0.3s;" id="dropZone">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 32px; color: #94a3b8; margin-bottom: 10px;"></i>
+                        <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px;">Drag and drop your .csv file here or click to browse</p>
+                        <input type="file" name="csv_file" id="csv_file_input" accept=".csv" required style="display: block; margin: 0 auto; color: #475569;">
+                    </div>
                 </div>
-                <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" name="send_emails" id="send_emails" value="1" checked>
-                    <label for="send_emails" style="margin: 0;">Send login credentials via email automatically</label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('importModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Import</button>
-            </div>
-        </form>
-    </div>
-</div>
 
-<!-- Assign Services Modal -->
-<div id="servicesModal" class="modal">
-    <div class="modal-content" style="max-width: 400px;">
-        <div class="modal-header">
-            <h2>Assign Services</h2>
-            <span class="close" onclick="closeModal('servicesModal')">&times;</span>
-        </div>
-        <form method="POST" action="<?php echo moduleUrl('admin', 'students'); ?>">
-            <?php echo csrf_field(); ?>
-            <input type="hidden" name="action" value="assign_services">
-            <input type="hidden" name="student_id" id="services_student_id">
-            <div class="modal-body">
-                <p style="margin-bottom:15px; color:var(--gray);">Select the services this student will be enrolled in. Note: Newly assigned services will automatically generate an invoice.</p>
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    <?php if (!empty($services)): ?>
-                        <?php foreach ($services as $srv): ?>
-                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:10px; border:1px solid #e5e7eb; border-radius:5px;">
-                            <input type="checkbox" name="service_ids[]" value="<?php echo $srv['service_id']; ?>">
-                            <span><?php echo htmlspecialchars($srv['service_name']); ?> <br><small style="color:var(--gray);"><?php echo formatMoney($srv['fee_amount'] ?? 0); ?></small></span>
-                        </label>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p style="color:var(--danger);">No active services found. Add services in the Fee module first.</p>
-                    <?php endif; ?>
+                <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #1e40af; font-size: 14px;"><i class="fas fa-info-circle"></i> Use the official template for accurate imports</span>
+                    <button type="button" onclick="document.getElementById('downloadTemplateForm').submit();" class="btn btn-sm" style="background-color: #fff; color: #2563eb; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-download"></i> Template
+                    </button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('servicesModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Assignments</button>
-            </div>
-        </form>
-    </div>
-</div>
 
-<!-- Withdraw Student Modal -->
-<div id="withdrawModal" class="modal">
-    <div class="modal-content" style="max-width: 400px;">
-        <div class="modal-header">
-            <h2>TC / Withdraw Student</h2>
-            <span class="close" onclick="closeModal('withdrawModal')">&times;</span>
-        </div>
-        <form method="POST" action="<?php echo moduleUrl('admin', 'students'); ?>">
-            <?php echo csrf_field(); ?>
-            <input type="hidden" name="action" value="withdraw">
-            <input type="hidden" name="student_id" id="withdraw_student_id">
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Leaving Date *</label>
-                    <input type="date" name="leaving_date" value="<?php echo date('Y-m-d'); ?>" required max="<?php echo date('Y-m-d'); ?>">
+                <div class="form-group" style="background-color: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <input type="checkbox" name="send_emails" id="send_emails" value="1" checked style="width: 18px; height: 18px; cursor: pointer;">
+                        <label for="send_emails" style="margin: 0; font-weight: 600; color: #1e293b; cursor: pointer;">Automatically generate and email login credentials</label>
+                    </div>
+                    <div style="padding-left: 28px;">
+                        <p style="margin: 0; font-size: 13px; color: #64748b; line-height: 1.5;">
+                            <i class="fas fa-exclamation-triangle" style="color: #eab308; margin-right: 4px;"></i>
+                            <strong>Helpful Tip:</strong> To make sure every student successfully receives their welcome email, please only upload a maximum of <strong>200 to 300 students per day</strong>. If you try to add 1,000 students all at once, email companies (like Gmail or Yahoo) will think you are sending spam and will block the emails.
+                        </p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Reason *</label>
-                    <select name="leaving_reason" required>
-                        <option value="">Select Reason</option>
-                        <option value="Passed Out">Passed Out</option>
-                        <option value="TC Issued">TC Issued</option>
-                        <option value="Withdrawn">Withdrawn</option>
-                        <option value="Expelled">Expelled</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <p style="font-size:12px; color:var(--gray); margin-top:10px;">Warning: Withdrawing a student will disable their login. Historical records (fees, exams) will be preserved.</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('withdrawModal')">Cancel</button>
-                <button type="submit" class="btn btn-danger" style="background:#f97316;"><i class="fas fa-sign-out-alt"></i> Withdraw Student</button>
+            <div class="modal-footer" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 24px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn" style="background-color: #fff; border: 1px solid #cbd5e1; color: #475569;" onclick="closeModal('importModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="importSubmitBtn"><i class="fas fa-upload"></i> Start Import</button>
             </div>
         </form>
     </div>
@@ -425,49 +269,6 @@ tbody tr:nth-last-child(3) .action-menu-content { top: auto; bottom: 100%; }
 </form>
 
 <script>
-function openWithdrawModal(studentId) {
-    document.getElementById('withdraw_student_id').value = studentId;
-    openModal('withdrawModal');
-}
-
-function openEditModal(s) {
-    document.getElementById('edit_student_id').value = s.student_id;
-    document.getElementById('edit_first_name').value = s.first_name || '';
-    document.getElementById('edit_last_name').value = s.last_name || '';
-    document.getElementById('edit_dob').value = s.date_of_birth || '';
-    document.getElementById('edit_gender').value = s.gender || 'Male';
-    document.getElementById('edit_class_id').value = s.current_class_id || '';
-    document.getElementById('edit_roll_number').value = s.roll_number || '';
-    document.getElementById('edit_email').value = s.email || '';
-    document.getElementById('edit_phone').value = s.phone || '';
-    document.getElementById('edit_parent_name').value = s.parent_name || '';
-    document.getElementById('edit_parent_phone').value = s.parent_phone || '';
-    openModal('editModal');
-}
-
-function openServicesModal(studentId) {
-    document.getElementById('services_student_id').value = studentId;
-    // Note: We don't have the assigned services loaded in this quick view, 
-    // ideally an AJAX request would fetch checked services first. But for now, user re-checks them.
-    openModal('servicesModal');
-}
-
-function viewDetails(s) {
-    document.getElementById('viewModalBody').innerHTML = `
-        <table class="detail-table" style="width:100%;border-collapse:collapse;">
-            <tr><th style="text-align:left;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;width:35%;">Name</th><td style="padding:10px;border:1px solid #e5e7eb;">${s.first_name || ''} ${s.last_name || ''}</td></tr>
-            <tr><th style="text-align:left;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;">Username</th><td style="padding:10px;border:1px solid #e5e7eb;">@${s.username || 'N/A'}</td></tr>
-            <tr><th style="text-align:left;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;">Roll Number</th><td style="padding:10px;border:1px solid #e5e7eb;">${s.roll_number || '—'}</td></tr>
-            <tr><th style="text-align:left;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;">Class</th><td style="padding:10px;border:1px solid #e5e7eb;">${s.class_name || ''} ${s.section || ''}</td></tr>
-            <tr><th style="text-align:left;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;">Gender</th><td style="padding:10px;border:1px solid #e5e7eb;">${s.gender || ''}</td></tr>
-            <tr><th style="text-align:left;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;">Date of Birth</th><td style="padding:10px;border:1px solid #e5e7eb;">${s.date_of_birth || '—'}</td></tr>
-            <tr><th style="text-align:left;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;">Email</th><td style="padding:10px;border:1px solid #e5e7eb;">${s.email || '—'}</td></tr>
-            <tr><th style="text-align:left;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;">Phone</th><td style="padding:10px;border:1px solid #e5e7eb;">${s.phone || '—'}</td></tr>
-            <tr><th style="text-align:left;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;">Parent Name</th><td style="padding:10px;border:1px solid #e5e7eb;">${s.parent_name || '—'}</td></tr>
-            <tr><th style="text-align:left;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;">Parent Phone</th><td style="padding:10px;border:1px solid #e5e7eb;">${s.parent_phone || '—'}</td></tr>
-        </table>`;
-    openModal('viewModal');
-}
 
 function autoGenerateRoll(prefix) {
     const classSelect = document.getElementById(prefix + 'ClassSelect');
@@ -484,9 +285,73 @@ function autoGenerateRoll(prefix) {
     });
 }
 
-function downloadPDF() {
-    const el = document.getElementById('printableTable');
-    const opt = { margin: 0.5, filename: 'students_list.pdf', image: {type:'jpeg',quality:0.98}, html2canvas: {scale:2}, jsPDF: {unit:'in',format:'a4',orientation:'landscape'} };
-    html2pdf().set(opt).from(el).save();
+function validateDownload() {
+    const filterClass = document.getElementById('export_filter_class').value;
+    if (!filterClass || filterClass === "0") {
+        alert("Please select a specific Class from the dropdown before downloading.");
+        return false;
+    }
+    return true;
+}
+
+function submitPdfExport() {
+    if (!validateDownload()) return;
+    const form = document.getElementById('exportForm');
+    const originalAction = form.elements['action'].value;
+    form.elements['action'].value = 'export_pdf';
+    form.submit();
+    // Revert back so CSV works next time
+    setTimeout(() => { form.elements['action'].value = originalAction; }, 100);
+}
+
+function validateImportFile() {
+    const fileInput = document.getElementById('csv_file_input');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert("Please select a file to import.");
+        return false;
+    }
+    
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert("Security Block: Only strict .csv files are allowed to be imported.");
+        fileInput.value = ''; // clear
+        return false;
+    }
+
+    // Replace footer with progress bar UI
+    const footer = document.querySelector('#importModal .modal-footer');
+    footer.style.display = 'none';
+
+    const progressContainer = document.createElement('div');
+    progressContainer.style.padding = '20px 24px';
+    progressContainer.style.backgroundColor = '#f8fafc';
+    progressContainer.style.borderTop = '1px solid #e2e8f0';
+    progressContainer.style.textAlign = 'center';
+
+    progressContainer.innerHTML = `
+        <p style="margin: 0 0 12px 0; font-weight: bold; color: #1e293b; font-size: 15px;">
+            <i class="fas fa-spinner fa-spin" style="color: #800000; margin-right: 5px;"></i> Uploading & Processing Students...
+        </p>
+        <div style="width: 100%; height: 12px; background-color: #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 12px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);">
+            <div id="uploadProgressBar" style="width: 0%; height: 100%; background-color: #800000; transition: width 0.5s ease-out; border-radius: 6px;"></div>
+        </div>
+        <p style="margin: 0; color: #dc2626; font-size: 13px; font-weight: 600;">
+            <i class="fas fa-exclamation-circle"></i> Please DO NOT click anywhere, refresh, or go back until finished!
+        </p>
+    `;
+
+    document.getElementById('importForm').appendChild(progressContainer);
+
+    // Animate progress bar simulating upload & email sending
+    const progressBar = document.getElementById('uploadProgressBar');
+    let progress = 0;
+    setInterval(() => {
+        // Asymptotically approach 95% while waiting for server
+        progress += (95 - progress) * 0.05;
+        progressBar.style.width = progress + '%';
+    }, 500);
+
+    return true;
 }
 </script>

@@ -46,9 +46,8 @@
     <table>
         <thead>
             <tr>
-                <th width="5%">#</th>
-                <th width="15%">App ID</th>
-                <th width="25%">Student Name</th>
+                <th width="10%">#</th>
+                <th width="35%">Student Name</th>
                 <th width="20%">Class</th>
                 <th width="35%">Parent/Contact</th>
             </tr>
@@ -57,7 +56,6 @@
             <?php $i = 1; foreach ($meritList as $app): ?>
                 <tr>
                     <td><?php echo $i++; ?></td>
-                    <td>APP-<?php echo str_pad($app['id'], 4, '0', STR_PAD_LEFT); ?></td>
                     <td><?php echo htmlspecialchars($app['student_name']); ?></td>
                     <td><?php echo htmlspecialchars($app['class_name'] . ' ' . $app['section']); ?></td>
                     <td><?php echo htmlspecialchars($app['parent_name'] . ' (' . $app['phone'] . ')'); ?></td>

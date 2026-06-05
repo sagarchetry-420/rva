@@ -32,13 +32,23 @@ class PublicAdmissionController extends \Controller
         if (!$isOpen || $deadlinePassed) {
             $this->render('Modules/Admission/Views/public_admission_closed', [
                 'pageTitle' => 'Admissions Closed',
-                'settings'  => $settings
+                'settings'  => $settings,
+                'moduleCss' => ['Admission/public_admission_closed.css']
             ], 'auth');
             return;
         }
 
-        // Get classes for the dropdown
-        $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name, section");
+        // Get classes for the dropdown (Option 1: Hide sections, group by class name)
+        $allClasses = $this->db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name, section");
+        $classes = [];
+        $seenClassNames = [];
+        
+        foreach ($allClasses as $cls) {
+            if (!in_array($cls['class_name'], $seenClassNames)) {
+                $classes[] = $cls;
+                $seenClassNames[] = $cls['class_name'];
+            }
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->validateCsrf();
@@ -61,7 +71,7 @@ class PublicAdmissionController extends \Controller
             $parentPhone = trim($this->input('parent_phone', ''));
             $address     = trim($this->input('address', ''));
 
-            if (empty($firstName) || empty($lastName) || empty($classId) || empty($phone) || empty($dob) || empty($gender) || empty($parentName) || empty($parentPhone)) {
+            if (empty($firstName) || empty($lastName) || empty($classId) || empty($phone) || empty($email) || empty($dob) || empty($gender) || empty($parentName) || empty($parentPhone)) {
                 $this->flash('error', 'Please fill in all required fields.');
                 $this->redirect(moduleUrl('public', 'admission'));
             }
@@ -76,18 +86,15 @@ class PublicAdmissionController extends \Controller
                 $this->redirect(moduleUrl('public', 'admission'));
             }
 
-            // Prevent duplicate submissions
-            $duplicateCheck = $this->db->fetch("SELECT * FROM student_applications WHERE phone = ?", [$phone]);
-            if ($duplicateCheck) {
-                $this->flash('error', 'An application with this phone number has already been submitted.');
-                $this->redirect(moduleUrl('public', 'admission'));
-            }
-
+            // Prevent duplicate submissions by email across both applications and existing users
             if (!empty($email)) {
-                $emailCheck = $this->db->fetch("SELECT * FROM student_applications WHERE email = ?", [$email]);
-                if ($emailCheck) {
-                    $this->flash('error', 'An application with this email address has already been submitted.');
+                $emailCheckApp = $this->db->fetch("SELECT * FROM student_applications WHERE TRIM(LOWER(email)) = TRIM(LOWER(?))", [$email]);
+                $emailCheckUser = $this->db->fetch("SELECT * FROM users WHERE TRIM(LOWER(email)) = TRIM(LOWER(?))", [$email]);
+                
+                if ($emailCheckApp || $emailCheckUser) {
+                    $this->flash('error', 'An application or account with this email address has already been registered.');
                     $this->redirect(moduleUrl('public', 'admission'));
+                    return;
                 }
             }
             
@@ -101,22 +108,36 @@ class PublicAdmissionController extends \Controller
                 $fileCount = count($_FILES['documents']['name']);
                 for ($i = 0; $i < $fileCount; $i++) {
                     if ($_FILES['documents']['error'][$i] === UPLOAD_ERR_OK) {
-                        $fileName = time() . '_' . $i . '_' . preg_replace("/[^a-zA-Z0-9.-]/", "_", basename($_FILES['documents']['name'][$i]));
-                        $targetFile = $uploadDir . $fileName;
-                        
                         if ($_FILES['documents']['size'][$i] > 5 * 1024 * 1024) {
                             $this->flash('error', 'One of the documents exceeds the 5MB limit.');
                             $this->redirect(moduleUrl('public', 'admission'));
                         }
                         
-                        $ext = strtolower(pathinfo($targetFile, PATHINFO_EXTENSION));
-                        if (!in_array($ext, ['pdf', 'jpg', 'jpeg', 'png'])) {
-                            $this->flash('error', 'Invalid document format detected. Only PDF, JPG, and PNG are allowed.');
+                        $originalName = $_FILES['documents']['name'][$i];
+                        $tmpName = $_FILES['documents']['tmp_name'][$i];
+                        
+                        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                        
+                        // Strict MIME checking to detect fake extensions
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $mime = finfo_file($finfo, $tmpName);
+                        finfo_close($finfo);
+                        
+                        $validMimes = ['application/pdf', 'image/jpeg', 'image/png'];
+                        
+                        if (!in_array($ext, ['pdf', 'jpg', 'jpeg', 'png']) || !in_array($mime, $validMimes)) {
+                            // Immediately delete the temp file if malicious
+                            @unlink($tmpName);
+                            $this->flash('error', 'Security Error: Invalid or malicious document format detected.');
                             $this->redirect(moduleUrl('public', 'admission'));
                         }
+                        
+                        // Generate a completely safe, random filename (prevent double extension attacks like shell.php.jpg)
+                        $safeFileName = md5(time() . uniqid() . $i) . '.' . $ext;
+                        $targetFile = $uploadDir . $safeFileName;
 
-                        if (move_uploaded_file($_FILES['documents']['tmp_name'][$i], $targetFile)) {
-                            $documentPaths[] = 'uploads/applications/' . $fileName;
+                        if (move_uploaded_file($tmpName, $targetFile)) {
+                            $documentPaths[] = 'uploads/applications/' . $safeFileName;
                         }
                     }
                 }
@@ -155,7 +176,8 @@ class PublicAdmissionController extends \Controller
         $this->render('Modules/Admission/Views/public_admission', [
             'pageTitle' => 'Student Admission Form',
             'classes'   => $classes,
-            'settings'  => $settings
+            'settings'  => $settings,
+            'moduleCss' => ['Admission/public_admission.css']
         ], 'auth');
     }
 
@@ -189,5 +211,46 @@ class PublicAdmissionController extends \Controller
             'pageTitle' => 'Application Receipt',
             'application' => $application
         ]);
+    }
+    public function track(): void
+    {
+        $application = null;
+        $error = null;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $appIdInput = trim($this->input('app_id', ''));
+            $phone = trim($this->input('phone', ''));
+            $dob = trim($this->input('dob', ''));
+
+            if (empty($appIdInput) || empty($phone) || empty($dob)) {
+                $error = 'Please provide Application ID, Phone Number, and Date of Birth.';
+            } else {
+                // Extract numeric ID if APP- prefix is used
+                $numericId = preg_replace('/[^0-9]/', '', $appIdInput);
+                if (empty($numericId)) {
+                    $error = 'Invalid Application ID format.';
+                } else {
+                    $numericId = (int)$numericId;
+                    $application = $this->db->fetch(
+                        "SELECT a.*, c.class_name, c.section 
+                         FROM student_applications a 
+                         LEFT JOIN classes c ON a.class_id = c.class_id 
+                         WHERE a.id = ? AND a.phone = ? AND a.date_of_birth = ?",
+                        [$numericId, $phone, $dob]
+                    );
+
+                    if (!$application) {
+                        $error = 'No application found with the provided details.';
+                    }
+                }
+            }
+        }
+
+        $this->render('Modules/Admission/Views/track_application', [
+            'pageTitle' => 'Track Application Status',
+            'application' => $application,
+            'error' => $error,
+            'moduleCss' => ['Admission/track_application.css']
+        ], 'auth');
     }
 }

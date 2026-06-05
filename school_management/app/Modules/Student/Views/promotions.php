@@ -35,9 +35,11 @@
 
 <?php 
 $selectedClassName = '';
+$selectedSection = '';
 foreach ($classes as $c) {
     if ($c['class_id'] == $selectedClassId) {
         $selectedClassName = $c['class_name'];
+        $selectedSection = isset($c['section']) ? trim($c['section']) : '';
         break;
     }
 }
@@ -60,8 +62,64 @@ $isHighestClass = strpos(strtolower($selectedClassName), '12') !== false;
                     <label>Target Class (Promote To) *</label>
                     <select name="target_class_id" required class="form-control" style="max-width:300px;">
                         <option value="">-- Select Target Class --</option>
+                        <?php 
+                        $currentLevel = 0;
+                        if (preg_match('/\d+/', $selectedClassName, $matches)) {
+                            $currentLevel = (int)$matches[0];
+                        }
+                        $nextLevel = $currentLevel + 1;
+                        
+                        // Helper to extract stream keywords (like 'arts', 'science', 'commerce') 
+                        // ignoring 'class', numbers, and single letters ('A', 'B', etc.)
+                        $getStreamKeywords = function($className, $section) {
+                            $text = strtolower($className . ' ' . $section);
+                            $words = preg_split('/[\s\W]+/', $text);
+                            $keywords = [];
+                            foreach ($words as $w) {
+                                if (!is_numeric($w) && $w !== 'class' && $w !== '' && strlen($w) > 1) {
+                                    $keywords[] = $w;
+                                }
+                            }
+                            return $keywords;
+                        };
+                        $sourceKeywords = $getStreamKeywords($selectedClassName, $selectedSection);
+                        ?>
                         <?php foreach ($classes as $c): ?>
-                            <?php if ($c['class_id'] != $selectedClassId): ?>
+                            <?php 
+                            $cLevel = 0;
+                            if (preg_match('/\d+/', $c['class_name'], $matches)) {
+                                $cLevel = (int)$matches[0];
+                            }
+                            
+                            $isValidTarget = false;
+                            if ($currentLevel > 0) {
+                                $isValidTarget = ($cLevel === $nextLevel);
+                                
+                                // Enforce stream matching when promoting from Class 11 to 12
+                                if ($currentLevel == 11 && $isValidTarget) {
+                                    $targetSection = isset($c['section']) ? trim($c['section']) : '';
+                                    $targetKeywords = $getStreamKeywords($c['class_name'], $targetSection);
+                                    
+                                    // If the source has a stream (like 'arts'), the target MUST have the same stream
+                                    if (!empty($sourceKeywords)) {
+                                        $hasMatchingStream = false;
+                                        foreach ($sourceKeywords as $sk) {
+                                            if (in_array($sk, $targetKeywords)) {
+                                                $hasMatchingStream = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!$hasMatchingStream) {
+                                            $isValidTarget = false;
+                                        }
+                                    }
+                                }
+                            } else {
+                                $isValidTarget = ($c['class_id'] != $selectedClassId);
+                            }
+                            
+                            if ($isValidTarget): 
+                            ?>
                                 <option value="<?php echo $c['class_id']; ?>">
                                     <?php echo htmlspecialchars($c['class_name'] . ' ' . $c['section']); ?>
                                 </option>
@@ -80,6 +138,9 @@ $isHighestClass = strpos(strtolower($selectedClassName), '12') !== false;
             </label>
 
             <div class="table-container">
+                <div class="table-header" style="padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="display: flex; align-items: center; margin: 0; font-size: 18px; color: var(--text-dark);">Students <span style="background-color: #800000; color: white; border-radius: 16px; min-width: 28px; height: 28px; padding: 0 8px; font-size: 15px; font-weight: 600; margin-left: 10px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(128,0,0,0.25);"><?php echo $pagination['total'] ?? count($students); ?></span></h2>
+                </div>
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -109,6 +170,15 @@ $isHighestClass = strpos(strtolower($selectedClassName), '12') !== false;
                     </tbody>
                 </table>
             </div>
+            
+            <?php if (isset($pagination) && $pagination['total'] > 0): ?>
+                <div style="margin-top:15px;" class="no-print" data-html2canvas-ignore="true">
+                    <?php echo renderPagination($pagination); ?>
+                    <div style="text-align: center; margin-top: 10px; color: var(--gray); font-size: 13px;">
+                        Showing page <?php echo $pagination['current_page']; ?> of <?php echo $pagination['pages']; ?> (Total: <?php echo $pagination['total']; ?> students)
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <div style="margin-top:20px; text-align:right;">
                 <?php if ($isHighestClass): ?>

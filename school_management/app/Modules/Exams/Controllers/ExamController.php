@@ -145,6 +145,51 @@ class ExamController extends \Controller
         ], 'admin');
     }
 
+    public function masterSchedule(): void
+    {
+        $examId = (int)$this->input('exam_id', 0);
+
+        if (!$examId) {
+            $this->flash('error', 'Select an Exam to view the master schedule.');
+            $this->redirect(moduleUrl('admin', 'examinations'));
+            return;
+        }
+
+        $exam = $this->examRepo->findById($examId);
+        $exam['classes'] = $this->examRepo->getExamClasses($examId);
+        
+        $db = \Database::getInstance();
+        
+        // Fetch all schedules for this exam across all classes
+        $schedules = $db->fetchAll(
+            "SELECT es.*, s.subject_name, s.subject_code 
+             FROM exam_schedules es
+             JOIN subjects s ON es.subject_id = s.subject_id
+             WHERE es.exam_id = ?
+             ORDER BY es.exam_date ASC, es.start_time ASC, es.class_id ASC",
+            [$examId]
+        );
+
+        // Build matrix
+        $matrix = []; // matrix[date][class_id] = array of schedules for that day
+        $dates = [];
+        
+        foreach ($schedules as $s) {
+            $date = $s['exam_date'];
+            $dates[$date] = $date;
+            $matrix[$date][$s['class_id']][] = $s;
+        }
+
+        sort($dates);
+
+        $this->render('Modules/Exams/Views/master_schedule', [
+            'pageTitle'  => 'Master Exam Routine: ' . $exam['exam_name'],
+            'exam'       => $exam,
+            'matrix'     => $matrix,
+            'dates'      => $dates
+        ], 'admin');
+    }
+
     public function handleAction(): void
     {
         $action = $this->input('action', '');
@@ -152,6 +197,9 @@ class ExamController extends \Controller
         switch ($action) {
             case 'create_exam':
                 $this->createExam();
+                break;
+            case 'update_exam':
+                $this->updateExam();
                 break;
             case 'update_schedules':
                 $this->updateSchedules();
@@ -213,6 +261,35 @@ class ExamController extends \Controller
         }
 
         $result = $this->service->createExam($data, $_SESSION['user_id'], $_SESSION['user_type']);
+        $this->flash($result['success'] ? 'success' : 'error', $result['message']);
+        $this->redirect(moduleUrl('admin', 'examinations'));
+    }
+
+    private function updateExam(): void
+    {
+        $this->validateCsrf();
+        $data = $this->allInput();
+        $examId = (int)$this->input('exam_id', 0);
+
+        if ($examId <= 0) {
+            $this->flash('error', 'Invalid exam ID.');
+            $this->redirect(moduleUrl('admin', 'examinations'));
+            return;
+        }
+
+        // Auto-set exam_name from exam_type if not provided
+        if (empty($data['exam_name'])) {
+            $data['exam_name'] = $data['exam_type'] ?? 'Exam';
+        }
+
+        $validator = new ExamValidator();
+        if (!$validator->validateExam($data)) {
+            $this->flash('error', $validator->firstError());
+            $this->redirect(moduleUrl('admin', 'examinations'));
+            return;
+        }
+
+        $result = $this->service->updateExam($examId, $data, $_SESSION['user_id']);
         $this->flash($result['success'] ? 'success' : 'error', $result['message']);
         $this->redirect(moduleUrl('admin', 'examinations'));
     }
@@ -500,24 +577,6 @@ class ExamController extends \Controller
         $examId = (int)$this->input('exam_id', 0);
         $classId = (int)$this->input('class_id', 0);
 
-        $exam = $this->examRepo->findById($examId);
-        
-        $filename = "exam_schedule_template.csv";
-        header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        
-        $output = fopen('php://output', 'w');
-        fputcsv($output, ['Date (DD-MM-YYYY)', 'Start Time (HH:MM)', 'End Time (HH:MM)', 'Subject Code', 'Full Marks', 'Pass Marks']);
-        fputcsv($output, [date('d-m-Y', strtotime($exam['start_date'])), '09:00', '12:00', 'MATH101', '100', '35']);
-        fclose($output);
-        exit;
-    }
-
-    private function downloadExamDetails(): void
-    {
-        $examId = (int)$this->input('exam_id', 0);
-        $classId = (int)$this->input('class_id', 0);
-        
         if (!$examId || !$classId) {
             $this->flash('error', 'Invalid request.');
             $this->redirect(moduleUrl('admin', 'examinations'));
@@ -527,7 +586,7 @@ class ExamController extends \Controller
         $exam = $this->examRepo->findById($examId);
         $classRepo = new ClassRepository();
         $class = $classRepo->findById($classId);
-
+        
         $academicRepo = new ClassSubjectRepository();
         $session = $academicRepo->getActiveSession();
         $sessionId = $session ? $session['session_id'] : 0;
@@ -543,29 +602,34 @@ class ExamController extends \Controller
         );
 
         $classNameClean = preg_replace('/[^A-Za-z0-9]/', '_', $class['class_name'] . '_' . $class['section']);
-        $filename = "exam_details_" . $classNameClean . ".csv";
-
+        $filename = "exam_schedule_template_" . $classNameClean . ".csv";
         header('Content-Type: text/csv');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         
         $output = fopen('php://output', 'w');
         
-        // Exam Meta Info
-        fputcsv($output, ['Exam Name', 'Class', 'Start Date', 'End Date']);
-        fputcsv($output, [
-            $exam['exam_name'], 
-            $class['class_name'] . ' ' . $class['section'],
-            $exam['start_date'],
-            $exam['end_date']
-        ]);
-        
-        fputcsv($output, []); // Empty row for spacing
-        
-        // Subjects
-        fputcsv($output, ['Assigned Subject Name', 'Subject Code']);
+        // Instructional Headers
+        fputcsv($output, ['# Exam: ' . trim($exam['exam_name'])]);
+        fputcsv($output, ['# Exam Date Range: ' . date('d-m-Y', strtotime($exam['start_date'])) . ' to ' . date('d-m-Y', strtotime($exam['end_date']))]);
+        fputcsv($output, ['# Class: ' . trim($class['class_name'] . ' ' . $class['section'])]);
+        fputcsv($output, ['# INSTRUCTIONS']);
+        fputcsv($output, ['# IMPORTANT: Do NOT delete the "# Exam:" or "# Class:" rows above. They are required for security verification.']);
+        fputcsv($output, ['# Structure: Date, Start Time, End Time, Subject Code, Full Marks, Pass Marks']);
+        fputcsv($output, ['# Time Format: HH:MM AM/PM (e.g., 09:00 AM)']);
+        fputcsv($output, ['# Date Format: DD-MM-YYYY']);
+        fputcsv($output, ['# VALID SUBJECT CODES FOR THIS CLASS:']);
         foreach ($subjects as $sub) {
-            fputcsv($output, [$sub['subject_name'], $sub['subject_code']]);
+            fputcsv($output, ['# ' . $sub['subject_code'] . ' (' . $sub['subject_name'] . ')']);
         }
+        fputcsv($output, []);
+        fputcsv($output, ['# --- EXAMPLE DATA BELOW (Replace with your actual schedule) ---']);
+        
+        // Schedule Template Section
+        fputcsv($output, ['Date (DD-MM-YYYY)', 'Start Time', 'End Time', 'Subject Code', 'Full Marks', 'Pass Marks']);
+        
+        // Output an example subject if possible
+        $exampleSubject = !empty($subjects) ? $subjects[0]['subject_code'] : 'MATH101';
+        fputcsv($output, [date('d-m-Y', strtotime($exam['start_date'])), '09:00 AM', '12:00 PM', $exampleSubject, '100', '35']);
         
         fclose($output);
         exit;
@@ -592,6 +656,39 @@ class ExamController extends \Controller
             return;
         }
 
+        $exam = $this->examRepo->findById($examId);
+        $classRepo = new ClassRepository();
+        $class = $classRepo->findById($classId);
+
+        // Verify Exam & Class Security Headers
+        $examLine = fgetcsv($handle);
+        $dateLine = fgetcsv($handle);
+        $classLine = fgetcsv($handle);
+
+        if (!$examLine || strpos($examLine[0], '# Exam:') !== 0 || !$classLine || strpos($classLine[0], '# Class:') !== 0) {
+            $this->flash('error', 'Invalid CSV format. The "# Exam:" or "# Class:" headers are missing. Please use the provided template.');
+            $this->redirect('/admin/schedules?exam_id=' . $examId . '&class_id=' . $classId);
+            return;
+        }
+
+        $csvExamStr = trim(substr($examLine[0], 7));
+        $expectedExamStr = trim($exam['exam_name']);
+
+        if (strtolower($csvExamStr) !== strtolower($expectedExamStr)) {
+            $this->flash('error', "Security verification failed. This CSV belongs to exam '$csvExamStr', but you are trying to import it into '$expectedExamStr'.");
+            $this->redirect('/admin/schedules?exam_id=' . $examId . '&class_id=' . $classId);
+            return;
+        }
+
+        $csvClassStr = trim(substr($classLine[0], 8));
+        $expectedClassStr = trim($class['class_name'] . ' ' . $class['section']);
+
+        if (strtolower($csvClassStr) !== strtolower($expectedClassStr)) {
+            $this->flash('error', "Security verification failed. This CSV belongs to class '$csvClassStr', but you are trying to import it into '$expectedClassStr'.");
+            $this->redirect('/admin/schedules?exam_id=' . $examId . '&class_id=' . $classId);
+            return;
+        }
+
         $academicRepo = new ClassSubjectRepository();
         $session = $academicRepo->getActiveSession();
         $sessionId = $session ? $session['session_id'] : 0;
@@ -610,16 +707,28 @@ class ExamController extends \Controller
             $subjectMap[strtoupper(trim($sub['subject_code']))] = $sub['subject_id'];
         }
 
-        $exam = $db->fetch("SELECT start_date, end_date FROM examinations WHERE exam_id = ?", [$examId]);
         $examStart = strtotime($exam['start_date']);
         $examEnd = strtotime($exam['end_date']);
 
-        $header = fgetcsv($handle); // skip header
         $validRows = [];
         $rowNum = 1;
+        $isHeaderSkipped = false;
 
         while (($data = fgetcsv($handle)) !== false) {
             $rowNum++;
+
+            // Skip empty rows
+            if (empty(array_filter($data))) continue;
+
+            // Skip instructional rows starting with #
+            if (strpos(trim($data[0]), '#') === 0) continue;
+
+            // Skip the actual column header row
+            if (!$isHeaderSkipped && strpos(strtolower($data[0]), 'date') !== false) {
+                $isHeaderSkipped = true;
+                continue;
+            }
+
             if (count($data) < 6) continue;
             
             $rawDate = trim($data[0]);
@@ -627,7 +736,7 @@ class ExamController extends \Controller
             $time = false;
             // Explicitly support DD-MM-YYYY if it contains dashes
             if (strpos($rawDate, '-') !== false) {
-                $dt = \DateTime::createFromFormat('d-m-Y', $rawDate);
+                $dt = \DateTime::createFromFormat('!d-m-Y', $rawDate); // ! resets time to 00:00:00
                 if ($dt !== false) {
                     $time = $dt->getTimestamp();
                 }
@@ -637,31 +746,37 @@ class ExamController extends \Controller
                 $time = strtotime($rawDate);
             }
             
+            $dateStr = $time ? date('Y-m-d', $time) : false;
+
             // Smart Ambiguity Resolution: If it falls outside bounds, try swapping Month and Day
-            if ($time && ($time < $examStart || $time > $examEnd)) {
+            if ($dateStr && ($dateStr < $exam['start_date'] || $dateStr > $exam['end_date'])) {
                 $parts = preg_split('/[-\/.]/', $rawDate);
                 if (count($parts) === 3) {
                     $altDate = $parts[1] . '-' . $parts[0] . '-' . $parts[2];
                     $altTime = strtotime($altDate);
-                    if ($altTime && $altTime >= $examStart && $altTime <= $examEnd) {
-                        $time = $altTime;
+                    if ($altTime) {
+                        $altDateStr = date('Y-m-d', $altTime);
+                        if ($altDateStr >= $exam['start_date'] && $altDateStr <= $exam['end_date']) {
+                            $time = $altTime;
+                            $dateStr = $altDateStr;
+                        }
                     }
                 }
             }
 
-            if (!$time) {
+            if (!$time || !$dateStr) {
                 $this->flash('error', "Invalid date format on row $rowNum.");
                 fclose($handle);
                 $this->redirect('/admin/schedules?exam_id=' . $examId . '&class_id=' . $classId);
                 return;
             }
-            if ($time < $examStart || $time > $examEnd) {
+            if ($dateStr < $exam['start_date'] || $dateStr > $exam['end_date']) {
                 $this->flash('error', "Date '$rawDate' on row $rowNum is outside the exam's allowed date range ({$exam['start_date']} to {$exam['end_date']}).");
                 fclose($handle);
                 $this->redirect('/admin/schedules?exam_id=' . $examId . '&class_id=' . $classId);
                 return;
             }
-            $date = date('Y-m-d', $time);
+            $date = $dateStr;
 
             $startTime = date('H:i:s', strtotime(trim($data[1])));
             $endTime = date('H:i:s', strtotime(trim($data[2])));
@@ -682,6 +797,25 @@ class ExamController extends \Controller
 
             $fullMarks = (float)trim($data[4]);
             $passMarks = (float)trim($data[5]);
+
+            $newStart = strtotime($startTime);
+            $newEnd = strtotime($endTime);
+
+            // Check for time conflicts with previously parsed rows in the same CSV
+            foreach ($validRows as $existingRow) {
+                if ($existingRow['exam_date'] === $date) {
+                    $existStart = strtotime($existingRow['start_time']);
+                    $existEnd = strtotime($existingRow['end_time']);
+                    
+                    if ($newStart < $existEnd && $newEnd > $existStart) {
+                        $overlapStr = date('h:i A', $existStart) . ' - ' . date('h:i A', $existEnd);
+                        $this->flash('error', "Time conflict detected on row $rowNum. The time (" . date('h:i A', $newStart) . " - " . date('h:i A', $newEnd) . ") overlaps with another subject scheduled for $overlapStr on the same date.");
+                        fclose($handle);
+                        $this->redirect('/admin/schedules?exam_id=' . $examId . '&class_id=' . $classId);
+                        return;
+                    }
+                }
+            }
 
             $validRows[] = [
                 'exam_id'    => $examId,

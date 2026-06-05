@@ -54,9 +54,11 @@ class AuthController extends \Controller
         }
 
         // Authenticate
+        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
         $result = $this->authService->authenticate(
             trim($data['email']),
-            $data['password']
+            $data['password'],
+            $ipAddress
         );
 
         if (!$result['success']) {
@@ -89,6 +91,7 @@ class AuthController extends \Controller
     {
         $this->render('Modules/Auth/Views/forgot_password', [
             'pageTitle' => 'Forgot Password',
+            'moduleCss' => ['Auth/login.css'],
         ], 'auth');
     }
 
@@ -147,6 +150,7 @@ class AuthController extends \Controller
         $this->render('Modules/Auth/Views/reset_password', [
             'pageTitle' => 'Reset Password',
             'token'     => $token,
+            'moduleCss' => ['Auth/login.css'],
         ], 'auth');
     }
 

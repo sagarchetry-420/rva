@@ -1,14 +1,11 @@
-/* ═══ PRINCIPAL SECTION ═══ */
 section.principal-section {
     display: flex;
     position: relative;
     background: #ffffff;
     padding: 0;
     align-items: stretch;
-    /* Stretches the image container to match the text height */
     overflow: hidden;
     justify-content: flex-end;
-    /* Align content to the right */
 }
 
 .principal-image-left {
@@ -18,24 +15,24 @@ section.principal-section {
     width: 45%;
     height: 100%;
     z-index: 1;
+    clip-path: inset(0); /* Creates a clipping window for the fixed child */
 }
 
 .principal-image-bg {
-    width: 100%;
-    height: 100%;
-    background-size: 45vw auto;
-    /* Matches the 45% container width exactly to stop massive zooming */
-    background-position: left center;
-    /* Anchors the image perfectly inside the left box */
+    position: fixed; /* Acts as the fixed background but confined to 45% width */
+    top: 0;
+    left: 0;
+    width: 45%;
+    height: 100vh;
+    background-size: cover; /* Now covers 45% x 100vh, significantly reducing zoom */
+    background-position: center 20%;
     background-repeat: no-repeat;
-    background-attachment: fixed;
-    /* Parallax effect applied! */
 }
 
 .principal-content-right {
-    flex: 0 0 50%;
-    padding: 60px 5%;
-    /* Reduced padding to make it less tall */
+    flex: 0 0 55%;
+    padding: 60px 5% 60px 3%;
+    /* Increased flex to 55% and reduced left padding to move closer to image */
     display: flex;
     flex-direction: column;
     justify-content: center;

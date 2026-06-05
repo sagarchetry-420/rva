@@ -30,6 +30,8 @@ class AcademicValidator
             $this->addError('class_name', 'Class Name is required.');
         } elseif (strlen($className) > 50) {
             $this->addError('class_name', 'Class Name must not exceed 50 characters.');
+        } elseif (!preg_match('/^[a-zA-Z0-9\s]+$/', $className)) {
+            $this->addError('class_name', 'Class Name can only contain letters, numbers, and spaces.');
         }
 
         $section = trim($data['section'] ?? '');
@@ -37,6 +39,18 @@ class AcademicValidator
             $this->addError('section', 'Section is required.');
         } elseif (strlen($section) > 10) {
             $this->addError('section', 'Section must not exceed 10 characters.');
+        } elseif (!preg_match('/^[a-zA-Z0-9]+$/', $section)) {
+            $this->addError('section', 'Section can only contain letters and numbers.');
+        }
+
+        $admissionFee = $data['admission_fee'] ?? '';
+        if ($admissionFee !== '' && (float)$admissionFee < 0) {
+            $this->addError('admission_fee', 'Admission fee cannot be negative.');
+        }
+
+        $examFee = $data['exam_fee'] ?? '';
+        if ($examFee !== '' && (float)$examFee < 0) {
+            $this->addError('exam_fee', 'Exam fee cannot be negative.');
         }
 
         if (!$this->hasErrors()) {
@@ -59,6 +73,8 @@ class AcademicValidator
             $this->addError('subject_name', 'Subject Name is required.');
         } elseif (strlen($subjectName) > 100) {
             $this->addError('subject_name', 'Subject Name must not exceed 100 characters.');
+        } elseif (!preg_match('/^[a-zA-Z0-9\s\-\&]+$/', $subjectName)) {
+            $this->addError('subject_name', 'Subject Name can only contain letters, numbers, spaces, hyphens, and ampersands.');
         }
 
         $subjectCode = trim($data['subject_code'] ?? '');
@@ -66,6 +82,8 @@ class AcademicValidator
             $this->addError('subject_code', 'Subject Code is required.');
         } elseif (strlen($subjectCode) > 20) {
             $this->addError('subject_code', 'Subject Code must not exceed 20 characters.');
+        } elseif (!preg_match('/^[a-zA-Z0-9\-]+$/', $subjectCode)) {
+            $this->addError('subject_code', 'Subject Code can only contain letters, numbers, and hyphens.');
         }
 
         if (!$this->hasErrors()) {

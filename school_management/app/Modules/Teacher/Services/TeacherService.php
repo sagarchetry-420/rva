@@ -105,7 +105,7 @@ class TeacherService
                 'email'                  => $data['email'],
                 'qualification'          => $data['qualification'] ?: null,
                 'subject_specialization' => $data['subject_specialization'] ?: null,
-                'joining_date'           => $data['joining_date'] ?: null
+                'joining_date'           => $teacher['joining_date']
             ];
 
             $updated = $this->teacherRepo->update($teacherId, $teacherData);
@@ -140,9 +140,9 @@ class TeacherService
     /**
      * Export teachers to CSV
      */
-    public function exportCsv(): void
+    public function exportCsv(?string $status = null, string $search = ''): void
     {
-        $teachers = $this->teacherRepo->findAll();
+        $teachers = $this->teacherRepo->getAll($status, $search);
 
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=teachers_list_' . date('Ymd') . '.csv');
@@ -163,6 +163,59 @@ class TeacherService
             ]);
         }
         fclose($output);
+        exit;
+    }
+
+    public function exportPdf(?string $status = null, string $search = ''): void
+    {
+        $teachers = $this->teacherRepo->getAll($status, $search);
+
+        require_once APP_ROOT . '/includes/fpdf/fpdf.php';
+        $pdf = new \FPDF('L', 'mm', 'A4'); // Landscape for tables
+        $pdf->SetAutoPageBreak(true, 15);
+        $pdf->AddPage();
+
+        // Header
+        $pdf->SetFont('Arial', 'B', 16);
+        $pdf->Cell(0, 10, APP_NAME . ' - Teachers List', 0, 1, 'C');
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->Cell(0, 7, 'Generated: ' . date('d M Y'), 0, 1, 'C');
+        $pdf->Ln(5);
+
+        // Table Header
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->SetFillColor(41, 128, 185);
+        $pdf->SetTextColor(255);
+        $pdf->Cell(50, 8, 'Name', 1, 0, 'L', true);
+        $pdf->Cell(25, 8, 'Gender', 1, 0, 'L', true);
+        $pdf->Cell(65, 8, 'Email', 1, 0, 'L', true);
+        $pdf->Cell(35, 8, 'Phone', 1, 0, 'L', true);
+        $pdf->Cell(65, 8, 'Specialization', 1, 0, 'L', true);
+        $pdf->Cell(35, 8, 'Joining Date', 1, 1, 'L', true);
+
+        // Table Data
+        $pdf->SetFont('Arial', '', 10);
+        $pdf->SetTextColor(0);
+        $fill = false;
+
+        foreach ($teachers as $t) {
+            $name = trim(($t['first_name'] ?? '') . ' ' . ($t['last_name'] ?? ''));
+
+            if ($fill) {
+                $pdf->SetFillColor(245, 245, 245);
+            }
+
+            $pdf->Cell(50, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($name, 0, 25)), 1, 0, 'L', $fill);
+            $pdf->Cell(25, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($t['gender'] ?? '', 0, 10)), 1, 0, 'L', $fill);
+            $pdf->Cell(65, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($t['email'] ?? '', 0, 35)), 1, 0, 'L', $fill);
+            $pdf->Cell(35, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($t['phone'] ?? 'N/A', 0, 15)), 1, 0, 'L', $fill);
+            $pdf->Cell(65, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($t['subject_specialization'] ?? 'N/A', 0, 30)), 1, 0, 'L', $fill);
+            $pdf->Cell(35, 8, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', substr($t['joining_date'] ?? 'N/A', 0, 15)), 1, 1, 'L', $fill);
+            
+            $fill = !$fill;
+        }
+
+        $pdf->Output('D', 'teachers_list_' . date('Ymd') . '.pdf');
         exit;
     }
 

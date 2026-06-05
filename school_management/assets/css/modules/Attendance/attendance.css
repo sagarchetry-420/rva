@@ -1,0 +1,15 @@
+/* ═══ ATTENDANCE GRID ═══ */
+.attendance-grid { width: 100%; border-collapse: collapse; }
+.attendance-grid th, .attendance-grid td { padding: 12px 15px; text-align: center; }
+.attendance-grid thead { background: var(--primary); color: white; }
+.attendance-grid td { border-bottom: 1px solid var(--border); }
+
+.attendance-radio-group { display: flex; gap: 12px; justify-content: center; }
+.attendance-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 13px;
+    cursor: pointer;
+}
+

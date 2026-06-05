@@ -85,7 +85,7 @@ if ($hasResults) {
         <h3>
             <i class="fas fa-edit"></i> Enter Marks — <?php echo htmlspecialchars($schedule['subject_name'] ?? ''); ?>
             <?php if ($schedule): ?>
-                (Max: <?php echo $schedule['max_marks'] ?? 100; ?>)
+                (Full Marks: <?php echo (float)($schedule['full_marks'] ?? 100); ?>)
             <?php endif; ?>
         </h3>
         
@@ -129,7 +129,7 @@ if ($hasResults) {
                                     <input type="number" name="marks[<?php echo $s['student_id']; ?>]" 
                                            class="form-control" style="width: 100px;"
                                            value="<?php echo $s['marks_obtained'] ?? ''; ?>"
-                                           min="0" max="<?php echo $schedule['max_marks'] ?? 100; ?>" step="0.5"
+                                           min="0" max="<?php echo $schedule['full_marks'] ?? 100; ?>" step="0.5"
                                            <?php echo !$canEdit ? 'disabled' : ''; ?>>
                                 </td>
                                 <td style="text-align:center;">

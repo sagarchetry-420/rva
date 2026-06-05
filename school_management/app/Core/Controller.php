@@ -25,6 +25,17 @@ class Controller
      */
     protected function render(string $view, array $data = [], ?string $layout = null): void
     {
+        // Auto-detect module-wise CSS if no moduleCss is manually set
+        if (!isset($data['moduleCss']) && preg_match('/^Modules\/([^\/]+)\/Views\/(.+)$/', $view, $matches)) {
+            $moduleName = $matches[1];
+            $viewName = $matches[2];
+            $cssRelPath = 'modules/' . $moduleName . '/' . $viewName . '.css';
+            $cssAbsPath = APP_ROOT . '/assets/css/' . $cssRelPath;
+            if (file_exists($cssAbsPath)) {
+                $data['moduleCss'] = [$moduleName . '/' . $viewName . '.css'];
+            }
+        }
+
         // Extract data variables into local scope
         extract($data);
 

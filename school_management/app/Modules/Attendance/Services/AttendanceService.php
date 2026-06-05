@@ -22,13 +22,22 @@ class AttendanceService
     /**
      * Get attendance list for marking
      */
-    public function getAttendanceList(int $classId, string $date): array
+    public function getAttendanceList(int $classId, string $date, string $search = '', int $limit = 0, int $offset = 0): array
     {
         $session = $this->academicRepo->getActiveSession();
         if (!$session) {
             return [];
         }
-        return $this->repo->getAttendanceByDateAndClass($classId, $date, $session['session_id']);
+        return $this->repo->getAttendanceByDateAndClass($classId, $date, $session['session_id'], $search, $limit, $offset);
+    }
+
+    public function getAttendanceCount(int $classId, string $date, string $search = ''): int
+    {
+        $session = $this->academicRepo->getActiveSession();
+        if (!$session) {
+            return 0;
+        }
+        return $this->repo->getAttendanceCountByDateAndClass($classId, $date, $session['session_id'], $search);
     }
 
     /**

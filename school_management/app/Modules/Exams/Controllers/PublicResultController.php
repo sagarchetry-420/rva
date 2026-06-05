@@ -14,7 +14,7 @@ class PublicResultController extends \Controller
     {
         $db = Database::getInstance();
         
-        $exams = $db->fetchAll("SELECT * FROM examinations ORDER BY start_date DESC");
+        $exams = $db->fetchAll("SELECT * FROM examinations WHERE exam_type != 'Class Test' ORDER BY start_date DESC");
         // Using classes from db directly for simplicity, but better via repo
         $classes = $db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name");
 
@@ -24,10 +24,10 @@ class PublicResultController extends \Controller
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $eid = (int)$this->input('exam_id');
             $cid = (int)$this->input('class_id');
-            $roll = trim($this->input('roll_number', ''));
+            $roll = sanitizeInput($this->input('roll_number', ''));
 
             // Check if exam is published (using simple queries for brevity in public check)
-            $exam_chk = $db->fetch("SELECT exam_name, session_id FROM examinations WHERE exam_id=? AND is_published=1", [$eid]);
+            $exam_chk = $db->fetch("SELECT exam_name, session_id FROM examinations WHERE exam_id=? AND is_published=1 AND exam_type != 'Class Test'", [$eid]);
             
             if (!$exam_chk) {
                 $error = "Result for this examination is not published yet.";
@@ -79,7 +79,7 @@ class PublicResultController extends \Controller
             'classes' => $classes,
             'result_data' => $result_data,
             'error' => $error,
-            'roll_number' => $this->input('roll_number', '')
+            'roll_number' => sanitizeInput($this->input('roll_number', ''))
         ], 'blank'); // blank layout!
     }
 }

@@ -9,11 +9,7 @@
         <h1><i class="fas fa-file-download"></i> <?php echo htmlspecialchars($pageTitle); ?></h1>
         <p>Your complete academic history across all sessions</p>
     </div>
-    <?php if (!empty($transcriptData)): ?>
-    <a href="<?php echo moduleUrl('student', 'download_transcript'); ?>" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px;">
-        <i class="fas fa-file-pdf"></i> Download PDF
-    </a>
-    <?php endif; ?>
+
 </div>
 
 <!-- Student Info Card -->
@@ -122,8 +118,30 @@
                 </div>
 
                 <!-- Results Table -->
+                <style>
+                    /* Force traditional tabular layout on mobile but smaller */
+                    @media (max-width: 768px) {
+                        .transcript-table {
+                            display: table !important;
+                            width: 100% !important;
+                            min-width: 0 !important;
+                        }
+                        .transcript-table thead { display: table-header-group !important; }
+                        .transcript-table tbody { display: table-row-group !important; }
+                        .transcript-table tfoot { display: table-footer-group !important; }
+                        .transcript-table tr { display: table-row !important; }
+                        .transcript-table th, .transcript-table td {
+                            display: table-cell !important;
+                            padding: 6px 3px !important;
+                            font-size: 11px !important;
+                            white-space: normal !important;
+                            word-wrap: break-word !important;
+                        }
+                        .transcript-table td::before { display: none !important; }
+                    }
+                </style>
                 <div style="overflow-x: auto;">
-                    <table class="data-table" style="margin:0; border-radius:0;">
+                    <table class="data-table transcript-table" style="margin:0; border-radius:0;">
                         <thead>
                             <tr>
                                 <th style="text-align:left; padding-left:20px;">Subject</th>

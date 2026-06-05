@@ -94,10 +94,10 @@ class StudentValidator
         // Date of Birth — optional, valid date, not future
         $dob = trim($data['date_of_birth'] ?? '');
         if (!empty($dob)) {
-            $date = \DateTime::createFromFormat('Y-m-d', $dob);
+            $date = \DateTime::createFromFormat('!Y-m-d', $dob);
             if (!$date || $date->format('Y-m-d') !== $dob) {
                 $this->errors['date_of_birth'] = 'Invalid date format.';
-            } elseif ($date > new \DateTime('today')) {
+            } elseif ($dob > date('Y-m-d')) {
                 $this->errors['date_of_birth'] = 'Date of birth cannot be in the future.';
             }
         }

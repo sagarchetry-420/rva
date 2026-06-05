@@ -261,7 +261,6 @@ class TeacherPortalController extends \Controller
                 $teacherClasses = $myClassData;
                 $myClassIds = array_column($myClassData, 'class_id');
 
-                // Fetch distinct subjects this teacher teaches
                 $teacherSubjects = $this->db->fetchAll(
                     "SELECT DISTINCT cs.subject_id, s.subject_name, s.subject_code
                      FROM class_subjects cs
@@ -269,6 +268,15 @@ class TeacherPortalController extends \Controller
                      WHERE cs.teacher_id = ? AND cs.session_id = ?",
                     [$teacher['teacher_id'], $session['session_id']]
                 );
+
+                $subjectClassMap = [];
+                $mappingQuery = $this->db->fetchAll(
+                    "SELECT subject_id, class_id FROM class_subjects WHERE teacher_id = ? AND session_id = ?",
+                    [$teacher['teacher_id'], $session['session_id']]
+                );
+                foreach ($mappingQuery as $row) {
+                    $subjectClassMap[$row['subject_id']][] = $row['class_id'];
+                }
 
                 $teacherStats = [];
                 if (!empty($exams) && !empty($myClassIds)) {
@@ -306,12 +314,13 @@ class TeacherPortalController extends \Controller
         }
 
         $this->render('Modules/Teacher/Views/portal/examinations', [
-            'pageTitle'       => 'Class Tests & Examinations',
+            'pageTitle'       => 'Exams',
             'teacher'         => $teacher,
             'exams'           => $exams,
             'session'         => $session,
             'teacherClasses'  => $teacherClasses,
-            'teacherSubjects' => $teacherSubjects
+            'teacherSubjects' => $teacherSubjects,
+            'subjectClassMap' => $subjectClassMap ?? []
         ], 'teacher');
     }
 
@@ -343,13 +352,37 @@ class TeacherPortalController extends \Controller
             return;
         }
 
-        // Validate subject selection
         $subjectId = (int)($data['subject_id'] ?? 0);
         if (!$subjectId) {
             $this->flash('error', 'Please select a subject for the class test.');
             $this->redirect(moduleUrl('teacher', 'examinations'));
             return;
         }
+
+        // Security check: Only allow assigning to classes where this teacher teaches the selected subject
+        $teacher = $this->getCurrentTeacher();
+        $academicRepo = new \App\Modules\Academic\Repositories\ClassSubjectRepository();
+        $session = $academicRepo->getActiveSession();
+        $assignedClasses = $this->db->fetchAll(
+            "SELECT class_id FROM class_subjects WHERE teacher_id = ? AND subject_id = ? AND session_id = ?",
+            [$teacher['teacher_id'], $subjectId, $session['session_id']]
+        );
+        $assignedClassIds = array_column($assignedClasses, 'class_id');
+        $validClassIds = [];
+        if (!empty($data['class_ids'])) {
+            foreach ($data['class_ids'] as $cid) {
+                if (in_array((int)$cid, $assignedClassIds)) {
+                    $validClassIds[] = (int)$cid;
+                }
+            }
+        }
+        
+        if (empty($validClassIds)) {
+            $this->flash('error', 'You are not assigned to teach this subject in any of the selected classes.');
+            $this->redirect(moduleUrl('teacher', 'examinations'));
+            return;
+        }
+        $data['class_ids'] = $validClassIds;
 
         $service = new \App\Modules\Exams\Services\ExamService();
         $result = $service->createExam($data, (int)$_SESSION['user_id'], $_SESSION['user_type']);
@@ -533,10 +566,16 @@ class TeacherPortalController extends \Controller
             }
         }
 
-        $maxMarks = $schedule['max_marks'] ?? 100;
+        $maxMarks = $schedule['full_marks'] ?? 100;
 
         foreach ($marks as $studentId => $marksVal) {
             $isAbsent = isset($absent[$studentId]) ? 1 : 0;
+            
+            // Skip if teacher left it completely blank and not marked absent (optional subject handling)
+            if (trim((string)$marksVal) === '' && !$isAbsent) {
+                continue;
+            }
+
             $marksObtained = $isAbsent ? 0 : (float)$marksVal;
 
             // Calculate grade
@@ -573,13 +612,21 @@ class TeacherPortalController extends \Controller
     // ─────────────────────────────────────────────
     public function notices(): void
     {
-        $notices = $this->db->fetchAll(
-            "SELECT * FROM notices WHERE target_audience IN ('All', 'Teachers') ORDER BY created_at DESC"
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $perPage = 10;
+        
+        $paginated = $this->db->paginate(
+            "SELECT * FROM notices WHERE target_audience IN ('All', 'Teachers') ORDER BY created_at DESC",
+            [],
+            $page,
+            $perPage
         );
 
         $this->render('Modules/Teacher/Views/portal/notices', [
-            'pageTitle' => 'Notices',
-            'notices'   => $notices
+            'pageTitle'  => 'Notices',
+            'notices'    => $paginated['data'],
+            'page'       => $paginated['current_page'],
+            'totalPages' => $paginated['pages']
         ], 'teacher');
     }
 

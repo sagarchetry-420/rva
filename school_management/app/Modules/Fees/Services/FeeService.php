@@ -22,11 +22,19 @@ class FeeService
     /**
      * Process a fee payment, marking it paid and generating a receipt.
      */
-    public function collectFee(int $feeId, string $paymentMethod, string $remarks, int $userId): array
+    public function collectFee(int $feeId, string $paymentMethod, string $remarks, int $userId, int $studentId = 0, float $amount = null): array
     {
         $fee = $this->feeRepo->findById($feeId);
         if (!$fee) {
             return ['success' => false, 'message' => 'Fee record not found.'];
+        }
+
+        if ($studentId > 0 && (int)$fee['student_id'] !== $studentId) {
+            return ['success' => false, 'message' => 'Fee does not belong to the selected student.'];
+        }
+
+        if ($amount !== null && (float)$fee['amount'] !== $amount) {
+            return ['success' => false, 'message' => 'Submitted amount does not match the actual fee amount.'];
         }
 
         if ($fee['payment_status'] === 'Paid') {
@@ -67,11 +75,24 @@ class FeeService
             return ['success' => false, 'message' => 'No active academic session found.'];
         }
 
+        // Prevent duplicate generation for the same student, category, and due date
+        $db = Database::getInstance();
+        $existing = $db->fetch("SELECT fee_id FROM fees WHERE student_id = ? AND session_id = ? AND category_id = ? AND due_date = ?", [
+            $data['student_id'],
+            $session['session_id'],
+            $data['category_id'],
+            $data['due_date']
+        ]);
+
+        if ($existing) {
+            return ['success' => false, 'message' => 'A fee for this category and due date already exists for this student!'];
+        }
+
         $feeId = $this->feeRepo->createFee([
             'student_id'  => $data['student_id'],
             'session_id'  => $session['session_id'],
             'category_id' => $data['category_id'],
-            'service_id'  => $data['service_id'] ?: null,
+            'service_id'  => $data['service_id'] ?? null,
             'amount'      => $data['amount'],
             'due_date'    => $data['due_date'],
             'created_by'  => $userId

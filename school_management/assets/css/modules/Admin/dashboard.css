@@ -1,0 +1,82 @@
+/* ═══ STATS CARDS ═══ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.stat-card {
+    background: white;
+    padding: 22px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    transition: var(--transition);
+}
+
+.stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+
+.stat-icon {
+    width: 55px; height: 55px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+}
+
+.students-icon { background: #dbeafe; }
+.teachers-icon { background: #fef3c7; }
+.classes-icon { background: #d1fae5; }
+.subjects-icon { background: #e0e7ff; }
+.fees-icon { background: #fce7f3; }
+.exams-icon { background: #ccfbf1; }
+
+.stat-details h3 { font-size: 28px; color: var(--dark); font-weight: 700; }
+.stat-details p { color: var(--gray); font-size: 13px; margin-top: 2px; }
+
+/* ═══ DASHBOARD SECTIONS ═══ */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 20px;
+}
+
+.dashboard-section {
+    background: white;
+    padding: 22px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+}
+
+.dashboard-section h2 {
+    font-size: 18px;
+    margin-bottom: 18px;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.notices-list { display: flex; flex-direction: column; gap: 12px; }
+
+.notice-item {
+    display: flex;
+    gap: 15px;
+    padding: 14px;
+    background: var(--light);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-light);
+    transition: var(--transition);
+}
+
+.notice-item:hover { transform: translateX(4px); }
+
+.notice-date { color: var(--primary); font-weight: 600; font-size: 13px; min-width: 90px; }
+.notice-content h4 { color: var(--dark); margin-bottom: 4px; font-size: 14px; }
+.notice-content p { color: var(--gray); font-size: 13px; }
+

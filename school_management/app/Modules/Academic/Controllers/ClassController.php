@@ -47,9 +47,7 @@ class ClassController extends \Controller
             case 'edit':
                 $this->update();
                 break;
-            case 'delete':
-                $this->destroy();
-                break;
+
             default:
                 $this->flash('error', 'Invalid action.');
                 $this->redirect(moduleUrl('admin', 'classes'));
@@ -96,22 +94,6 @@ class ClassController extends \Controller
         $result = $this->service->updateClass($classId, $data);
         $type = $result['success'] ? (($result['no_change'] ?? false) ? 'info' : 'success') : 'error';
         $this->flash($type, $result['message']);
-        $this->redirect(moduleUrl('admin', 'classes'));
-    }
-
-    private function destroy(): void
-    {
-        $this->validateCsrf();
-        $classId = (int)$this->input('class_id', 0);
-
-        if (!$classId) {
-            $this->flash('error', 'Invalid class ID.');
-            $this->redirect(moduleUrl('admin', 'classes'));
-            return;
-        }
-
-        $result = $this->service->deleteClass($classId);
-        $this->flash($result['success'] ? 'success' : 'error', $result['message']);
         $this->redirect(moduleUrl('admin', 'classes'));
     }
 }

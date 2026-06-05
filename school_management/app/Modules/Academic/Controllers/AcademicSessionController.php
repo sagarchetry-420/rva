@@ -74,6 +74,18 @@ class AcademicSessionController extends \Controller
             return;
         }
 
+        if (!preg_match('/^[a-zA-Z0-9 \-]+$/', $name)) {
+            $this->flash('error', 'Session name can only contain letters, numbers, spaces, and hyphens.');
+            $this->redirect(moduleUrl('admin', 'academic_sessions'));
+            return;
+        }
+
+        if ($startYear < 2000 || $startYear > 2100 || $endYear < 2000 || $endYear > 2100) {
+            $this->flash('error', 'Start and end years must be between 2000 and 2100.');
+            $this->redirect(moduleUrl('admin', 'academic_sessions'));
+            return;
+        }
+
         if (strtotime($endDate) <= strtotime($startDate)) {
             $this->flash('error', 'End date must be after start date.');
             $this->redirect(moduleUrl('admin', 'academic_sessions'));
@@ -129,6 +141,18 @@ class AcademicSessionController extends \Controller
 
         if (!$id || empty($name) || empty($startDate) || empty($endDate)) {
             $this->flash('error', 'Invalid input for updating session.');
+            $this->redirect(moduleUrl('admin', 'academic_sessions'));
+            return;
+        }
+
+        if (!preg_match('/^[a-zA-Z0-9 \-]+$/', $name)) {
+            $this->flash('error', 'Session name can only contain letters, numbers, spaces, and hyphens.');
+            $this->redirect(moduleUrl('admin', 'academic_sessions'));
+            return;
+        }
+
+        if ($startYear < 2000 || $startYear > 2100 || $endYear < 2000 || $endYear > 2100) {
+            $this->flash('error', 'Start and end years must be between 2000 and 2100.');
             $this->redirect(moduleUrl('admin', 'academic_sessions'));
             return;
         }

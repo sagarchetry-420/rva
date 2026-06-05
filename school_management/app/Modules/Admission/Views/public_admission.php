@@ -4,52 +4,56 @@
  */
 ?>
 <div class="auth-container admission-form-container">
-    <div class="auth-header">
-        <div class="auth-logo">
-            <i class="fa-solid fa-graduation-cap fa-3x" style="color: var(--primary);"></i>
+    <div class="auth-header" style="text-align: center; margin-bottom: 30px;">
+        <div class="auth-logo" style="margin-bottom: 10px;">
+            <img src="/RVA/assets/logo/logo_small.png" alt="School Logo" style="max-height: 80px; width: auto;" loading="lazy">
         </div>
-        <h1><?php echo htmlspecialchars($pageTitle); ?></h1>
-        <p class="text-muted">Apply for the upcoming academic session</p>
+        <h1 style="margin-top: 5px; font-size: 28px;"><?php echo htmlspecialchars($pageTitle); ?></h1>
+        <p class="text-muted" style="margin-bottom: 20px;">Apply for the upcoming academic session</p>
+        <div>
+            <a href="<?php echo moduleUrl('public', 'track_application'); ?>" class="btn btn-outline" style="font-size: 14px; padding: 8px 20px; border-radius: 30px; text-decoration: none; border: 2px solid var(--primary); color: var(--primary); display: inline-block; transition: all 0.2s;"><i class="fa-solid fa-magnifying-glass"></i> Track Existing Application</a>
+        </div>
     </div>
 
     <?php if (!empty($settings['instructions'])): ?>
-        <div class="alert alert-info" style="margin-bottom: 25px; text-align: left; background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 4px;">
-            <h4 style="margin: 0 0 10px; color: #1e40af; font-size: 15px;"><i class="fa-solid fa-circle-info"></i> Important Instructions</h4>
-            <div style="font-size: 14px; color: #3b82f6; white-space: pre-line;">
-                <?php echo htmlspecialchars($settings['instructions']); ?>
+        <div style="margin-bottom: 30px; text-align: left;">
+            <h4 style="margin: 0 0 10px; color: var(--primary); font-size: 16px; text-align: left;"><i class="fa-solid fa-circle-info"></i> Important Instructions</h4>
+            <div style="font-size: 14px; color: var(--gray); line-height: 1.6; text-align: left;">
+                <?php echo nl2br(htmlspecialchars(trim($settings['instructions']))); ?>
             </div>
+            <hr style="margin-top: 25px; margin-bottom: 0; border: none; border-top: 1px solid #e2e8f0;">
         </div>
     <?php endif; ?>
 
     <form method="POST" action="<?php echo moduleUrl('public', 'admission'); ?>" enctype="multipart/form-data" class="auth-form" style="text-align: left;">
         <?php echo csrf_field(); ?>
 
-        <div class="form-group" style="display: flex; gap: 15px;">
-            <div style="flex: 1;">
+        <div class="form-group form-row">
+            <div class="form-col">
                 <label class="form-label" for="first_name">Applicant First Name <span style="color: var(--danger);">*</span></label>
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-user"></i>
-                    <input type="text" id="first_name" name="first_name" class="form-control" placeholder="First Name" pattern="^[a-zA-Z\s]+$" title="Only alphabets and spaces allowed" required>
+                    <input type="text" id="first_name" name="first_name" class="form-control" placeholder="First Name" maxlength="50" pattern="^[a-zA-Z\s]+$" title="Only alphabets and spaces allowed" required>
                 </div>
             </div>
-            <div style="flex: 1;">
+            <div class="form-col">
                 <label class="form-label" for="last_name">Applicant Last Name <span style="color: var(--danger);">*</span></label>
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-user"></i>
-                    <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Last Name" pattern="^[a-zA-Z\s]+$" title="Only alphabets and spaces allowed" required>
+                    <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Last Name" maxlength="50" pattern="^[a-zA-Z\s]+$" title="Only alphabets and spaces allowed" required>
                 </div>
             </div>
         </div>
 
-        <div class="form-group" style="display: flex; gap: 15px;">
-            <div style="flex: 1;">
+        <div class="form-group form-row">
+            <div class="form-col">
                 <label class="form-label" for="date_of_birth">Date of Birth <span style="color: var(--danger);">*</span></label>
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-calendar"></i>
                     <input type="date" id="date_of_birth" name="date_of_birth" class="form-control" max="<?php echo date('Y-m-d'); ?>" required>
                 </div>
             </div>
-            <div style="flex: 1;">
+            <div class="form-col">
                 <label class="form-label" for="gender">Gender <span style="color: var(--danger);">*</span></label>
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-venus-mars"></i>
@@ -71,41 +75,41 @@
                     <option value="">-- Select Class --</option>
                     <?php foreach ($classes as $cls): ?>
                         <option value="<?php echo $cls['class_id']; ?>">
-                            <?php echo htmlspecialchars($cls['class_name'] . ' ' . $cls['section']); ?>
+                            <?php echo htmlspecialchars($cls['class_name']); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
             </div>
         </div>
 
-        <div class="form-group" style="display: flex; gap: 15px;">
-            <div style="flex: 1;">
+        <div class="form-group form-row">
+            <div class="form-col">
                 <label class="form-label" for="phone">Student Phone <span style="color: var(--danger);">*</span></label>
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-phone"></i>
                     <input type="tel" id="phone" name="phone" class="form-control" placeholder="10-digit Phone Number" maxlength="10" minlength="10" pattern="^[0-9]{10}$" title="Please enter exactly a 10 digit phone number" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)" required>
                 </div>
             </div>
-            <div style="flex: 1;">
-                <label class="form-label" for="email">Student Email</label>
+            <div class="form-col">
+                <label class="form-label" for="email">Student Email <span style="color: var(--danger);">*</span></label>
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-envelope"></i>
-                    <input type="email" id="email" name="email" class="form-control" placeholder="Optional" pattern="^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$" title="Please enter a valid email address (e.g. user@example.com)" oninput="this.value = this.value.replace(/[^a-zA-Z0-9._@+-]/g, '')">
+                    <input type="email" id="email" name="email" class="form-control" placeholder="Email Address" maxlength="100" pattern="^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$" title="Please enter a valid email address (e.g. user@example.com)" oninput="this.value = this.value.replace(/[^a-zA-Z0-9._@+-]/g, '')" required>
                 </div>
             </div>
         </div>
 
         <h4 style="margin: 25px 0 15px; color: #1e40af; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;">Parent/Guardian Details</h4>
 
-        <div class="form-group" style="display: flex; gap: 15px;">
-            <div style="flex: 1;">
+        <div class="form-group form-row">
+            <div class="form-col">
                 <label class="form-label" for="parent_name">Parent Name <span style="color: var(--danger);">*</span></label>
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-user-group"></i>
-                    <input type="text" id="parent_name" name="parent_name" class="form-control" placeholder="Parent/Guardian Name" pattern="^[A-Za-z\s]+$" title="Please enter only letters and spaces" oninput="this.value = this.value.replace(/[^A-Za-z\s]/g, '')" required>
+                    <input type="text" id="parent_name" name="parent_name" class="form-control" placeholder="Parent/Guardian Name" maxlength="100" pattern="^[A-Za-z\s]+$" title="Please enter only letters and spaces" oninput="this.value = this.value.replace(/[^A-Za-z\s]/g, '')" required>
                 </div>
             </div>
-            <div style="flex: 1;">
+            <div class="form-col">
                 <label class="form-label" for="parent_phone">Parent Phone <span style="color: var(--danger);">*</span></label>
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-phone"></i>
@@ -118,17 +122,14 @@
             <label class="form-label" for="address">Full Address (Optional)</label>
             <div class="input-icon-wrapper">
                 <i class="fa-solid fa-location-dot" style="top: 20px;"></i>
-                <textarea id="address" name="address" class="form-control" placeholder="Enter residential address" rows="3" style="padding-left: 40px; resize: vertical;"></textarea>
+                <textarea id="address" name="address" class="form-control" placeholder="Enter residential address" rows="3" maxlength="255" style="padding-left: 40px; resize: vertical;"></textarea>
             </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label" for="documents">Upload Supporting Documents (Optional)</label>
-            <div class="input-icon-wrapper">
-                <i class="fa-solid fa-file-upload"></i>
-                <input type="file" id="documents" name="documents[]" multiple class="form-control" accept=".pdf,.jpg,.jpeg,.png" style="padding-left: 40px; padding-top: 7px;">
-            </div>
-            <small class="text-muted" style="display:block; margin-top:5px; font-size:12px;">You can select multiple files. Accepted formats: PDF, JPG, PNG (Max 5MB each)</small>
+        <div class="form-group" style="padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: #fafafa;">
+            <label class="form-label" for="documents" style="margin-bottom: 10px;">Upload Supporting Documents (Optional)</label>
+            <input type="file" id="documents" name="documents[]" multiple accept=".pdf,.jpg,.jpeg,.png" style="display: block;">
+            <small class="text-muted" style="display:block; margin-top:8px; font-size:12px;"><i class="fa-solid fa-info-circle"></i> You can select multiple files. (Max 150KB for images, 1.5MB for PDFs).</small>
         </div>
 
         <button type="submit" class="btn btn-primary btn-block" style="margin-top: 30px; font-size: 16px; padding: 12px;">
@@ -137,73 +138,4 @@
     </form>
 </div>
 
-<style>
-.admission-form-container {
-    max-width: 600px;
-    margin: 40px auto;
-    padding: 40px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-}
-.input-icon-wrapper {
-    position: relative;
-}
-.input-icon-wrapper i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-}
-.input-icon-wrapper .form-control {
-    padding-left: 42px;
-}
-.btn-primary {
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background 0.3s ease;
-}
-.btn-primary:hover {
-    background: var(--primary-dark);
-}
-.btn-block {
-    width: 100%;
-    display: block;
-}
-.form-group {
-    margin-bottom: 20px;
-}
-.form-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: var(--text-main);
-}
-.form-control {
-    width: 100%;
-    padding: 10px 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--bg-main);
-    color: var(--text-main);
-    box-sizing: border-box;
-}
-.form-control:focus {
-    border-color: var(--primary);
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-.auth-links a {
-    color: var(--primary);
-    text-decoration: none;
-    font-weight: 500;
-}
-.auth-links a:hover {
-    text-decoration: underline;
-}
-</style>
+

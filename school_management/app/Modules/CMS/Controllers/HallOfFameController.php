@@ -27,18 +27,62 @@ class HallOfFameController extends \Controller
         $this->validateCsrf();
 
         if ($action === 'create') {
-            $name = $this->input('name', '');
-            $achievement = $this->input('achievement', '');
-            $percentage = $this->input('percentage', '');
+            $name = trim($this->input('name', ''));
+            $achievement = trim($this->input('achievement', ''));
+            $percentage = trim($this->input('percentage', ''));
+
+            // Backend validation
+            if (!preg_match('/^[a-zA-Z\s]+$/', $name)) {
+                $this->flash('error', 'Name contains invalid characters. Only letters and spaces are allowed.');
+                $this->redirect(moduleUrl('admin', 'hall-of-fame'));
+                return;
+            }
+            if (!preg_match('/^[a-zA-Z0-9\s.,\-]+$/', $achievement)) {
+                $this->flash('error', 'Achievement contains invalid characters.');
+                $this->redirect(moduleUrl('admin', 'hall-of-fame'));
+                return;
+            }
+            if (!empty($percentage) && !preg_match('/^[0-9]+(\.[0-9]{1,2})?%?$/', $percentage)) {
+                $this->flash('error', 'Percentage contains invalid characters.');
+                $this->redirect(moduleUrl('admin', 'hall-of-fame'));
+                return;
+            }
+
+            // Sanitize
+            $name = strip_tags($name);
+            $achievement = strip_tags($achievement);
+            $percentage = strip_tags($percentage);
             
             // Handle image upload
             $imagePath = '';
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                // File validation
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                $fileMimeType = @mime_content_type($_FILES['image']['tmp_name']);
+                
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                $fileExtension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+
+                if (!in_array($fileMimeType, $allowedMimeTypes) || !in_array($fileExtension, $allowedExtensions)) {
+                    $this->flash('error', 'Invalid file format. Only JPG, PNG, GIF, and WebP are allowed.');
+                    $this->redirect(moduleUrl('admin', 'hall-of-fame'));
+                    return;
+                }
+
+                if ($_FILES['image']['size'] > 5 * 1024 * 1024) { // 5MB limit
+                    $this->flash('error', 'File size exceeds the 5MB limit.');
+                    $this->redirect(moduleUrl('admin', 'hall-of-fame'));
+                    return;
+                }
+
                 $uploadDir = dirname(APP_ROOT) . '/assets/gallery/';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0777, true);
                 }
-                $filename = uniqid('fame_') . '_' . basename($_FILES['image']['name']);
+                
+                // Sanitize filename
+                $safeFilename = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($_FILES['image']['name'], PATHINFO_FILENAME));
+                $filename = uniqid('fame_') . '_' . $safeFilename . '.' . $fileExtension;
                 $targetFile = $uploadDir . $filename;
                 
                 if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {

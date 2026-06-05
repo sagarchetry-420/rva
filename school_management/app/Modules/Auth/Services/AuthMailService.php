@@ -85,8 +85,15 @@ class AuthMailService
                 $mail->send();
                 return true;
             } catch (\Exception $e) {
-                error_log("PHPMailer Error: " . $e->getMessage());
-                return false;
+                $errorMsg = $e->getMessage();
+                error_log("PHPMailer Error: " . $errorMsg);
+                
+                // Log strictly to mail_error.log for Super Admin dashboard
+                $mailLogPath = APP_ROOT . '/app/Core/mail_error.log';
+                $logEntry = date('Y-m-d H:i:s') . " | TO: $toEmail | SUB: $subject | ERROR: " . str_replace(["\r", "\n"], " ", $errorMsg) . "\n";
+                @file_put_contents($mailLogPath, $logEntry, FILE_APPEND);
+                
+                // Do not return false here, let it fall through to the file logging fallback
             }
         }
 

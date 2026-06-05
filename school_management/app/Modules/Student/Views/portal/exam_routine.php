@@ -5,11 +5,21 @@
  */
 ?>
 <div class="print-header" style="display: none;">
-    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #ccc;">
-        <img src="<?php echo asset('img/logo.png'); ?>" alt="Logo" style="height: 50px; width: 50px; border-radius: 50%; object-fit: cover;">
-        <div>
-            <h2 style="margin: 0; font-size: 22px; color: #333;">RVA</h2>
-            <p style="margin: 0; font-size: 14px; color: #666;">Student Examination Routine</p>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #ccc;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="<?php echo asset('img/logo.png'); ?>" alt="Logo" style="height: 50px; width: 50px; border-radius: 50%; object-fit: cover;">
+            <div>
+                <h2 style="margin: 0; font-size: 22px; color: #333;">RVA</h2>
+                <p style="margin: 0; font-size: 14px; color: #666;">Examination Routine</p>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <h3 style="margin: 0; font-size: 18px; color: #333;">
+                <?php echo $selectedExam ? htmlspecialchars($selectedExam['exam_name']) : 'Exam Schedule'; ?>
+            </h3>
+            <p style="margin: 0; font-size: 14px; color: #666; font-weight: bold;">
+                Class: <?php echo htmlspecialchars($academic['class_name'] . ' ' . $academic['section']); ?>
+            </p>
         </div>
     </div>
 </div>
@@ -20,15 +30,48 @@
         <p>Your upcoming examination schedule</p>
     </div>
     <div style="display:flex; gap:10px;">
-        <button class="btn btn-info" onclick="window.print()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+        <?php if ($selectedExam): ?>
+            <a href="<?php echo moduleUrl('student', 'downloadRoutinePdf'); ?>?exam_id=<?php echo $selectedExam['exam_id']; ?>" class="btn btn-info"><i class="fas fa-file-pdf"></i> Download PDF</a>
+        <?php else: ?>
+            <button class="btn btn-info" disabled><i class="fas fa-file-pdf"></i> Download PDF</button>
+        <?php endif; ?>
     </div>
 </div>
 
 <style>
 @media print {
+    @page { size: landscape; margin: 10mm; }
+    body, html, .main-container, .main-content, .content-wrapper {
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: auto !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
     .sidebar, .top-nav, .main-header, .page-header, .btn, .exam-selector { display: none !important; }
-    .main-content { margin-left: 0 !important; padding: 0 !important; }
-    .print-header { display: block !important; }
+    .print-header { display: block !important; margin-bottom: 30px !important; }
+    
+    .table-container { 
+        overflow: visible !important; 
+        position: static !important;
+        width: auto !important;
+    }
+    table.data-table { 
+        min-width: 100% !important; 
+        width: 100% !important; 
+        border-collapse: collapse !important;
+        page-break-inside: auto;
+    }
+    table.data-table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+    div[style*="box-shadow"] {
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
 }
 </style>
 
@@ -46,7 +89,7 @@
     
     <div class="exam-selector" style="margin-bottom: 20px; display: flex; align-items: center; gap: 15px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
         <label style="font-weight: bold; margin: 0; color: var(--primary);">Select Exam:</label>
-        <select class="form-control" style="width: auto; display: inline-block; padding: 8px; font-weight: bold;" onchange="window.location.href="<?php echo moduleUrl('student', 'exam_routine'); ?>?exam_id="+this.value">
+        <select class="form-control" style="width: auto; display: inline-block; padding: 8px; font-weight: bold;" onchange="window.location.href='<?php echo moduleUrl('student', 'exam_routine'); ?>?exam_id='+this.value">
             <?php foreach ($exams as $e): ?>
                 <option value="<?php echo $e['exam_id']; ?>" <?php echo ($selectedExam && $selectedExam['exam_id'] == $e['exam_id']) ? 'selected' : ''; ?>>
                     <?php echo htmlspecialchars($e['exam_name']); ?> (<?php echo date('M Y', strtotime($e['start_date'])); ?>)
@@ -92,6 +135,22 @@
             <h3 style="margin-bottom: 20px; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px;">
                 <i class="fas fa-file-signature"></i> <?php echo htmlspecialchars($selectedExam['exam_name']); ?> Routine
             </h3>
+            <style>
+                @media (max-width: 768px) {
+                    .timetable-matrix {
+                        min-width: 0 !important;
+                    }
+                    .timetable-matrix th, 
+                    .timetable-matrix td {
+                        padding: 6px 4px !important;
+                        font-size: 11px !important;
+                    }
+                    .timetable-matrix th small, 
+                    .timetable-matrix td small {
+                        font-size: 9px !important;
+                    }
+                }
+            </style>
             <div class="table-container" style="overflow-x: auto;">
                 <table class="data-table timetable-matrix" style="width: 100%; border-collapse: collapse; min-width: 800px;">
                     <thead>

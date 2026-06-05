@@ -20,8 +20,47 @@
         <p>No results found for this exam.</p>
     </div>
 <?php else: ?>
+    <style>
+        /* Force traditional tabular layout on mobile but smaller */
+        @media (max-width: 768px) {
+            .view-result-table {
+                display: table !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+            .view-result-table thead {
+                display: table-header-group !important;
+            }
+            .view-result-table tbody {
+                display: table-row-group !important;
+            }
+            .view-result-table tfoot {
+                display: table-footer-group !important;
+            }
+            .view-result-table tr {
+                display: table-row !important;
+            }
+            .view-result-table th, 
+            .view-result-table td {
+                display: table-cell !important;
+            }
+            .view-result-table th, 
+            .view-result-table td {
+                padding: 6px 3px !important;
+                font-size: 11px !important;
+                white-space: normal !important;
+                word-wrap: break-word !important;
+            }
+            .view-result-table td::before {
+                display: none !important; /* Hide the card labels */
+            }
+            .table-container {
+                overflow-x: auto;
+            }
+        }
+    </style>
     <div class="table-container">
-        <table class="data-table">
+        <table class="data-table view-result-table">
             <thead>
                 <tr>
                     <th>Subject</th>

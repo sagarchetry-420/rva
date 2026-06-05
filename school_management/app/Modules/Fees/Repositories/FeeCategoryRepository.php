@@ -50,4 +50,9 @@ class FeeCategoryRepository
         }
         return $this->db->fetch($sql, $params) !== null;
     }
+
+    public function isCategoryInUse(int $categoryId): bool
+    {
+        return $this->db->fetch("SELECT 1 FROM fees WHERE category_id = ? LIMIT 1", [$categoryId]) !== null;
+    }
 }

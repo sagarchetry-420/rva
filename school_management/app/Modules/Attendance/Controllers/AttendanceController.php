@@ -24,6 +24,10 @@ class AttendanceController extends \Controller
     {
         $classId = (int)$this->input('class_id', 0);
         $date = $this->input('attendance_date', date('Y-m-d'));
+        $search = trim($this->input('search', ''));
+        $page = max(1, (int)$this->input('page', 1));
+        $limit = 20;
+        $offset = ($page - 1) * $limit;
         
         // Force date to today for teachers
         if ($_SESSION['user_type'] === 'teacher') {
@@ -43,8 +47,13 @@ class AttendanceController extends \Controller
 
         $students = [];
         $isMarked = false;
+        $totalStudents = 0;
+        $totalPages = 0;
+
         if ($classId && $date) {
-            $students = $this->service->getAttendanceList($classId, $date);
+            $students = $this->service->getAttendanceList($classId, $date, $search, $limit, $offset);
+            $totalStudents = $this->service->getAttendanceCount($classId, $date, $search);
+            $totalPages = ceil($totalStudents / $limit);
             $isMarked = $this->service->isAttendanceMarked($classId, $date);
         }
 
@@ -53,6 +62,9 @@ class AttendanceController extends \Controller
             'classes'         => $classes,
             'filterClass'     => $classId,
             'attendanceDate'  => $date,
+            'searchQuery'     => $search,
+            'currentPage'     => $page,
+            'totalPages'      => $totalPages,
             'students'        => $students,
             'isMarked'        => $isMarked
         ], $_SESSION['user_type']); // render in respective layout
@@ -76,6 +88,12 @@ class AttendanceController extends \Controller
                 break;
             case 'exportPdf':
                 $this->exportPdf();
+                break;
+            case 'exportMonthlyCsv':
+                $this->exportMonthlyCsv();
+                break;
+            case 'exportMonthlyPdf':
+                $this->exportMonthlyPdf();
                 break;
             default:
                 $this->flash('error', 'Invalid action.');
@@ -136,7 +154,8 @@ class AttendanceController extends \Controller
         $startDate = $data['start_date'];
         $endDate = $data['end_date'];
         $status = $data['leave_status']; // Leave or Half Leave
-        $remarks = $data['remarks'] ?? '';
+        $rawRemarks = trim($data['remarks'] ?? '');
+        $sanitizedRemarks = htmlspecialchars(strip_tags($rawRemarks), ENT_QUOTES, 'UTF-8');
         
         if (strtotime($endDate) < strtotime($startDate)) {
             $this->flash('error', 'End date cannot be before start date.');
@@ -145,19 +164,39 @@ class AttendanceController extends \Controller
         }
 
         $documentPath = null;
-        if (!empty($_FILES['leave_document']['name'])) {
-            $uploadDir = APP_ROOT . '/uploads/leaves/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-            }
-            $fileName = time() . '_' . basename($_FILES['leave_document']['name']);
-            $targetFile = $uploadDir . $fileName;
-            if (move_uploaded_file($_FILES['leave_document']['tmp_name'], $targetFile)) {
-                $documentPath = 'uploads/leaves/' . $fileName;
+        if (!empty($_FILES['leave_document']['name']) && $_FILES['leave_document']['error'] === UPLOAD_ERR_OK) {
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+            $allowedMimeTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+            
+            $fileInfo = pathinfo($_FILES['leave_document']['name']);
+            $extension = strtolower($fileInfo['extension'] ?? '');
+            $mimeType = mime_content_type($_FILES['leave_document']['tmp_name']);
+            
+            if (in_array($extension, $allowedExtensions) && in_array($mimeType, $allowedMimeTypes)) {
+                $uploadDir = APP_ROOT . '/uploads/leaves/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                $fileName = time() . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($_FILES['leave_document']['name']));
+                $targetFile = $uploadDir . $fileName;
+                if (move_uploaded_file($_FILES['leave_document']['tmp_name'], $targetFile)) {
+                    $documentPath = 'uploads/leaves/' . $fileName;
+                }
+            } else {
+                $this->flash('error', 'Invalid file type. Only JPG, PNG, and PDF are allowed.');
+                $this->redirect('/admin/attendance?class_id=' . $classId . '&attendance_date=' . $startDate);
+                return;
             }
         }
 
-        // Generate date range
+        // Generate date range and formatted remarks
+        $startFormatted = date('d-m-Y', strtotime($startDate));
+        $endFormatted = date('d-m-Y', strtotime($endDate));
+        $dateInfo = ($startDate !== $endDate) ? "(From: $startFormatted To: $endFormatted)" : "(Date: $startFormatted)";
+        
+        $baseRemark = $sanitizedRemarks ? $sanitizedRemarks : 'Leave Approved';
+        $remarks = "$baseRemark $dateInfo";
+
         $current = strtotime($startDate);
         $end = strtotime($endDate);
         
@@ -168,16 +207,21 @@ class AttendanceController extends \Controller
         if ($session) {
             while ($current <= $end) {
                 $currentDate = date('Y-m-d', $current);
-                $attendanceRepo->upsertAttendance([
-                    'student_id'      => $studentId,
-                    'class_id'        => $classId,
-                    'session_id'      => $session['session_id'],
-                    'attendance_date' => $currentDate,
-                    'status'          => $status,
-                    'remarks'         => $remarks,
-                    'leave_document'  => $documentPath,
-                    'marked_by'       => (int)$_SESSION['user_id']
-                ]);
+                
+                // Skip Sundays (1 = Monday, 7 = Sunday)
+                if (date('N', $current) != 7) {
+                    $attendanceRepo->upsertAttendance([
+                        'student_id'      => $studentId,
+                        'class_id'        => $classId,
+                        'session_id'      => $session['session_id'],
+                        'attendance_date' => $currentDate,
+                        'status'          => $status,
+                        'remarks'         => $remarks,
+                        'leave_document'  => $documentPath,
+                        'marked_by'       => (int)$_SESSION['user_id']
+                    ]);
+                }
+                
                 $current = strtotime('+1 day', $current);
             }
             $this->flash('success', 'Leave applied successfully.');
@@ -217,7 +261,7 @@ class AttendanceController extends \Controller
             $pdfService->generateStudentReport($student, $summary);
         } else {
             // Whole class report for a date
-            $students = $this->service->getAttendanceList($classId, $date);
+            $students = $this->service->getAttendanceList($classId, $date, '', 0, 0);
             $pdfService->generateClassReport($classId, $date, $students);
         }
     }
@@ -250,7 +294,7 @@ class AttendanceController extends \Controller
             'yearMonth' => $yearMonth,
             'students' => $students,
             'pageTitle' => 'Monthly Class Attendance'
-        ]);
+        ], 'admin');
     }
 
     public function exportMonthlyCsv(): void
@@ -302,5 +346,27 @@ class AttendanceController extends \Controller
 
         fclose($out);
         exit;
+    }
+
+    public function exportMonthlyPdf(): void
+    {
+        $this->validateCsrf();
+        $classId = (int)$this->input('class_id', 0);
+        $yearMonth = $this->input('month', date('Y-m'));
+
+        if (!$classId) {
+            $this->flash('error', 'Class ID is required for export.');
+            $this->redirect(moduleUrl('admin', 'index') . '?action=attendance/monthly');
+            return;
+        }
+
+        $academicRepo = new \App\Modules\Academic\Repositories\ClassSubjectRepository();
+        $session = $academicRepo->getActiveSession();
+        
+        $attendanceRepo = new AttendanceRepository();
+        $students = $attendanceRepo->getMonthlyClassAttendance($classId, $yearMonth, $session['session_id']);
+
+        $pdfService = new \App\Modules\Attendance\Services\AttendancePdfService();
+        $pdfService->generateMonthlyReport($classId, $yearMonth, $students);
     }
 }

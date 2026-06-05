@@ -145,17 +145,31 @@
 
 @media (max-width: 768px) {
     .hero {
-        display: block; /* Use simple block stacking for mobile to prevent flex bugs */
-        min-height: auto;
+        display: flex;
+        min-height: 100vh;
+        height: 100vh; /* Force full screen height */
+        align-items: center;
     }
     
     .hero-left {
         position: relative;
         width: 100%;
-        height: auto;
-        padding: 120px 20px 60px 20px;
-        background: white;
-        z-index: 2;
+        height: 100%;
+        padding: 25vh 20px 60px 20px; /* Pin to top instead of centering */
+        background: transparent;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start; /* Stop jumping by anchoring to top */
+    }
+
+    .hero-left .hero-kicker {
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .hero-left .hero-title {
+        color: #ffffff;
+        -webkit-text-fill-color: #ffffff;
     }
 
     .hero-scroll-down {
@@ -163,17 +177,29 @@
     }
 
     .hero-title {
-        font-size: 45px;
-        min-height: 230px; /* Reserves space so the image below doesn't jump up when shorter text rotates in */
+        font-size: clamp(32px, 10vw, 45px); /* Responsive to prevent wild wrapping */
+        min-height: auto; /* No longer needed since it grows downwards securely */
     }
 
     .hero-right {
-        position: relative;
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
-        height: 400px; /* Foolproof fixed height */
+        height: 100%; 
         right: 0;
         z-index: 1;
         display: block;
+    }
+
+    /* Dark gradient/overlay so white text is readable over bright images */
+    .hero-right::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2;
     }
     
     .hero-background {
@@ -181,7 +207,7 @@
         top: 0; left: 0;
         width: 100%;
         height: 100%;
-        background-position: center center;
+        background-position: center top;
     }
     
     .hero-left-overlay {

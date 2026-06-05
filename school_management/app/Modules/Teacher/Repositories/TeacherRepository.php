@@ -20,26 +20,79 @@ class TeacherRepository
      */
     public function findById(int $teacherId): ?array
     {
-        return $this->db->fetch("SELECT * FROM teachers WHERE teacher_id = ?", [$teacherId]);
+        $sql = "SELECT t.*, u.username 
+                FROM teachers t 
+                LEFT JOIN users u ON t.user_id = u.user_id 
+                WHERE t.teacher_id = ?";
+        return $this->db->fetch($sql, [$teacherId]);
     }
 
     /**
      * Get all teachers paginated
      */
-    public function findAll(?string $status = null, int $page = 1, int $perPage = 20): array
+    public function findAll(?string $status = null, int $page = 1, int $perPage = 20, string $search = ''): array
     {
         $sql = "SELECT t.*, u.username 
                 FROM teachers t
-                JOIN users u ON t.user_id = u.user_id";
+                JOIN users u ON t.user_id = u.user_id
+                WHERE 1=1";
         $params = [];
         
         if ($status !== null) {
-            $sql .= " WHERE t.status = ?";
+            $sql .= " AND t.status = ?";
             $params[] = $status;
+        }
+
+        if (!empty($search)) {
+            $sql .= " AND (t.first_name LIKE ? OR t.last_name LIKE ? OR CONCAT(t.first_name, ' ', t.last_name) LIKE ? OR t.email LIKE ? OR t.phone LIKE ? OR u.username LIKE ?)";
+            $searchTerm = "%{$search}%";
+            $cleanSearch = ltrim($search, '@');
+            $usernameSearchTerm = "%{$cleanSearch}%";
+            
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $usernameSearchTerm;
         }
         
         $sql .= " ORDER BY t.first_name, t.last_name";
         return $this->db->paginate($sql, $params, $page, $perPage);
+    }
+
+    /**
+     * Get all teachers without pagination (for export)
+     */
+    public function getAll(?string $status = null, string $search = ''): array
+    {
+        $sql = "SELECT t.*, u.username 
+                FROM teachers t
+                JOIN users u ON t.user_id = u.user_id
+                WHERE 1=1";
+        $params = [];
+        
+        if ($status !== null) {
+            $sql .= " AND t.status = ?";
+            $params[] = $status;
+        }
+
+        if (!empty($search)) {
+            $sql .= " AND (t.first_name LIKE ? OR t.last_name LIKE ? OR CONCAT(t.first_name, ' ', t.last_name) LIKE ? OR t.email LIKE ? OR t.phone LIKE ? OR u.username LIKE ?)";
+            $searchTerm = "%{$search}%";
+            $cleanSearch = ltrim($search, '@');
+            $usernameSearchTerm = "%{$cleanSearch}%";
+            
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $usernameSearchTerm;
+        }
+        
+        $sql .= " ORDER BY t.first_name, t.last_name";
+        return $this->db->fetchAll($sql, $params);
     }
 
     /**

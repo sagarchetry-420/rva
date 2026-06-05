@@ -25,6 +25,36 @@
     <!-- Font Awesome for Social Icons -->
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
     <style>
+        /* EYE ANIMATION CSS */
+        .loader {
+            position: relative;
+            width: 108px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .loader::after, .loader::before {
+            content: '';
+            display: inline-block;
+            width: 48px;
+            height: 48px;
+            background-color: #FFF;
+            background-image: radial-gradient(circle 14px, #0d161b 100%, transparent 0);
+            background-repeat: no-repeat;
+            border-radius: 50%;
+            animation: eyeMove 10s infinite, blink 10s infinite;
+        }
+        @keyframes eyeMove {
+            0%, 10% { background-position: 0px 0px; }
+            13%, 40% { background-position: -15px 0px; }
+            43%, 70% { background-position: 15px 0px; }
+            73%, 90% { background-position: 0px 15px; }
+            93%, 100% { background-position: 0px 0px; }
+        }
+        @keyframes blink {
+            0%, 10%, 12%, 20%, 22%, 40%, 42%, 60%, 62%, 70%, 72%, 90%, 92%, 98%, 100% { height: 48px; }
+            11%, 21%, 41%, 61%, 71%, 91%, 99% { height: 18px; }
+        }
+
         /* Force navbar to be solid white on this inner page */
         .navbar {
             background-color: #ffffff !important;
@@ -158,11 +188,9 @@
     <!-- Floating Social Strip -->
     <div class="social-sidebar">
         <ul>
-            <li><a href="#"><i class="fab fa-facebook-f icon"></i></a></li>
-            <li><a href="#"><i class="fab fa-twitter icon"></i></a></li>
-            <li><a href="#"><i class="fab fa-linkedin-in icon"></i></a></li>
-            <li><a href="#"><i class="fab fa-youtube icon"></i></a></li>
-            <li><a href="#"><i class="fab fa-instagram icon"></i></a></li>
+            <li><a href="https://www.facebook.com/rosevalleyacademy" target="_blank"><i class="fab fa-facebook-f icon"></i></a></li>
+            <li><a href="https://www.instagram.com/rose_valley_academy" target="_blank"><i class="fab fa-instagram icon"></i></a></li>
+            <li><a href="https://youtube.com/@rosevalleyacademy1856" target="_blank"><i class="fab fa-youtube icon"></i></a></li>
         </ul>
     </div>
 
@@ -239,6 +267,13 @@
 
                     // Initialize load more logic
                     initializeNotices();
+                    
+                    // Trigger exit animation for seamless transition after notices are loaded
+                    const transitionIn = document.getElementById('notice-transition-in');
+                    if(transitionIn) {
+                        transitionIn.classList.add('slide-out');
+                        setTimeout(() => transitionIn.remove(), 800);
+                    }
                 })
                 .catch(error => {
                     console.error('Error fetching notices:', error);
@@ -425,24 +460,13 @@
     <!-- Seamless Page Load Overlay -->
     <div class="notice-transition active" id="notice-transition-in">
         <div class="nt-content">
-            <div class="nt-item"><span class="revealed">Loading</span></div>
-            <div class="nt-item"><span class="revealed">All</span></div>
-            <div class="nt-item"><span class="revealed">Notices...</span></div>
+            <span class="loader"></span>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Trigger exit animation for seamless transition
-            const transitionIn = document.getElementById('notice-transition-in');
-            if(transitionIn) {
-                // Short delay to ensure the browser paints the white screen first
-                setTimeout(() => {
-                    transitionIn.classList.add('slide-out');
-                    // Remove from DOM after animation completes so it doesn't block clicks
-                    setTimeout(() => transitionIn.remove(), 800);
-                }, 50);
-            }
+            // Transition is now removed dynamically after notices load!
 
             // Load More Logic
             const notices = document.querySelectorAll('.notice-list-item');

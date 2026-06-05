@@ -14,15 +14,36 @@ class PromotionController extends \Controller
 
         $students = [];
         $selectedClassId = (int)$this->input('class_id', 0);
+        $pagination = null;
         
         if ($selectedClassId && $session) {
+            // Pagination settings
+            $page = max(1, (int)$this->input('page', 1));
+            $limit = 20; // 20 students per page
+            $offset = ($page - 1) * $limit;
+            
+            // Get total count
+            $totalCount = $this->db->fetch("
+                 SELECT COUNT(*) as cnt
+                 FROM student_academics sa
+                 WHERE sa.class_id = ? AND sa.session_id = ? AND sa.admission_status = 'Active'
+            ", [$selectedClassId, $session['session_id']])['cnt'];
+            
+            $pagination = [
+                'total' => $totalCount,
+                'pages' => ceil($totalCount / $limit),
+                'current_page' => $page,
+                'limit' => $limit
+            ];
+
             $students = $this->db->fetchAll(
                 "SELECT s.*, sa.roll_number, c.class_name, c.section, sa.promotion_status 
                  FROM student_academics sa
                  JOIN students s ON sa.student_id = s.student_id
                  JOIN classes c ON sa.class_id = c.class_id 
                  WHERE sa.class_id = ? AND sa.session_id = ? AND sa.admission_status = 'Active'
-                 ORDER BY sa.roll_number",
+                 ORDER BY sa.roll_number
+                 LIMIT $limit OFFSET $offset",
                 [$selectedClassId, $session['session_id']]
             );
 
@@ -72,6 +93,7 @@ class PromotionController extends \Controller
             'classes'         => $classes,
             'students'        => $students,
             'selectedClassId' => $selectedClassId,
+            'pagination'      => $pagination,
         ], 'admin');
     }
 
@@ -105,8 +127,8 @@ class PromotionController extends \Controller
         }
 
         $academicRepo = new \App\Modules\Academic\Repositories\ClassSubjectRepository();
-        $nextSession = $this->db->fetch("SELECT * FROM academic_sessions WHERE is_current = 0 ORDER BY start_date DESC LIMIT 1");
         $currentSession = $academicRepo->getActiveSession();
+        $nextSession = $this->db->fetch("SELECT * FROM academic_sessions WHERE start_date > ? ORDER BY start_date ASC LIMIT 1", [$currentSession['start_date']]);
 
         if (!$nextSession) {
             $this->flash('error', 'No next academic session found. Please create a new session before promoting students.');
@@ -115,7 +137,9 @@ class PromotionController extends \Controller
         }
 
         $promoted = 0;
-        foreach ($studentIds as $studentId) {
+        try {
+            $this->db->transaction(function() use ($studentIds, $currentSession, $nextSession, $targetClassId, $sourceClassId, &$promoted) {
+                foreach ($studentIds as $studentId) {
             // Check pass status
             $failedCount = $this->db->fetch("
                 SELECT COUNT(*) as cnt 
@@ -222,9 +246,13 @@ class PromotionController extends \Controller
 
                 $promoted++;
             }
+                }
+            });
+            $this->flash('success', "{$promoted} student(s) promoted successfully.");
+        } catch (\Exception $e) {
+            $this->flash('error', 'Promotion failed due to a system error: ' . $e->getMessage());
         }
 
-        $this->flash('success', "{$promoted} student(s) promoted successfully.");
         $this->redirect('/admin/promotions?class_id=' . $sourceClassId);
     }
     private function passOutStudents(): void
@@ -249,7 +277,9 @@ class PromotionController extends \Controller
         }
 
         $passedOut = 0;
-        foreach ($studentIds as $studentId) {
+        try {
+            $this->db->transaction(function() use ($studentIds, $currentSession, &$passedOut) {
+                foreach ($studentIds as $studentId) {
             // Check pass status
             $failedCount = $this->db->fetch("
                 SELECT COUNT(*) as cnt 
@@ -294,9 +324,13 @@ class PromotionController extends \Controller
 
                 $passedOut++;
             }
+                }
+            });
+            $this->flash('success', "{$passedOut} student(s) passed out successfully.");
+        } catch (\Exception $e) {
+            $this->flash('error', 'Pass Out failed due to a system error: ' . $e->getMessage());
         }
 
-        $this->flash('success', "{$passedOut} student(s) passed out successfully.");
         $this->redirect('/admin/promotions?class_id=' . $sourceClassId);
     }
 }

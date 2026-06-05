@@ -42,6 +42,17 @@ class FeeValidator
 
         if (empty($data['due_date'])) {
             $this->addError('due_date', 'Due date is required.');
+        } else {
+            $date = \DateTime::createFromFormat('Y-m-d', $data['due_date']);
+            if (!$date || $date->format('Y-m-d') !== $data['due_date']) {
+                $this->addError('due_date', 'Invalid date format.');
+            } else {
+                $today = new \DateTime('today');
+                $date->setTime(0, 0, 0);
+                if ($date < $today) {
+                    $this->addError('due_date', 'Due date cannot be in the past.');
+                }
+            }
         }
 
         return !$this->hasErrors();

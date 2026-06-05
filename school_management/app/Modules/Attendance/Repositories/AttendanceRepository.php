@@ -18,8 +18,23 @@ class AttendanceRepository
     /**
      * Get students and their attendance for a specific class, date, and session
      */
-    public function getAttendanceByDateAndClass(int $classId, string $date, int $sessionId): array
+    public function getAttendanceByDateAndClass(int $classId, string $date, int $sessionId, string $search = '', int $limit = 0, int $offset = 0): array
     {
+        $params = [$date, $classId, $sessionId];
+        $searchSql = "";
+        
+        if ($search !== '') {
+            $searchSql = " AND (s.first_name LIKE ? OR s.last_name LIKE ? OR sa.roll_number LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+
+        $limitSql = "";
+        if ($limit > 0) {
+            $limitSql = " LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        }
+
         $sql = "SELECT sa.student_id, sa.roll_number, s.first_name, s.last_name, 
                        a.attendance_id, a.status, a.remarks, a.leave_document
                 FROM student_academics sa
@@ -29,9 +44,33 @@ class AttendanceRepository
                                        AND a.session_id = sa.session_id 
                                        AND a.attendance_date = ?
                 WHERE sa.class_id = ? AND sa.session_id = ? AND sa.admission_status = 'Active'
-                ORDER BY sa.roll_number ASC";
+                $searchSql
+                ORDER BY sa.roll_number ASC
+                $limitSql";
                 
-        return $this->db->fetchAll($sql, [$date, $classId, $sessionId]);
+        return $this->db->fetchAll($sql, $params);
+    }
+
+    public function getAttendanceCountByDateAndClass(int $classId, string $date, int $sessionId, string $search = ''): int
+    {
+        $params = [$classId, $sessionId];
+        $searchSql = "";
+        
+        if ($search !== '') {
+            $searchSql = " AND (s.first_name LIKE ? OR s.last_name LIKE ? OR sa.roll_number LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+
+        $sql = "SELECT COUNT(*) as total
+                FROM student_academics sa
+                JOIN students s ON sa.student_id = s.student_id
+                WHERE sa.class_id = ? AND sa.session_id = ? AND sa.admission_status = 'Active'
+                $searchSql";
+                
+        $result = $this->db->fetch($sql, $params);
+        return (int)($result['total'] ?? 0);
     }
 
     /**

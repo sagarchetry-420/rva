@@ -17,7 +17,14 @@ class ExamRepository
 
     public function findAllBySession(int $sessionId): array
     {
-        return $this->db->fetchAll("SELECT * FROM examinations WHERE session_id = ? ORDER BY start_date DESC", [$sessionId]);
+        return $this->db->fetchAll("
+            SELECT e.*, 
+                   IF(e.created_by_role = 'teacher', CONCAT('Teacher: ', t.first_name, ' ', t.last_name), 'Admin') as creator_name
+            FROM examinations e
+            LEFT JOIN teachers t ON e.created_by = t.user_id AND e.created_by_role = 'teacher'
+            WHERE e.session_id = ? 
+            ORDER BY e.start_date DESC
+        ", [$sessionId]);
     }
 
     public function findById(int $examId): ?array
@@ -25,18 +32,19 @@ class ExamRepository
         return $this->db->fetch("SELECT * FROM examinations WHERE exam_id = ?", [$examId]);
     }
 
-    public function findDuplicateExam(int $sessionId, string $examType, string $startDate, string $endDate): ?array
+    public function findDuplicateExam(int $sessionId, string $examName, string $examType, string $startDate, string $endDate): ?array
     {
         if (in_array($examType, ['Mid-Term', 'Final'])) {
             // Only one Mid-Term or Final allowed per session
             return $this->db->fetch("SELECT * FROM examinations WHERE session_id = ? AND exam_type = ?", [$sessionId, $examType]);
         } else {
-            // For Unit/Class tests, prevent overlapping dates for the same type
+            // For Unit/Class tests, prevent overlapping dates for the same type AND same name
             $sql = "SELECT * FROM examinations 
                     WHERE session_id = ? 
                     AND exam_type = ? 
+                    AND exam_name = ?
                     AND (start_date <= ? AND end_date >= ?)";
-            return $this->db->fetch($sql, [$sessionId, $examType, $endDate, $startDate]);
+            return $this->db->fetch($sql, [$sessionId, $examType, $examName, $endDate, $startDate]);
         }
     }
 
@@ -77,6 +85,29 @@ class ExamRepository
     public function removeClass(int $examId, int $classId): void
     {
         $this->db->delete('exam_classes', 'exam_id = ? AND class_id = ?', [$examId, $classId]);
+    }
+
+    public function syncExamClasses(int $examId, array $newClassIds): void
+    {
+        $currentClasses = $this->db->fetchAll("SELECT class_id FROM exam_classes WHERE exam_id = ?", [$examId]);
+        $currentClassIds = array_column($currentClasses, 'class_id');
+
+        $toAdd = array_diff($newClassIds, $currentClassIds);
+        foreach ($toAdd as $classId) {
+            $this->assignClass($examId, (int)$classId);
+        }
+
+        $toRemove = array_diff($currentClassIds, $newClassIds);
+        foreach ($toRemove as $classId) {
+            $hasMarks = $this->db->fetch("SELECT COUNT(*) as cnt FROM results r 
+                 JOIN exam_schedules es ON r.schedule_id = es.schedule_id 
+                 WHERE es.exam_id = ? AND es.class_id = ?", [$examId, $classId]);
+                 
+            if ($hasMarks['cnt'] == 0) {
+                $this->db->delete('exam_schedules', 'exam_id = ? AND class_id = ?', [$examId, $classId]);
+                $this->removeClass($examId, (int)$classId);
+            }
+        }
     }
 
     public function getExamMarksProgressStats(int $examId, int $sessionId): array
@@ -125,7 +156,7 @@ class ExamRepository
                 continue;
             }
             
-            if ($resultCount >= $studentCount) {
+            if ($resultCount > 0) {
                 $completeSchedules++;
             } else {
                 $teacherName = ($row['first_name'] || $row['last_name']) ? ($row['first_name'] . ' ' . $row['last_name']) : 'Unassigned';

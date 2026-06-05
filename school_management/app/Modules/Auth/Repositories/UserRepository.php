@@ -90,4 +90,39 @@ class UserRepository
     {
         return $this->db->fetch("SELECT 1 FROM users WHERE username = ?", [$username]) !== null;
     }
+
+    public function getLoginAttempts(string $ipAddress, string $identifier): ?array
+    {
+        return $this->db->fetch(
+            "SELECT * FROM login_attempts WHERE ip_address = ? AND identifier = ?",
+            [$ipAddress, $identifier]
+        );
+    }
+
+    public function incrementLoginAttempts(string $ipAddress, string $identifier): void
+    {
+        $record = $this->getLoginAttempts($ipAddress, $identifier);
+        
+        if ($record) {
+            $this->db->execute(
+                "UPDATE login_attempts SET attempts = attempts + 1, last_attempt = NOW() WHERE ip_address = ? AND identifier = ?",
+                [$ipAddress, $identifier]
+            );
+        } else {
+            $this->db->insert('login_attempts', [
+                'ip_address' => $ipAddress,
+                'identifier' => $identifier,
+                'attempts' => 1,
+                'last_attempt' => date('Y-m-d H:i:s')
+            ]);
+        }
+    }
+
+    public function clearLoginAttempts(string $ipAddress, string $identifier): void
+    {
+        $this->db->execute(
+            "DELETE FROM login_attempts WHERE ip_address = ? AND identifier = ?",
+            [$ipAddress, $identifier]
+        );
+    }
 }

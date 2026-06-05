@@ -22,11 +22,16 @@ class SubjectController extends \Controller
 
     public function index(): void
     {
-        $subjects = $this->repo->findAll();
+        $page = (int)$this->input('page', 1);
+        $search = trim($this->input('search', ''));
+        
+        $pagination = $this->repo->paginateSubjects($page, $search, 10);
 
         $this->render('Modules/Academic/Views/subjects', [
-            'pageTitle' => 'Subjects Management',
-            'subjects'  => $subjects
+            'pageTitle'  => 'Subjects Management',
+            'subjects'   => $pagination['data'],
+            'pagination' => $pagination,
+            'search'     => $search
         ], 'admin');
     }
 

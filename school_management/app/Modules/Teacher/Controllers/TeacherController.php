@@ -26,17 +26,44 @@ class TeacherController extends \Controller
     public function index(): void
     {
         $status = $this->input('status', 'Active'); // Default to showing only active teachers
-        $page = $this->input('page', 1);
+        $page = (int)$this->input('page', 1);
+        $search = htmlspecialchars(trim($this->input('search', '')), ENT_QUOTES, 'UTF-8');
         
         // If status=all, fetch everything. Otherwise filter.
         $fetchStatus = $status === 'all' ? null : $status;
-        $paginatedTeachers = $this->repo->findAll($fetchStatus, $page, 20);
+        $paginatedTeachers = $this->repo->findAll($fetchStatus, $page, 20, $search);
 
         $this->render('Modules/Teacher/Views/index', [
             'pageTitle'     => 'Teachers Management',
             'teachers'      => $paginatedTeachers['data'],
             'pagination'    => $paginatedTeachers,
-            'currentStatus' => $status
+            'currentStatus' => $status,
+            'searchQuery'   => $search
+        ], 'admin');
+    }
+
+    /**
+     * Show dedicated teacher details page
+     */
+    public function details(): void
+    {
+        $teacherId = (int)$this->input('id', 0);
+        if (!$teacherId) {
+            $this->flash('error', 'Invalid teacher ID.');
+            $this->redirect(moduleUrl('admin', 'teachers'));
+            return;
+        }
+
+        $teacher = $this->repo->findById($teacherId);
+        if (!$teacher) {
+            $this->flash('error', 'Teacher not found.');
+            $this->redirect(moduleUrl('admin', 'teachers'));
+            return;
+        }
+
+        $this->render('Modules/Teacher/Views/details', [
+            'pageTitle' => 'Teacher Profile',
+            'teacher'   => $teacher
         ], 'admin');
     }
 
@@ -65,6 +92,9 @@ class TeacherController extends \Controller
                 break;
             case 'export_csv':
                 $this->exportCsv();
+                break;
+            case 'export_pdf':
+                $this->exportPdf();
                 break;
             default:
                 $this->flash('error', 'Invalid action.');
@@ -132,7 +162,13 @@ class TeacherController extends \Controller
 
         $type = $result['success'] ? (($result['no_change'] ?? false) ? 'info' : 'success') : 'error';
         $this->flash($type, $result['message']);
-        $this->redirect(moduleUrl('admin', 'teachers'));
+        
+        $origin = $this->input('origin', '');
+        if ($origin === 'details') {
+            $this->redirect(moduleUrl('admin', 'teacher_details', ['id' => $teacherId]));
+        } else {
+            $this->redirect(moduleUrl('admin', 'teachers'));
+        }
     }
 
     /**
@@ -142,10 +178,28 @@ class TeacherController extends \Controller
     {
         $this->validateCsrf();
         $teacherId = (int)$this->input('teacher_id', 0);
+        $confirmName = trim($this->input('confirm_teacher_name', ''));
 
         if (!$teacherId) {
             $this->flash('error', 'Invalid teacher ID.');
             $this->redirect(moduleUrl('admin', 'teachers'));
+            return;
+        }
+
+        // Fetch teacher to compare full name
+        $teacher = $this->repo->findById($teacherId);
+        if (!$teacher) {
+            $this->flash('error', 'Teacher not found.');
+            $this->redirect(moduleUrl('admin', 'teachers'));
+            return;
+        }
+
+        $expectedName = trim($teacher['first_name'] . ' ' . $teacher['last_name']);
+
+        // Case-insensitive comparison
+        if (strcasecmp($confirmName, $expectedName) !== 0) {
+            $this->flash('error', 'Deletion failed: Confirmation name did not match.');
+            $this->redirect(moduleUrl('admin', 'teacher_details', ['id' => $teacherId]));
             return;
         }
 
@@ -159,27 +213,59 @@ class TeacherController extends \Controller
      */
     private function exportCsv(): void
     {
-        $this->service->exportCsv();
+        $status = $this->input('status', 'Active');
+        $fetchStatus = $status === 'all' ? null : $status;
+        $search = htmlspecialchars(trim($this->input('search', '')), ENT_QUOTES, 'UTF-8');
+        
+        $this->service->exportCsv($fetchStatus, $search);
     }
+
+    /**
+     * Export teachers to PDF
+     */
+    private function exportPdf(): void
+    {
+        $status = $this->input('status', 'Active');
+        $fetchStatus = $status === 'all' ? null : $status;
+        $search = htmlspecialchars(trim($this->input('search', '')), ENT_QUOTES, 'UTF-8');
+        
+        $this->service->exportPdf($fetchStatus, $search);
+    }
+
     /**
      * Deactivate a teacher
      */
     private function deactivate(): void
     {
         $this->validateCsrf();
-        $teacherId = (int)$this->input('teacher_id', 0);
-        $leavingDate = $this->input('leaving_date', date('Y-m-d'));
-        $leavingReason = trim($this->input('leaving_reason', ''));
+        $data = $this->allInput();
 
-        if (!$teacherId || empty($leavingDate) || empty($leavingReason)) {
-            $this->flash('error', 'Invalid deactivation data provided.');
-            $this->redirect(moduleUrl('admin', 'teachers'));
+        $validator = new \App\Modules\Teacher\Validators\TeacherValidator();
+        if (!$validator->validateDeactivate($data)) {
+            $this->flash('error', $validator->firstError());
+            $origin = $data['origin'] ?? '';
+            $teacherId = (int)($data['teacher_id'] ?? 0);
+            if ($origin === 'details' && $teacherId) {
+                $this->redirect(moduleUrl('admin', 'teacher_details', ['id' => $teacherId]));
+            } else {
+                $this->redirect(moduleUrl('admin', 'teachers'));
+            }
             return;
         }
 
+        $teacherId = (int)$data['teacher_id'];
+        $leavingDate = $data['leaving_date'];
+        $leavingReason = trim($data['leaving_reason']);
+
         $result = $this->service->deactivateTeacher($teacherId, $leavingDate, $leavingReason);
         $this->flash($result['success'] ? 'success' : 'error', $result['message']);
-        $this->redirect(moduleUrl('admin', 'teachers'));
+        
+        $origin = $data['origin'] ?? '';
+        if ($origin === 'details') {
+            $this->redirect(moduleUrl('admin', 'teacher_details', ['id' => $teacherId]));
+        } else {
+            $this->redirect(moduleUrl('admin', 'teachers'));
+        }
     }
 
     /**
@@ -198,6 +284,12 @@ class TeacherController extends \Controller
 
         $result = $this->service->reactivateTeacher($teacherId);
         $this->flash($result['success'] ? 'success' : 'error', $result['message']);
-        $this->redirect(moduleUrl('admin', 'teachers'));
+        
+        $origin = $this->input('origin', '');
+        if ($origin === 'details') {
+            $this->redirect(moduleUrl('admin', 'teacher_details', ['id' => $teacherId]));
+        } else {
+            $this->redirect(moduleUrl('admin', 'teachers'));
+        }
     }
 }

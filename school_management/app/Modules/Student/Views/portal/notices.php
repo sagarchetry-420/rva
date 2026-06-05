@@ -41,4 +41,24 @@
             </div>
         </div>
     <?php endforeach; ?>
+
+    <?php if (isset($totalPages) && $totalPages > 1): ?>
+    <style>
+        .pagination { display: flex; padding-left: 0; list-style: none; justify-content: center; gap: 5px; margin-top: 20px; }
+        .page-item { margin: 0; }
+        .page-link { position: relative; display: block; padding: 8px 16px; color: #0d6efd; text-decoration: none; background-color: #fff; border: 1px solid #dee2e6; border-radius: 4px; transition: all 0.2s; }
+        .page-link:hover { z-index: 2; color: #0a58ca; background-color: #e9ecef; border-color: #dee2e6; }
+        .page-item.active .page-link { z-index: 3; color: #fff; background-color: #0d6efd; border-color: #0d6efd; }
+    </style>
+    <nav aria-label="Notices pagination">
+        <ul class="pagination">
+            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                <li class="page-item <?php echo isset($page) && $i == $page ? 'active' : ''; ?>">
+                    <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                </li>
+            <?php endfor; ?>
+        </ul>
+    </nav>
+    <?php endif; ?>
+
 <?php endif; ?>

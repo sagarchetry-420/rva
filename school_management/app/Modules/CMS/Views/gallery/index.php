@@ -27,7 +27,7 @@
                     <th>Title</th>
                     <th>Category</th>
                     <th>Status</th>
-                    <th class="actions-cell">Actions</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,7 +49,7 @@
                                 <span style="color:var(--gray);"><i class="fas fa-eye-slash"></i> Hidden</span>
                             <?php endif; ?>
                         </td>
-                        <td class="actions-cell">
+                        <td>
                             <div style="display:flex; gap:5px;">
                                 <form method="POST" action="<?php echo moduleUrl('admin', 'gallery'); ?>" style="display:inline;">
                                     <?php echo csrf_field(); ?>
@@ -57,7 +57,7 @@
                                     <input type="hidden" name="id" value="<?php echo $g['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-info" title="Toggle Visibility"><i class="fas fa-eye"></i></button>
                                 </form>
-                                <form method="POST" action="<?php echo moduleUrl('admin', 'gallery'); ?>" style="display:inline;" onsubmit="return confirm('Delete this photo?');">
+                                <form method="POST" action="<?php echo moduleUrl('admin', 'gallery'); ?>" style="display:inline;" onsubmit="return confirmDelete('Are you sure you want to delete this photo?');">
                                     <?php echo csrf_field(); ?>
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?php echo $g['id']; ?>">
@@ -94,11 +94,11 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label>Title / Description *</label>
-                    <input type="text" name="title" required placeholder="e.g. Annual Sports Day 2026">
+                    <input type="text" name="title" required pattern="^[a-zA-Z0-9\s.,\-]+$" title="Title should not contain special characters like @, #, $, %" placeholder="e.g. Annual Sports Day 2026">
                 </div>
                 <div class="form-group">
                     <label>Category</label>
-                    <input type="text" name="category" class="form-control" placeholder="e.g. Campus, Sports, General" required>
+                    <input type="text" name="category" class="form-control" pattern="^[a-zA-Z0-9\s.,\-]+$" title="Category should not contain special characters like @, #, $, %" placeholder="e.g. Campus, Sports, General" required>
                 </div>
                 <div class="form-group">
                     <label>Photo *</label>

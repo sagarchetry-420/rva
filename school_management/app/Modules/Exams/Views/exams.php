@@ -23,6 +23,7 @@ tbody tr:nth-last-child(2) .action-menu-content { top: auto; bottom: 100%; }
         <p>Manage examinations and assigned classes</p>
     </div>
     <div style="display:flex; gap:10px;">
+        <button class="btn btn-warning" onclick="openModal('bulkExamModal')" style="box-shadow: 0 2px 4px rgba(255,152,0,0.3);"><i class="fas fa-bolt"></i> Generate Exam Fees</button>
         <button class="btn btn-primary" onclick="openModal('addExamModal')"><i class="fas fa-plus"></i> Create Exam</button>
     </div>
 </div>
@@ -38,7 +39,7 @@ tbody tr:nth-last-child(2) .action-menu-content { top: auto; bottom: 100%; }
                     <th>Type</th>
                     <th>Duration</th>
                     <th>Status</th>
-                    <th class="actions-cell">Actions</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -50,23 +51,47 @@ tbody tr:nth-last-child(2) .action-menu-content { top: auto; bottom: 100%; }
                         <small style="color:var(--gray);">
                             Classes: 
                             <?php 
-                                $classList = array_map(function($c) { 
-                                    $marksIcon = !empty($c['marks_entered']) ? ' <i class="fas fa-check-circle" style="color:var(--success);" title="Marks Entered"></i>' : '';
-                                    return htmlspecialchars($c['class_name'].' '.$c['section']) . $marksIcon; 
+                                $classList = array_map(function($c) use ($e) { 
+                                    $classNameStr = $c['class_name'].' '.$c['section'];
+                                    
+                                    $isMissing = false;
+                                    if (isset($e['missing_reports'])) {
+                                        foreach ($e['missing_reports'] as $mr) {
+                                            if ($mr['class_name'] === $classNameStr) {
+                                                $isMissing = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    $hasMarks = !empty($c['marks_entered']);
+                                    $marksIcon = '';
+                                    
+                                    if ($hasMarks && !$isMissing) {
+                                        $marksIcon = ' <i class="fas fa-check-circle" style="color:#10b981;" title="Marks Entry Complete"></i>';
+                                    } elseif ($hasMarks && $isMissing) {
+                                        $marksIcon = ' <i class="fas fa-pen" style="color:#f59e0b;" title="Marks Entry In Progress"></i>';
+                                    }
+                                    
+                                    return htmlspecialchars($classNameStr) . $marksIcon; 
                                 }, $e['classes']);
                                 echo !empty($classList) ? implode(', ', $classList) : 'None';
                             ?>
                         </small>
                     </td>
-                    <td><?php echo htmlspecialchars($e['exam_type']); ?></td>
                     <td>
-                        <i class="far fa-calendar-alt"></i> <?php echo formatDate($e['start_date']); ?> to <br>
-                        <i class="far fa-calendar-check"></i> <?php echo formatDate($e['end_date']); ?>
+                        <?php echo htmlspecialchars($e['exam_type']); ?>
+                        <div style="margin-top: 4px;">
+                            <small style="color:var(--gray); font-size: 11px;"><i class="fas fa-user-edit"></i> Created by: <?php echo htmlspecialchars($e['creator_name'] ?? 'Unknown'); ?></small>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="white-space: nowrap;"><i class="far fa-calendar-alt" style="color:var(--gray);"></i> <?php echo formatDate($e['start_date']); ?> &nbsp;&ndash;&nbsp; <?php echo formatDate($e['end_date']); ?></span>
                     </td>
                     <td>
                         <div style="display:flex; flex-direction:column; align-items:flex-start;">
                             <?php if ($e['is_approved']): ?>
-                                <span style="background:#10b981; color:white; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;"><i class="fas fa-check-circle"></i> Approved</span>
+                                <span style="background:#10b981; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600;"><i class="fas fa-check-circle"></i> Approved</span>
                                 
                                 <div style="margin-top: 8px; font-size: 11px; color: #475569; display: flex; flex-direction: column; gap: 4px; background: #f8fafc; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
                                     <div style="display:flex; align-items:center; gap:5px;">
@@ -91,11 +116,11 @@ tbody tr:nth-last-child(2) .action-menu-content { top: auto; bottom: 100%; }
                                 </div>
 
                             <?php else: ?>
-                                <span style="background:#f59e0b; color:white; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;"><i class="fas fa-clock"></i> Pending</span>
+                                <span style="background:#f59e0b; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600;"><i class="fas fa-clock"></i> Pending</span>
                             <?php endif; ?>
                         </div>
                     </td>
-                    <td class="actions-cell" style="overflow: visible; white-space: nowrap;">
+                    <td style="overflow: visible; white-space: nowrap;">
                         <div style="display: inline-flex; align-items: center; gap: 5px;">
                             <?php if (!$e['is_approved']): ?>
                                 <form method="POST" action="<?php echo moduleUrl('admin', 'examinations'); ?>" style="margin:0;">
@@ -111,6 +136,21 @@ tbody tr:nth-last-child(2) .action-menu-content { top: auto; bottom: 100%; }
                             <div class="action-menu">
                                 <button class="action-menu-btn"><i class="fas fa-ellipsis-v"></i></button>
                                 <div class="action-menu-content">
+                                    <button type="button" onclick='openEditExamModal(<?php echo json_encode([
+                                        "exam_id" => $e["exam_id"],
+                                        "exam_type" => $e["exam_type"],
+                                        "start_date" => $e["start_date"],
+                                        "end_date" => $e["end_date"],
+                                        "class_ids" => array_column($e["classes"], "class_id")
+                                    ]); ?>)'>
+                                        <i class="fas fa-edit" style="width:20px; color:var(--info);"></i> Edit Exam
+                                    </button>
+                                    <?php if (!empty($e['classes'])): ?>
+                                        <button type="button" onclick="window.location.href='<?php echo moduleUrl('admin', 'master_schedule'); ?>?exam_id=<?php echo $e['exam_id']; ?>'">
+                                            <i class="fas fa-table" style="width:20px; color:var(--primary);"></i> Master Routine
+                                        </button>
+                                    <?php endif; ?>
+                                    <hr style="margin: 5px 0; border: none; border-top: 1px solid var(--border);">
                                     <?php if ($e['is_approved']): ?>
                                         <form method="POST" action="<?php echo moduleUrl('admin', 'examinations'); ?>" style="margin:0;">
                                             <?php echo csrf_field(); ?>
@@ -172,7 +212,7 @@ tbody tr:nth-last-child(2) .action-menu-content { top: auto; bottom: 100%; }
                 <h2>Create New Exam</h2>
                 <span class="close" onclick="closeModal('addExamModal')">&times;</span>
             </div>
-            <form method="POST" action="<?php echo moduleUrl('admin', 'examinations'); ?>">
+            <form method="POST" action="<?php echo moduleUrl('admin', 'examinations'); ?>" onsubmit="return validateAddExamForm(this)">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="create_exam">
                 <div class="modal-body">
@@ -199,14 +239,14 @@ tbody tr:nth-last-child(2) .action-menu-content { top: auto; bottom: 100%; }
                     </div>
                     <div class="form-group">
                         <label>Assign to Classes *</label>
-                        <label style="display:block; margin-bottom:8px; cursor:pointer; font-weight:bold; color:var(--primary);">
-                            <input type="checkbox" id="selectAllClassesAdmin" onclick="toggleAllClasses(this, 'adminClassList')"> Select All Classes
+                        <label style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-bottom: 8px; cursor: pointer; font-weight: bold; color: var(--primary); text-align: left;">
+                            <input type="checkbox" id="selectAllClassesAdmin" onclick="toggleAllClasses(this, 'adminClassList')" style="margin: 0;"> <span>Select All Classes</span>
                         </label>
-                        <div id="adminClassList" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border); padding: 10px; border-radius: 4px;">
+                        <div id="adminClassList" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border); padding: 10px; border-radius: 4px; text-align: left;">
                             <?php foreach ($classes as $c): ?>
-                                <label style="display:block; margin-bottom:5px; cursor:pointer;">
-                                    <input type="checkbox" name="class_ids[]" value="<?php echo $c['class_id']; ?>"> 
-                                    <?php echo htmlspecialchars($c['class_name'] . ' ' . $c['section']); ?>
+                                <label style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-bottom: 5px; cursor: pointer; text-align: left;">
+                                    <input type="checkbox" name="class_ids[]" value="<?php echo $c['class_id']; ?>" style="margin: 0;"> 
+                                    <span><?php echo htmlspecialchars($c['class_name'] . ' ' . $c['section']); ?></span>
                                 </label>
                             <?php endforeach; ?>
                         </div>
@@ -215,6 +255,63 @@ tbody tr:nth-last-child(2) .action-menu-content { top: auto; bottom: 100%; }
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addExamModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Create</button>
+                </div>
+                <script>
+                    function validateAddExamForm(form) {
+                        var start = new Date(form.querySelector('#adminExamStartDate').value);
+                        var end = new Date(form.querySelector('#adminExamEndDate').value);
+                        if (start > end) {
+                            alert('End Date cannot be before Start Date.');
+                            return false;
+                        }
+                        var checkboxes = form.querySelectorAll('input[name="class_ids[]"]:checked');
+                        if (checkboxes.length === 0) {
+                            alert('Please assign this exam to at least one class.');
+                            return false;
+                        }
+                        return true;
+                    }
+                </script>
+            </form>
+        </div>
+    </div>
+    <!-- Bulk Generate Exam Fees Modal -->
+    <div id="bulkExamModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Generate Exam Fees (Bulk)</h2>
+                <span class="close" onclick="closeModal('bulkExamModal')">&times;</span>
+            </div>
+            <form method="POST" action="<?php echo moduleUrl('admin', 'fee_collection'); ?>">
+                <?php echo csrf_field(); ?>
+                <input type="hidden" name="action" value="generate_exam_fees">
+                <input type="hidden" name="redirect_to" value="examinations">
+                
+                <div class="modal-body">
+                    <p style="margin-bottom:15px; color:var(--text-light);">This will generate a pending exam fee invoice for all active students in the selected class who haven't been billed yet.</p>
+                    <div class="form-group">
+                        <label>Select Class *</label>
+                        <select name="class_id" required>
+                            <option value="">-- Select Class --</option>
+                            <?php foreach ($classes as $c): ?>
+                                <option value="<?php echo $c['class_id']; ?>"><?php echo htmlspecialchars($c['class_name'] . ' ' . $c['section'] . ' (Exam Fee: ₹' . $c['exam_fee'] . ')'); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Exam *</label>
+                        <select name="exam_id" required>
+                            <option value="">-- Select Exam --</option>
+                            <?php if(!empty($exams)): ?>
+                                <?php foreach ($exams as $e): ?>
+                                    <option value="<?php echo $e['exam_id']; ?>"><?php echo htmlspecialchars($e['exam_name']); ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-warning" style="width:100%;"><i class="fas fa-bolt"></i> Generate Fees</button>
                 </div>
             </form>
         </div>
@@ -235,9 +332,9 @@ tbody tr:nth-last-child(2) .action-menu-content { top: auto; bottom: 100%; }
             </div>
             <div id="progressData" style="display:none;">
                 <p id="progressStatus" style="font-weight:bold; margin-bottom: 15px;"></p>
-                <div class="table-container">
+                <div class="table-container" style="max-height: 400px; overflow-y: auto;">
                     <table class="data-table">
-                        <thead>
+                        <thead style="position: sticky; top: 0; z-index: 2; background: #f8f9fa;">
                             <tr>
                                 <th>Class</th>
                                 <th>Subject</th>
@@ -283,10 +380,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 function copyPublicLink() {
-    // Generate the public link
-    const currentUrl = window.location.href;
-    const baseUrl = currentUrl.split('?')[0];
-    const publicLink = baseUrl + '/public/check-result';
+    // Generate the public link using BASE_URL
+    const publicLink = '<?php echo BASE_URL; ?>/public/check-result';
     
     // Copy to clipboard
     navigator.clipboard.writeText(publicLink).then(() => {
@@ -339,5 +434,123 @@ function viewMarksProgress(examId) {
     .catch(e => {
         document.getElementById('progressLoading').innerHTML = '<p class="text-danger">Failed to load report.</p>';
     });
+}
+</script>
+
+    <!-- Edit Exam Modal -->
+    <div id="editExamModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Edit Exam</h2>
+                <span class="close" onclick="closeModal('editExamModal')">&times;</span>
+            </div>
+            <form method="POST" action="<?php echo moduleUrl('admin', 'examinations'); ?>" onsubmit="return validateEditExamForm(this)">
+                <?php echo csrf_field(); ?>
+                <input type="hidden" name="action" value="update_exam">
+                <input type="hidden" name="exam_id" id="editExamId">
+                <input type="hidden" name="exam_type" id="editExamTypeHidden">
+                <input type="hidden" id="originalStartDate">
+                <div class="modal-body">
+                    <div class="row" style="display:flex; gap:15px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Exam Type * (Locked)</label>
+                            <select id="editExamType" disabled style="background:#f1f5f9; cursor:not-allowed; opacity:0.8;">
+                                <option value="Unit Test">Unit Test</option>
+                                <option value="Mid-Term">Mid-Term</option>
+                                <option value="Final">Final</option>
+                                <option value="Class Test">Class Test</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row" style="display:flex; gap:15px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Start Date *</label>
+                            <input type="date" name="start_date" id="editExamStartDate" required>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>End Date *</label>
+                            <input type="date" name="end_date" id="editExamEndDate" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Assign to Classes *</label>
+                        <label style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-bottom: 8px; cursor: pointer; font-weight: bold; color: var(--primary); text-align: left;">
+                            <input type="checkbox" id="selectAllClassesEdit" onclick="toggleAllClasses(this, 'editClassList')" style="margin: 0;"> <span>Select All Classes</span>
+                        </label>
+                        <div id="editClassList" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border); padding: 10px; border-radius: 4px; text-align: left;">
+                            <?php foreach ($classes as $c): ?>
+                                <label style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-bottom: 5px; cursor: pointer; text-align: left;">
+                                    <input type="checkbox" name="class_ids[]" value="<?php echo $c['class_id']; ?>" class="edit-class-checkbox" style="margin: 0;"> 
+                                    <span><?php echo htmlspecialchars($c['class_name'] . ' ' . $c['section']); ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editExamModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                </div>
+                <script>
+                    function validateEditExamForm(form) {
+                        var startVal = form.querySelector('#editExamStartDate').value;
+                        var endVal = form.querySelector('#editExamEndDate').value;
+                        var origStart = form.querySelector('#originalStartDate').value;
+                        var today = new Date().toISOString().split('T')[0];
+                        
+                        // If they changed the start date to a past date
+                        if (startVal !== origStart && startVal < today) {
+                            alert('Start Date cannot be set to a past date.');
+                            return false;
+                        }
+
+                        if (startVal > endVal) {
+                            alert('End Date cannot be before Start Date.');
+                            return false;
+                        }
+                        var checkboxes = form.querySelectorAll('#editClassList input[name="class_ids[]"]:checked');
+                        if (checkboxes.length === 0) {
+                            alert('Please assign this exam to at least one class.');
+                            return false;
+                        }
+                        return true;
+                    }
+                </script>
+            </form>
+        </div>
+    </div>
+
+<script>
+function openEditExamModal(examData) {
+    document.getElementById('editExamId').value = examData.exam_id;
+    document.getElementById('editExamType').value = examData.exam_type;
+    document.getElementById('editExamTypeHidden').value = examData.exam_type;
+    
+    document.getElementById('editExamStartDate').value = examData.start_date;
+    document.getElementById('originalStartDate').value = examData.start_date;
+    document.getElementById('editExamEndDate').value = examData.end_date;
+    
+    // Set dynamic minimums so HTML5 validation works for future dates
+    let today = new Date().toISOString().split('T')[0];
+    if (examData.start_date >= today) {
+        document.getElementById('editExamStartDate').setAttribute('min', today);
+        document.getElementById('editExamEndDate').setAttribute('min', today);
+    } else {
+        document.getElementById('editExamStartDate').removeAttribute('min');
+        document.getElementById('editExamEndDate').removeAttribute('min');
+    }
+    
+    // Clear all checkboxes first
+    document.querySelectorAll('.edit-class-checkbox').forEach(cb => cb.checked = false);
+    
+    // Check the ones assigned
+    if (examData.class_ids && examData.class_ids.length > 0) {
+        examData.class_ids.forEach(cid => {
+            let cb = document.querySelector('.edit-class-checkbox[value="' + cid + '"]');
+            if (cb) cb.checked = true;
+        });
+    }
+    
+    openModal('editExamModal');
 }
 </script>

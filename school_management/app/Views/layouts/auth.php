@@ -11,8 +11,16 @@ $pageTitle = $pageTitle ?? 'Login';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle); ?> - <?php echo APP_NAME; ?></title>
     <link rel="icon" type="image/png" href="/RVA/assets/logo/logo_png.png">
-    <link rel="stylesheet" href="<?php echo asset('css/admin.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset('css/style.css'); ?>">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php if (isset($moduleCss)): ?>
+        <?php foreach ((array)$moduleCss as $cssFile): ?>
+            <link rel="stylesheet" href="<?php echo asset('css/modules/' . $cssFile); ?>">
+        <?php endforeach; ?>
+    <?php endif; ?>
     <?php if (isset($extraCss)): ?><style><?php echo $extraCss; ?></style><?php endif; ?>
 </head>
 <body class="login-page">
@@ -40,7 +48,7 @@ $pageTitle = $pageTitle ?? 'Login';
     <style>
     @keyframes toastFadeIn{from{opacity:0;transform:translate(-50%,-30px)}to{opacity:1;transform:translate(-50%,0)}}
     </style>
-    <script>setTimeout(function(){var t=document.getElementById('toastNotification');if(t)t.remove();},4000);</script>
+    <script>setTimeout(function(){var t=document.getElementById('toastNotification');if(t)t.remove();},10000);</script>
     <?php endif; ?>
 
     <?php echo $__content; ?>

@@ -37,29 +37,23 @@ class FeeController extends \Controller
             return;
         }
 
-        $search = $this->input('search', '');
+        $search = strip_tags(trim($this->input('search', '')));
         $filterClassId = (int)$this->input('filter_class_id', 0);
         $page = (int)$this->input('page', 1);
         $paginatedStudents = ['data' => [], 'total' => 0, 'pages' => 0, 'current_page' => 1, 'per_page' => 20];
-        $studentFees = [];
-        $selectedStudentId = (int)$this->input('student_id', 0);
 
+        $totalPendingCount = 0;
         if (!empty($search)) {
             $paginatedStudents = $this->feeRepo->searchStudents($search, $session['session_id'], $page, 20);
+            $totalPendingCount = $this->feeRepo->countStudentsWithPendingDues($session['session_id'], $search, 0);
         } elseif ($filterClassId > 0) {
             $paginatedStudents = $this->feeRepo->findStudentsByClass($filterClassId, $session['session_id'], $page, 20);
+            $totalPendingCount = $this->feeRepo->countStudentsWithPendingDues($session['session_id'], '', $filterClassId);
         } else {
             // Default: load recent active students
             $paginatedStudents = $this->feeRepo->searchStudents('', $session['session_id'], $page, 20);
+            $totalPendingCount = $this->feeRepo->countStudentsWithPendingDues($session['session_id'], '', 0);
         }
-
-        if ($selectedStudentId) {
-            $studentFees = $this->feeRepo->findFeesByStudent($selectedStudentId, $session['session_id']);
-        }
-
-        // For "Generate Manual Fee" modal
-        $catRepo = new FeeCategoryRepository();
-        $categories = $catRepo->findAll();
         
         $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name");
         $exams = $this->db->fetchAll("SELECT * FROM examinations WHERE session_id = ? AND exam_type != 'Class Test' ORDER BY start_date DESC", [$session['session_id']]);
@@ -71,11 +65,44 @@ class FeeController extends \Controller
             'filterClassId' => $filterClassId,
             'students'    => $paginatedStudents['data'],
             'pagination'  => $paginatedStudents,
-            'selectedStudentId' => $selectedStudentId,
-            'studentFees' => $studentFees,
-            'categories'  => $categories,
+            'totalPendingCount' => $totalPendingCount,
             'classes'     => $classes,
             'exams'       => $exams
+        ], 'admin');
+    }
+
+    public function studentFees(): void
+    {
+        $academicRepo = new ClassSubjectRepository();
+        $session = $academicRepo->getActiveSession();
+        if (!$session) {
+            $this->flash('error', 'No active academic session.');
+            $this->redirect(moduleUrl('admin', 'fee_collection'));
+            return;
+        }
+
+        $selectedStudentId = (int)$this->input('student_id', 0);
+        if (!$selectedStudentId) {
+            $this->redirect(moduleUrl('admin', 'fee_collection'));
+            return;
+        }
+
+        $search = $this->input('search', '');
+        $filterClassId = (int)$this->input('filter_class_id', 0);
+        
+        $studentFees = $this->feeRepo->findFeesByStudent($selectedStudentId, $session['session_id']);
+        
+        $catRepo = new FeeCategoryRepository();
+        $categories = $catRepo->findAll();
+
+        $this->render('Modules/Fees/Views/student_fees', [
+            'pageTitle'   => 'Student Fee History',
+            'session'     => $session,
+            'search'      => $search,
+            'filterClassId' => $filterClassId,
+            'selectedStudentId' => $selectedStudentId,
+            'studentFees' => $studentFees,
+            'categories'  => $categories
         ], 'admin');
     }
 
@@ -103,15 +130,29 @@ class FeeController extends \Controller
     {
         $this->validateCsrf();
         $data = $this->allInput();
+        $redirectTo = $this->input('redirect_to', 'fee_collection');
+        $redirectUrl = $redirectTo === 'student_fees' 
+            ? '/admin/student_fees?student_id=' . ($data['student_id'] ?? '')
+            : '/admin/fee_collection';
 
         $validator = new FeeValidator();
         if (!$validator->validateCollection($data)) {
             $this->flash('error', $validator->firstError());
-            $this->redirect('/admin/fee_collection?student_id=' . ($data['student_id'] ?? ''));
+            $this->redirect($redirectUrl);
             return;
         }
 
-        $result = $this->service->collectFee((int)$data['fee_id'], $data['payment_method'], $data['remarks'] ?? '', $_SESSION['user_id']);
+        $remarks = strip_tags(trim($data['remarks'] ?? ''));
+        $remarks = htmlspecialchars($remarks, ENT_QUOTES, 'UTF-8');
+
+        $result = $this->service->collectFee(
+            (int)$data['fee_id'], 
+            $data['payment_method'], 
+            $remarks, 
+            $_SESSION['user_id'],
+            (int)($data['student_id'] ?? 0),
+            isset($data['amount']) ? (float)$data['amount'] : null
+        );
 
         if ($result['success']) {
             $this->flash('success', $result['message']);
@@ -119,34 +160,39 @@ class FeeController extends \Controller
             $this->flash('error', $result['message']);
         }
 
-        $this->redirect('/admin/fee_collection?student_id=' . ($data['student_id'] ?? ''));
+        $this->redirect($redirectUrl);
     }
 
     private function generateFee(): void
     {
         $this->validateCsrf();
         $data = $this->allInput();
+        $redirectTo = $this->input('redirect_to', 'fee_collection');
+        $redirectUrl = $redirectTo === 'student_fees' 
+            ? '/admin/student_fees?student_id=' . ($data['student_id'] ?? '')
+            : '/admin/fee_collection';
 
         $validator = new FeeValidator();
         if (!$validator->validateFeeGeneration($data)) {
             $this->flash('error', $validator->firstError());
-            $this->redirect('/admin/fee_collection?student_id=' . ($data['student_id'] ?? ''));
+            $this->redirect($redirectUrl);
             return;
         }
 
         $result = $this->service->generateFee($data, $_SESSION['user_id']);
         $this->flash($result['success'] ? 'success' : 'error', $result['message']);
-        $this->redirect('/admin/fee_collection?student_id=' . $data['student_id']);
+        $this->redirect($redirectUrl);
     }
 
     private function generateExamFees(): void
     {
         $this->validateCsrf();
         $classId = (int)$this->input('class_id', 0);
+        $redirectTo = $this->input('redirect_to', 'fee_collection');
         
         if (!$classId) {
             $this->flash('error', 'Invalid class selected.');
-            $this->redirect(moduleUrl('admin', 'fee_collection'));
+            $this->redirect(moduleUrl('admin', $redirectTo));
             return;
         }
 
@@ -154,14 +200,14 @@ class FeeController extends \Controller
         $session = $academicRepo->getActiveSession();
         if (!$session) {
             $this->flash('error', 'No active academic session.');
-            $this->redirect(moduleUrl('admin', 'fee_collection'));
+            $this->redirect(moduleUrl('admin', $redirectTo));
             return;
         }
 
         $classInfo = $this->db->fetch("SELECT class_name, exam_fee FROM classes WHERE class_id = ?", [$classId]);
         if (!$classInfo || $classInfo['exam_fee'] <= 0) {
             $this->flash('error', 'This class does not have an exam fee configured.');
-            $this->redirect(moduleUrl('admin', 'fee_collection'));
+            $this->redirect(moduleUrl('admin', $redirectTo));
             return;
         }
 
@@ -188,7 +234,7 @@ class FeeController extends \Controller
 
         if (empty($students)) {
             $this->flash('info', 'No active students found in this class.');
-            $this->redirect(moduleUrl('admin', 'fee_collection'));
+            $this->redirect(moduleUrl('admin', $redirectTo));
             return;
         }
 
@@ -238,6 +284,6 @@ class FeeController extends \Controller
             $this->flash('error', 'Failed to generate exam fees: ' . $e->getMessage());
         }
 
-        $this->redirect(moduleUrl('admin', 'fee_collection'));
+        $this->redirect(moduleUrl('admin', $redirectTo));
     }
 }

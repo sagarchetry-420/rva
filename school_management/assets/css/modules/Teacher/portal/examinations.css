@@ -1,0 +1,61 @@
+/* Responsive Table-to-Card Layout for Examinations */
+@media (max-width: 768px) {
+    .data-table thead { display: none; }
+    .data-table, .data-table tbody, .data-table tr, .data-table td { 
+        display: block; 
+        width: 100%; 
+        box-sizing: border-box; 
+    }
+    .data-table tr {
+        margin-bottom: 15px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 5px;
+        background: #fff;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .data-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: right;
+        border-bottom: 1px dashed #eee;
+        padding: 12px 15px;
+    }
+    .data-table td:last-child { border-bottom: none; }
+    
+    .data-table td::before {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-right: 15px;
+        text-align: left;
+    }
+
+    /* Column Mapping */
+    .data-table td:nth-child(1)::before { content: "Exam Name"; }
+    .data-table td:nth-child(2)::before { content: "Type"; }
+    .data-table td:nth-child(3)::before { content: "Start Date"; }
+    .data-table td:nth-child(4)::before { content: "End Date"; }
+    .data-table td:nth-child(5)::before { content: "Classes"; }
+    .data-table td:nth-child(6)::before { content: "Status"; }
+    
+    /* Tweaks for badges in flex layout */
+    .data-table td:nth-child(5) {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 5px;
+    }
+    .data-table td:nth-child(5)::before {
+        align-self: flex-start;
+        margin-bottom: 5px;
+    }
+    
+    .data-table td:nth-child(7) {
+        justify-content: flex-end;
+    }
+    .data-table td:nth-child(7)::before {
+        display: none; /* Hide 'Action' label so the button has more space */
+    }
+}

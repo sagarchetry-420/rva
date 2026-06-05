@@ -11,45 +11,65 @@
     </div>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
-    <div class="form-card" style="text-align: center; padding: 30px;">
-        <div style="font-size: 2.5rem; color: var(--primary-color, #2c5f2d); margin-bottom: 10px;">
+<style>
+    .stat-card { text-align: center; padding: 30px; }
+    .stat-icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .stat-title { margin: 0 0 5px 0; }
+    .stat-label { margin: 0; color: #666; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+    
+    @media (max-width: 768px) {
+        .dashboard-grid { gap: 10px; margin-bottom: 15px; }
+        .stat-card { padding: 15px; }
+        .stat-icon { font-size: 2rem; margin-bottom: 5px; }
+        .stat-title { font-size: 1.2rem; }
+        .stat-label { font-size: 12px; }
+        
+        .action-grid { gap: 10px; margin-top: 10px; grid-template-columns: repeat(2, 1fr); }
+        .action-grid .btn { padding: 10px !important; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+    }
+</style>
+
+<div class="dashboard-grid">
+    <div class="form-card stat-card">
+        <div class="stat-icon" style="color: var(--primary-color, #2c5f2d);">
             <i class="fas fa-user-graduate"></i>
         </div>
-        <h3 style="margin: 0 0 5px 0;">
+        <h3 class="stat-title">
             <?php echo $academic ? htmlspecialchars($academic['class_name'] . ' ' . $academic['section']) : 'Not Assigned'; ?>
         </h3>
-        <p style="margin: 0; color: #666;">Current Class</p>
+        <p class="stat-label">Current Class</p>
     </div>
 
-    <div class="form-card" style="text-align: center; padding: 30px;">
-        <div style="font-size: 2.5rem; color: #2196F3; margin-bottom: 10px;">
+    <div class="form-card stat-card">
+        <div class="stat-icon" style="color: #2196F3;">
             <i class="fas fa-id-card"></i>
         </div>
-        <h3 style="margin: 0 0 5px 0;">
+        <h3 class="stat-title">
             <?php 
                 $rollNo = $academic['roll_number'] ?? $student['roll_number'] ?? '';
                 echo htmlspecialchars($rollNo !== '' ? $rollNo : 'Not Assigned'); 
             ?>
         </h3>
-        <p style="margin: 0; color: #666;">Roll Number</p>
+        <p class="stat-label">Roll Number</p>
     </div>
 
-    <div class="form-card" style="text-align: center; padding: 30px;">
-        <div style="font-size: 2.5rem; color: #FF9800; margin-bottom: 10px;">
+    <div class="form-card stat-card">
+        <div class="stat-icon" style="color: #FF9800;">
             <i class="fas fa-chart-pie"></i>
         </div>
-        <h3 style="margin: 0 0 5px 0;">
+        <h3 class="stat-title">
             <?php 
             $present = $attendanceSummary['Present'] ?? 0;
             echo $totalDays > 0 ? round(($present / $totalDays) * 100, 1) . '%' : '0%'; 
             ?>
         </h3>
-        <p style="margin: 0; color: #666;">Attendance Rate</p>
+        <p class="stat-label">Attendance Rate</p>
     </div>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+<div class="action-grid">
     <a href="<?php echo moduleUrl('student', 'profile'); ?>" class="btn btn-primary" style="text-align:center; padding: 15px;">
         <i class="fas fa-user"></i> My Profile
     </a>

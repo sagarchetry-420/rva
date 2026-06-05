@@ -77,11 +77,11 @@ tbody tr:nth-last-child(3) .action-menu-content { top: auto; bottom: 100%; }
                                         
                                         <hr style="margin: 5px 0; border: none; border-top: 1px solid var(--border);">
                                         
-                                        <form method="POST" action="<?php echo moduleUrl('admin', 'academic_sessions'); ?>" onsubmit="return confirmDelete('Delete this session? This action cannot be undone.');">
+                                        <form method="POST" action="<?php echo moduleUrl('admin', 'academic_sessions'); ?>" onsubmit="return confirm('Are you sure you want to delete this session? This action cannot be undone.');">
                                             <?php echo csrf_field(); ?>
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="session_id" value="<?php echo $s['session_id']; ?>">
-                                            <button type="submit" class="text-danger"><i class="fas fa-trash" style="width: 20px;"></i> Delete</button>
+                                            <button type="submit" style="color: #ef4444;"><i class="fas fa-trash" style="width: 20px;"></i> Delete</button>
                                         </form>
                                     <?php else: ?>
                                         <button disabled style="color: #9ca3af; cursor: not-allowed;"><i class="fas fa-ban" style="width: 20px;"></i> No other actions</button>
@@ -112,7 +112,7 @@ tbody tr:nth-last-child(3) .action-menu-content { top: auto; bottom: 100%; }
             <div class="modal-body">
                 <div class="form-group">
                     <label>Session Name *</label>
-                    <input type="text" name="session_name" id="sessionName" required placeholder="e.g. 2025-26">
+                    <input type="text" name="session_name" id="sessionName" required placeholder="e.g. 2025-26" pattern="[a-zA-Z0-9 \-]+" title="Only letters, numbers, spaces, and hyphens are allowed">
                 </div>
                 
                 <div class="form-row" style="display:flex; gap:15px; margin-bottom:15px;">

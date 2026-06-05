@@ -9,10 +9,15 @@ class TimetableController extends \Controller
     public function index(): void
     {
         $classes = $this->db->fetchAll("SELECT * FROM classes ORDER BY LENGTH(class_name), class_name, section");
+        $teachers = $this->db->fetchAll("SELECT * FROM teachers ORDER BY first_name, last_name");
+        
         $selectedClassId = (int)$this->input('class_id', 0);
+        $selectedTeacherId = (int)$this->input('teacher_id', 0);
 
         $timetable = [];
         $subjects = [];
+        
+        // Mode 1: Class Timetable
         if ($selectedClassId) {
             $timetable = $this->db->fetchAll(
                 "SELECT t.*, s.subject_name 
@@ -36,15 +41,32 @@ class TimetableController extends \Controller
             }
         }
 
+        // Mode 2: Teacher Timetable
+        $teacherTimetable = [];
+        if ($selectedTeacherId) {
+            $teacherTimetable = $this->db->fetchAll(
+                "SELECT t.*, s.subject_name, c.class_name, c.section
+                 FROM timetable t 
+                 LEFT JOIN subjects s ON t.subject_id = s.subject_id 
+                 LEFT JOIN classes c ON t.class_id = c.class_id
+                 WHERE t.teacher_id = ? AND t.is_break = 0
+                 ORDER BY FIELD(t.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'), t.start_time",
+                [$selectedTeacherId]
+            );
+        }
+
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
         $this->render('Modules/Timetable/Views/index', [
-            'pageTitle'       => 'Class Timetable',
-            'classes'         => $classes,
-            'selectedClassId' => $selectedClassId,
-            'timetable'       => $timetable,
-            'subjects'        => $subjects,
-            'days'            => $days,
+            'pageTitle'         => 'Class Timetable',
+            'classes'           => $classes,
+            'teachers'          => $teachers,
+            'selectedClassId'   => $selectedClassId,
+            'selectedTeacherId' => $selectedTeacherId,
+            'timetable'         => $timetable,
+            'teacherTimetable'  => $teacherTimetable,
+            'subjects'          => $subjects,
+            'days'              => $days,
         ], 'admin');
     }
 
@@ -53,203 +75,163 @@ class TimetableController extends \Controller
         $action = $this->input('action', '');
         $this->validateCsrf();
 
-        if ($action === 'add_column') {
-            $classId = (int)$this->input('class_id', 0);
-            $slotType = $this->input('slot_type', 'subject'); // 'subject' or 'break'
-            $startTime = $this->input('start_time', '');
-            $endTime = $this->input('end_time', '');
-            $breakName = $slotType === 'break' ? $this->input('break_name', '') : null;
-
-            if (!$classId || !$startTime || !$endTime) {
-                $this->flash('error', 'Common fields are required.');
-                $this->redirect('/admin/timetable?class_id=' . $classId);
-                return;
-            }
-
-            $start = strtotime($startTime);
-            $end = strtotime($endTime);
-            
-            if ($start >= $end) {
-                $this->flash('error', 'End Time must be after Start Time.');
-                $this->redirect('/admin/timetable?class_id=' . $classId);
-                return;
-            }
-            
-            if (($end - $start) < 45 * 60 && $slotType === 'subject') {
-                $this->flash('error', 'One period must be at least 45 minutes.');
-                $this->redirect('/admin/timetable?class_id=' . $classId);
-                return;
-            }
-
-            if ($slotType === 'break' && empty($breakName)) {
-                $this->flash('error', 'Break name is required for a break slot.');
-                $this->redirect('/admin/timetable?class_id=' . $classId);
-                return;
-            }
-
-            // Check for overlapping time periods
-            $existingSlots = $this->db->fetchAll(
-                "SELECT DISTINCT start_time, end_time FROM timetable WHERE class_id = ?",
-                [$classId]
-            );
-
-            foreach ($existingSlots as $slot) {
-                $eStart = strtotime($slot['start_time']);
-                $eEnd = strtotime($slot['end_time']);
-
-                if ($start < $eEnd && $end > $eStart) {
-                    $this->flash('error', 'The selected time period overlaps with an existing column (' . date('h:i A', $eStart) . ' - ' . date('h:i A', $eEnd) . '). Please choose a valid time.');
-                    $this->redirect('/admin/timetable?class_id=' . $classId);
-                    return;
-                }
-            }
-
-            $academicRepo = new \App\Modules\Academic\Repositories\ClassSubjectRepository();
-            $session = $academicRepo->getActiveSession();
-            $sessionId = $session ? $session['session_id'] : null;
-
-            $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            foreach ($days as $day) {
-                $data = [
-                    'class_id'     => $classId,
-                    'day_of_week'  => $day,
-                    'start_time'   => $startTime,
-                    'end_time'     => $endTime,
-                    'is_break'     => $slotType === 'break' ? 1 : 0,
-                    'break_name'   => $breakName,
-                    'subject_id'   => null,
-                    'teacher_id'   => null,
-                    'session_id'   => $sessionId,
-                ];
-                $this->db->insert('timetable', $data);
-            }
-
-            $this->flash('success', 'Time column added successfully.');
-            $this->redirect('/admin/timetable?class_id=' . $classId);
-
-        } elseif ($action === 'delete_column') {
-            $classId = (int)$this->input('class_id', 0);
-            $startTime = $this->input('start_time', '');
-            $endTime = $this->input('end_time', '');
-            
-            $this->db->delete('timetable', 'class_id = ? AND start_time = ? AND end_time = ?', [$classId, $startTime, $endTime]);
-            $this->flash('success', 'Time column removed.');
-            $this->redirect('/admin/timetable?class_id=' . $classId);
-
-        } elseif ($action === 'edit_column') {
-            $classId = (int)$this->input('class_id', 0);
-            $oldStartTime = $this->input('old_start_time', '');
-            $oldEndTime = $this->input('old_end_time', '');
-            
-            $newStartTime = $this->input('start_time', '');
-            $newEndTime = $this->input('end_time', '');
-            $breakName = $this->input('break_name', ''); // This might be empty for subject periods
-
-            if (!$classId || !$newStartTime || !$newEndTime || !$oldStartTime || !$oldEndTime) {
-                $this->flash('error', 'Common fields are required.');
-                $this->redirect('/admin/timetable?class_id=' . $classId);
-                return;
-            }
-
-            $start = strtotime($newStartTime);
-            $end = strtotime($newEndTime);
-            
-            if ($start >= $end) {
-                $this->flash('error', 'End Time must be after Start Time.');
-                $this->redirect('/admin/timetable?class_id=' . $classId);
-                return;
-            }
-
-            // Check for overlapping time periods EXCLUDING the column we are currently editing
-            $existingSlots = $this->db->fetchAll(
-                "SELECT DISTINCT start_time, end_time FROM timetable WHERE class_id = ? AND (start_time != ? OR end_time != ?)",
-                [$classId, $oldStartTime, $oldEndTime]
-            );
-
-            foreach ($existingSlots as $slot) {
-                $eStart = strtotime($slot['start_time']);
-                $eEnd = strtotime($slot['end_time']);
-
-                if ($start < $eEnd && $end > $eStart) {
-                    $this->flash('error', 'The new time period overlaps with an existing column (' . date('h:i A', $eStart) . ' - ' . date('h:i A', $eEnd) . '). Please choose a valid time.');
-                    $this->redirect('/admin/timetable?class_id=' . $classId);
-                    return;
-                }
-            }
-
-            $updateData = [
-                'start_time' => $newStartTime,
-                'end_time'   => $newEndTime
-            ];
-            
-            // Only update break_name if it was provided (for breaks). 
-            // Since we aren't using break_name for subject periods anymore.
-            if ($breakName !== '') {
-                $updateData['break_name'] = $breakName;
-            }
-
-            $this->db->update('timetable', $updateData, 'class_id = ? AND start_time = ? AND end_time = ?', [$classId, $oldStartTime, $oldEndTime]);
-            
-            $this->flash('success', 'Time column updated successfully.');
-            $this->redirect('/admin/timetable?class_id=' . $classId);
-
-        } elseif ($action === 'update_timetable') {
-            $classId = (int)$this->input('class_id', 0);
-            $subjectsMap = $_POST['timetable_subjects'] ?? [];
-
-            $academicRepo = new \App\Modules\Academic\Repositories\ClassSubjectRepository();
-            $session = $academicRepo->getActiveSession();
-            $sessionId = $session ? $session['session_id'] : 0;
-
-            foreach ($subjectsMap as $timetableId => $subjectId) {
-                $subjectId = (int)$subjectId;
-                $teacherId = null;
-
-                if ($subjectId > 0 && $sessionId) {
-                    $classSubject = $this->db->fetch(
-                        "SELECT teacher_id FROM class_subjects WHERE class_id = ? AND subject_id = ? AND session_id = ?",
-                        [$classId, $subjectId, $sessionId]
-                    );
-                    if ($classSubject && $classSubject['teacher_id']) {
-                        $teacherId = $classSubject['teacher_id'];
-                    }
-                }
-
-                $updateData = [];
-                if ($subjectId > 0) {
-                    $updateData['subject_id'] = $subjectId;
-                    $updateData['teacher_id'] = $teacherId;
-                } else {
-                    $updateData['subject_id'] = null;
-                    $updateData['teacher_id'] = null;
-                }
-
-                $this->db->update('timetable', $updateData, 'timetable_id = ?', [$timetableId]);
-            }
-
-            $this->flash('success', 'Timetable subjects updated successfully.');
-            $this->redirect('/admin/timetable?class_id=' . $classId);
-        } elseif ($action === 'download_template') {
+        if ($action === 'download_template') {
             $this->downloadTemplate();
         } elseif ($action === 'import_csv') {
             $this->importCsv();
+        } elseif ($action === 'clone_previous') {
+            $this->clonePrevious();
         }
 
         $this->redirect(moduleUrl('admin', 'timetable'));
     }
 
+    private function clonePrevious(): void
+    {
+        $classId = (int)$this->input('class_id', 0);
+        if (!$classId) {
+            $this->flash('error', 'Invalid class selected.');
+            $this->redirect('/admin/timetable?class_id=' . $classId);
+            return;
+        }
+
+        $academicRepo = new \App\Modules\Academic\Repositories\ClassSubjectRepository();
+        $currentSession = $academicRepo->getActiveSession();
+        if (!$currentSession) {
+            $this->flash('error', 'No active session found.');
+            $this->redirect('/admin/timetable?class_id=' . $classId);
+            return;
+        }
+
+        // Find the previous session (the one just before the current session based on start_date)
+        $previousSession = $this->db->fetch(
+            "SELECT session_id FROM academic_sessions WHERE start_date < ? ORDER BY start_date DESC LIMIT 1",
+            [$currentSession['start_date']]
+        );
+
+        if (!$previousSession) {
+            $this->flash('error', 'No previous academic session found to clone from.');
+            $this->redirect('/admin/timetable?class_id=' . $classId);
+            return;
+        }
+
+        // Fetch previous timetable records
+        $prevRecords = $this->db->fetchAll(
+            "SELECT * FROM timetable WHERE class_id = ? AND session_id = ?",
+            [$classId, $previousSession['session_id']]
+        );
+
+        if (empty($prevRecords)) {
+            $this->flash('error', 'No timetable found in the previous session for this class.');
+            $this->redirect('/admin/timetable?class_id=' . $classId);
+            return;
+        }
+
+        // Validate teacher/subject existence for cloning
+        $missingTeachers = [];
+        $missingSubjects = [];
+        foreach ($prevRecords as $r) {
+            if (!$r['is_break']) {
+                if ($r['teacher_id']) {
+                    $t = $this->db->fetch("SELECT teacher_id FROM teachers WHERE teacher_id=?", [$r['teacher_id']]);
+                    if (!$t) {
+                        $missingTeachers[] = $r['teacher_id'];
+                    }
+                }
+                if ($r['subject_id']) {
+                    $s = $this->db->fetch("SELECT subject_id FROM subjects WHERE subject_id=?", [$r['subject_id']]);
+                    if (!$s) {
+                        $missingSubjects[] = $r['subject_id'];
+                    }
+                }
+            }
+        }
+
+        if (!empty($missingTeachers) || !empty($missingSubjects)) {
+            $this->flash('error', 'Cannot clone: Some teachers or subjects from the previous session no longer exist in the system.');
+            $this->redirect('/admin/timetable?class_id=' . $classId);
+            return;
+        }
+
+        // Proceed to clone
+        try {
+            $this->db->transaction(function() use ($classId, $currentSession, $prevRecords) {
+                // Delete existing timetable for this class in current session
+                $this->db->delete('timetable', 'class_id = ? AND session_id = ?', [$classId, $currentSession['session_id']]);
+                
+                // Insert cloned records
+                foreach ($prevRecords as $row) {
+                    unset($row['timetable_id']); // Remove primary key so it auto-increments
+                    $row['session_id'] = $currentSession['session_id']; // Update session ID
+                    $this->db->insert('timetable', $row);
+                }
+            });
+            $this->flash('success', "Timetable successfully cloned from the previous session (" . count($prevRecords) . " entries).");
+        } catch (\Exception $e) {
+            $msg = $e->getMessage();
+            if (strpos($msg, '1062 Duplicate entry') !== false && strpos($msg, 'timetable.unique_slot_teacher') !== false) {
+                $this->flash('error', "<strong>Teacher Double-Booking!</strong> A cloned teacher is scheduled for a class at the same time as an existing class in this session.");
+            } else {
+                $this->flash('error', "Failed to clone timetable: " . $msg);
+            }
+        }
+
+        $this->redirect('/admin/timetable?class_id=' . $classId);
+    }
+
     private function downloadTemplate(): void
     {
+        $classId = (int)$this->input('class_id', 0);
+        
         $filename = "timetable_template.csv";
         header('Content-Type: text/csv');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         
         $output = fopen('php://output', 'w');
-        fputcsv($output, ['Day', 'Start Time (HH:MM)', 'End Time (HH:MM)', 'Subject Code (or Break)']);
         
-        // Example row
-        fputcsv($output, ['Monday', '09:00', '10:00', 'MATH101']);
-        fputcsv($output, ['Monday', '10:00', '10:15', 'Break']);
+        if ($classId) {
+            $classRecord = $this->db->fetch("SELECT class_name, section FROM classes WHERE class_id = ?", [$classId]);
+            if ($classRecord) {
+                fputcsv($output, ['# Class: ' . $classRecord['class_name'] . ' ' . $classRecord['section']]);
+            }
+            
+            $academicRepo = new \App\Modules\Academic\Repositories\ClassSubjectRepository();
+            $session = $academicRepo->getActiveSession();
+            $sessionId = $session ? $session['session_id'] : 0;
+            
+            $subjects = $this->db->fetchAll(
+                "SELECT s.subject_code, s.subject_name, t.first_name, t.last_name 
+                 FROM class_subjects cs 
+                 JOIN subjects s ON cs.subject_id = s.subject_id 
+                 LEFT JOIN teachers t ON cs.teacher_id = t.teacher_id
+                 WHERE cs.class_id = ? AND cs.session_id = ?",
+                [$classId, $sessionId]
+            );
+            
+            fputcsv($output, ['# INSTRUCTIONS']);
+            fputcsv($output, ['# IMPORTANT: Do NOT delete the "# Class:" row above. It is required for security verification.']);
+            fputcsv($output, ['# Structure: Times as rows, Days as columns.']);
+            fputcsv($output, ['# Time Format: HH:MM AM/PM - HH:MM AM/PM (e.g., 09:00 AM - 10:00 AM)']);
+            fputcsv($output, ['# Use "BREAK" in cells for breaks. Leave cells empty if there is no class.']);
+            
+            if (empty($subjects)) {
+                fputcsv($output, ['# Note: No subjects are currently assigned to this class.']);
+            } else {
+                fputcsv($output, ['# VALID SUBJECT CODES FOR THIS CLASS:']);
+                foreach ($subjects as $s) {
+                    $teacherName = $s['first_name'] ? trim($s['first_name'] . ' ' . $s['last_name']) : 'Unassigned';
+                    fputcsv($output, ['# ' . strtoupper(trim($s['subject_code'])) . ' (' . $s['subject_name'] . ') - Teacher: ' . $teacherName]);
+                }
+            }
+            fputcsv($output, []); // Empty row for spacing
+        }
+        
+        fputcsv($output, ['# --- EXAMPLE DATA BELOW (Replace with your actual timetable) ---']);
+        fputcsv($output, ['Time', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+        
+        // Example rows
+        fputcsv($output, ['09:00 AM - 10:00 AM', 'MATH101', 'ENG101', 'SCI101', 'MATH101', 'ENG101', 'SCI101', 'HOLIDAY']);
+        fputcsv($output, ['10:00 AM - 10:15 AM', 'BREAK', 'BREAK', 'BREAK', 'BREAK', 'BREAK', 'BREAK', 'HOLIDAY']);
         
         fclose($output);
         exit;
@@ -265,6 +247,29 @@ class TimetableController extends \Controller
             $this->redirect('/admin/timetable?class_id=' . $classId);
             return;
         }
+        
+        // --- Backend Validation & Security ---
+        $fileInfo = pathinfo($_FILES['csv_file']['name']);
+        if (!isset($fileInfo['extension']) || strtolower($fileInfo['extension']) !== 'csv') {
+            $this->flash('error', 'Security Error: Only .csv files are allowed.');
+            $this->redirect('/admin/timetable?class_id=' . $classId);
+            return;
+        }
+
+        if ($_FILES['csv_file']['size'] > 2 * 1024 * 1024) {
+            $this->flash('error', 'File size exceeds the 2MB limit.');
+            $this->redirect('/admin/timetable?class_id=' . $classId);
+            return;
+        }
+        
+        $mimeType = mime_content_type($_FILES['csv_file']['tmp_name']);
+        $allowedMimes = ['text/csv', 'text/plain', 'application/csv', 'text/comma-separated-values', 'application/excel', 'application/vnd.ms-excel', 'application/vnd.msexcel'];
+        if (!in_array($mimeType, $allowedMimes)) {
+            $this->flash('error', 'Security Error: Invalid file format detected.');
+            $this->redirect('/admin/timetable?class_id=' . $classId);
+            return;
+        }
+        // -------------------------------------
 
         $academicRepo = new \App\Modules\Academic\Repositories\ClassSubjectRepository();
         $session = $academicRepo->getActiveSession();
@@ -284,6 +289,10 @@ class TimetableController extends \Controller
             return;
         }
 
+        // Get Class Name for verification
+        $classRecord = $this->db->fetch("SELECT class_name, section FROM classes WHERE class_id = ?", [$classId]);
+        $expectedClassName = $classRecord ? ($classRecord['class_name'] . ' ' . $classRecord['section']) : '';
+
         // Get allowed subjects for this class
         $allowedSubjects = $this->db->fetchAll(
             "SELECT cs.subject_id, s.subject_code, cs.teacher_id 
@@ -301,27 +310,44 @@ class TimetableController extends \Controller
         }
 
         // Parse CSV
-        $header = fgetcsv($handle); // Skip header
         $validRows = [];
-        $rowNum = 1;
-
-        $validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        $timeSlots = []; // Track time ranges for overlap validation
+        $rowNum = 0;
+        $classMatched = false;
+        $validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
         while (($data = fgetcsv($handle)) !== false) {
             $rowNum++;
-            if (count($data) < 4) continue; // Skip empty/invalid rows
+            if (empty($data) || empty(trim($data[0]))) continue;
             
-            $day = ucfirst(strtolower(trim($data[0])));
-            $startTime = date('H:i:s', strtotime(trim($data[1])));
-            $endTime = date('H:i:s', strtotime(trim($data[2])));
-            $subjectCode = strtoupper(trim($data[3]));
-
-            if (!in_array($day, $validDays)) {
-                $this->flash('error', "Invalid day '$day' on row $rowNum.");
-                fclose($handle);
-                $this->redirect('/admin/timetable?class_id=' . $classId);
-                return;
+            $cellZero = htmlspecialchars(strip_tags(trim($data[0]))); // Sanitize input
+            
+            // Check for class validation header
+            if (strpos($cellZero, '# Class:') === 0) {
+                $csvClass = trim(str_replace('# Class:', '', $cellZero));
+                if ($csvClass !== $expectedClassName) {
+                    $this->flash('error', "Security Error: The uploaded CSV does not match the selected class. Expected: $expectedClassName, but found: $csvClass");
+                    fclose($handle);
+                    $this->redirect('/admin/timetable?class_id=' . $classId);
+                    return;
+                }
+                $classMatched = true;
+                continue;
             }
+            
+            // Skip comments and instructions
+            if (strpos($cellZero, '#') === 0) continue;
+            
+            // Skip the header row
+            if (strtolower($cellZero) === 'time') continue;
+            
+            // Parse time range, e.g., "09:00-10:00"
+            $timeRange = explode('-', $cellZero);
+            if (count($timeRange) !== 2) continue; // Invalid time range
+            
+            // strtotime parses AM/PM seamlessly and date() converts it to 24-hour format
+            $startTime = date('H:i:s', strtotime(trim($timeRange[0])));
+            $endTime = date('H:i:s', strtotime(trim($timeRange[1])));
 
             if ($startTime >= $endTime) {
                 $this->flash('error', "Start time must be before end time on row $rowNum.");
@@ -329,39 +355,71 @@ class TimetableController extends \Controller
                 $this->redirect('/admin/timetable?class_id=' . $classId);
                 return;
             }
-
-            $isBreak = 0;
-            $breakName = null;
-            $subjectId = null;
-            $teacherId = null;
-
-            if ($subjectCode === 'BREAK' || empty($subjectCode)) {
-                $isBreak = 1;
-                $breakName = 'Break';
-            } else {
-                if (!isset($subjectMap[$subjectCode])) {
-                    $this->flash('error', "Subject code '$subjectCode' on row $rowNum is not assigned to this class.");
+            
+            // Overlap validation: check against previously parsed rows
+            foreach ($timeSlots as $slot) {
+                // Two time ranges A and B overlap if (StartA < EndB) AND (EndA > StartB)
+                if ($startTime < $slot['end'] && $endTime > $slot['start']) {
+                    $this->flash('error', "Time overlap detected on row $rowNum (" . trim($data[0]) . "). It overlaps with a previous row.");
                     fclose($handle);
                     $this->redirect('/admin/timetable?class_id=' . $classId);
                     return;
                 }
-                $subjectId = $subjectMap[$subjectCode]['subject_id'];
-                $teacherId = $subjectMap[$subjectCode]['teacher_id'];
             }
+            $timeSlots[] = ['start' => $startTime, 'end' => $endTime];
 
-            $validRows[] = [
-                'class_id'     => $classId,
-                'day_of_week'  => $day,
-                'start_time'   => $startTime,
-                'end_time'     => $endTime,
-                'is_break'     => $isBreak,
-                'break_name'   => $breakName,
-                'subject_id'   => $subjectId,
-                'teacher_id'   => $teacherId,
-                'session_id'   => $sessionId
-            ];
+            // Extract subjects for each day
+            foreach ($validDays as $index => $day) {
+                $colIndex = $index + 1; // Days start from column index 1
+                if (!isset($data[$colIndex])) continue;
+                
+                $subjectCode = htmlspecialchars(strip_tags(strtoupper(trim($data[$colIndex])))); // Sanitize input
+                if (empty($subjectCode)) continue; // Empty cell means no class
+                
+                $isBreak = 0;
+                $breakName = null;
+                $subjectId = null;
+                $teacherId = null;
+
+                if ($subjectCode === 'BREAK' || $subjectCode === 'HOLIDAY') {
+                    if ($day === 'Sunday' || $subjectCode === 'HOLIDAY') {
+                        $isBreak = 1;
+                        $breakName = 'Holiday';
+                    } else {
+                        $isBreak = 1;
+                        $breakName = 'Break';
+                    }
+                } else {
+                    if (!isset($subjectMap[$subjectCode])) {
+                        $this->flash('error', "Subject code '$subjectCode' on row $rowNum ($day) is not assigned to this class.");
+                        fclose($handle);
+                        $this->redirect('/admin/timetable?class_id=' . $classId);
+                        return;
+                    }
+                    $subjectId = $subjectMap[$subjectCode]['subject_id'];
+                    $teacherId = $subjectMap[$subjectCode]['teacher_id'];
+                }
+
+                $validRows[] = [
+                    'class_id'     => $classId,
+                    'day_of_week'  => $day,
+                    'start_time'   => $startTime,
+                    'end_time'     => $endTime,
+                    'is_break'     => $isBreak,
+                    'break_name'   => $breakName,
+                    'subject_id'   => $subjectId,
+                    'teacher_id'   => $teacherId,
+                    'session_id'   => $sessionId
+                ];
+            }
         }
         fclose($handle);
+
+        if (!$classMatched) {
+            $this->flash('error', 'Security Error: The uploaded CSV is missing the required "# Class: [Name]" header. Please use the exact template provided.');
+            $this->redirect('/admin/timetable?class_id=' . $classId);
+            return;
+        }
 
         if (empty($validRows)) {
             $this->flash('error', "No valid data found in CSV.");
@@ -379,7 +437,35 @@ class TimetableController extends \Controller
             });
             $this->flash('success', "Timetable imported successfully. " . count($validRows) . " records added.");
         } catch (\Exception $e) {
-            $this->flash('error', "Failed to import timetable: " . $e->getMessage());
+            $msg = $e->getMessage();
+            if (strpos($msg, '1062 Duplicate entry') !== false && strpos($msg, 'timetable.unique_slot_teacher') !== false) {
+                preg_match("/Duplicate entry '(.*?)' for key/", $msg, $matches);
+                if (!empty($matches[1])) {
+                    $parts = explode('-', $matches[1]);
+                    if (count($parts) >= 4) {
+                        $teacherId = $parts[1];
+                        $day = $parts[2];
+                        $time = date('h:i A', strtotime($parts[3]));
+                        
+                        $teacher = $this->db->fetch("SELECT first_name, last_name FROM teachers WHERE teacher_id = ?", [$teacherId]);
+                        $tName = $teacher ? htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) : "Teacher #$teacherId";
+                        
+                        $friendlyMsg = "<strong>Teacher Double-Booking Detected!</strong><br>" .
+                                       "You assigned <strong>$tName</strong> to a class on <strong>$day</strong> at <strong>$time</strong>, but they are already scheduled to teach a different class at that exact time.<br><br>" .
+                                       "<strong>How to fix:</strong><br>" .
+                                       "1. Check <strong>$tName's</strong> schedule across other classes.<br>" .
+                                       "2. Change the subject/time in your CSV so they don't overlap.<br>" .
+                                       "3. Upload the fixed CSV again.";
+                        $this->flash('error', $friendlyMsg);
+                    } else {
+                        $this->flash('error', "<strong>Teacher Double-Booking!</strong> A teacher is scheduled for two classes at the same time. Please fix the schedule overlaps in your CSV.");
+                    }
+                } else {
+                    $this->flash('error', "<strong>Teacher Double-Booking!</strong> A teacher is scheduled for two classes at the same time. Please fix the schedule overlaps in your CSV.");
+                }
+            } else {
+                $this->flash('error', "Failed to import timetable: " . $msg);
+            }
         }
 
         $this->redirect('/admin/timetable?class_id=' . $classId);

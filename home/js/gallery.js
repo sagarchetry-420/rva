@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     div.setAttribute('data-category', item.category || 'general');
                     
                     div.innerHTML = `
-                        <img src="${item.image_path ? '../' + item.image_path : '../assets/gallery/placeholder.jpg'}" alt="${item.title}">
+                        <img src="${item.image_path ? '../' + item.image_path : '../assets/gallery/placeholder.jpg'}" alt="${item.title}" loading="lazy">
                         <div class="gallery-overlay">
                             <div class="gallery-content">
                                 <h3>${item.title}</h3>
@@ -175,7 +175,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (e.key === 'Escape') closeLightbox();
                 }
             });
-
+            
+            // Trigger exit animation for seamless transition after gallery is loaded
+            const transitionIn = document.getElementById('notice-transition-in');
+            if (transitionIn) {
+                transitionIn.classList.add('slide-out');
+                setTimeout(() => transitionIn.remove(), 800);
+            }
         })
         .catch(error => {
             console.error('Error fetching gallery data:', error);

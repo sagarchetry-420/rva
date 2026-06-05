@@ -27,18 +27,55 @@ class GalleryController extends \Controller
         $this->validateCsrf();
 
         if ($action === 'create') {
-            $title = $this->input('title', '');
-            $category = $this->input('category', '');
+            $title = trim($this->input('title', ''));
+            $category = trim($this->input('category', ''));
+
+            // Backend validation
+            if (!preg_match('/^[a-zA-Z0-9\s.,\-]+$/', $title)) {
+                $this->flash('error', 'Title contains invalid characters.');
+                $this->redirect(moduleUrl('admin', 'gallery'));
+                return;
+            }
+            if (!empty($category) && !preg_match('/^[a-zA-Z0-9\s.,\-]+$/', $category)) {
+                $this->flash('error', 'Category contains invalid characters.');
+                $this->redirect(moduleUrl('admin', 'gallery'));
+                return;
+            }
+
+            // Sanitize
+            $title = strip_tags($title);
+            $category = strip_tags($category);
             
             // Handle image upload
             $imagePath = '';
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                // Upload logic
+                // File validation
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                $fileMimeType = @mime_content_type($_FILES['image']['tmp_name']);
+                
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                $fileExtension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+
+                if (!in_array($fileMimeType, $allowedMimeTypes) || !in_array($fileExtension, $allowedExtensions)) {
+                    $this->flash('error', 'Invalid file format. Only JPG, PNG, GIF, and WebP are allowed.');
+                    $this->redirect(moduleUrl('admin', 'gallery'));
+                    return;
+                }
+
+                if ($_FILES['image']['size'] > 5 * 1024 * 1024) { // 5MB limit
+                    $this->flash('error', 'File size exceeds the 5MB limit.');
+                    $this->redirect(moduleUrl('admin', 'gallery'));
+                    return;
+                }
+
                 $uploadDir = dirname(APP_ROOT) . '/assets/gallery/';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0777, true);
                 }
-                $filename = uniqid('img_') . '_' . basename($_FILES['image']['name']);
+                
+                // Sanitize filename
+                $safeFilename = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($_FILES['image']['name'], PATHINFO_FILENAME));
+                $filename = uniqid('img_') . '_' . $safeFilename . '.' . $fileExtension;
                 $targetFile = $uploadDir . $filename;
                 
                 if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {

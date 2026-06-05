@@ -125,27 +125,45 @@ class StudentPortalController extends \Controller
 
         $attendanceSummary = ['Present' => 0, 'Absent' => 0, 'Leave' => 0, 'Half Leave' => 0];
         $recentAttendance = [];
+        $totalRecords = 0;
+        
+        $month = isset($_GET['month']) ? $_GET['month'] : '';
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $limit = 15;
+        $offset = ($page - 1) * $limit;
 
         if ($student && $session) {
             $attendanceRepo = new AttendanceRepository();
             $attendanceSummary = $attendanceRepo->getStudentSummary($student['student_id'], $session['session_id']);
             
-            $recentAttendance = $this->db->fetchAll(
-                "SELECT attendance_date, status, remarks 
-                 FROM attendance 
-                 WHERE student_id = ? AND session_id = ? 
-                 ORDER BY attendance_date DESC 
-                 LIMIT 30",
-                [$student['student_id'], $session['session_id']]
-            );
+            $query = "SELECT attendance_date, status, remarks FROM attendance WHERE student_id = ? AND session_id = ?";
+            $params = [$student['student_id'], $session['session_id']];
+            
+            if (!empty($month)) {
+                $query .= " AND MONTH(attendance_date) = ?";
+                $params[] = $month;
+            }
+            
+            // Count for pagination
+            $countQuery = str_replace("SELECT attendance_date, status, remarks", "SELECT COUNT(*)", $query);
+            $totalRecords = $this->db->fetchColumn($countQuery, $params);
+            
+            $query .= " ORDER BY attendance_date DESC LIMIT $limit OFFSET $offset";
+            
+            $recentAttendance = $this->db->fetchAll($query, $params);
         }
+        
+        $totalPages = ceil($totalRecords / $limit);
 
         $this->render('Modules/Student/Views/portal/attendance', [
             'pageTitle'          => 'My Attendance',
             'student'            => $student,
             'session'            => $session,
             'attendanceSummary'  => $attendanceSummary,
-            'recentAttendance'   => $recentAttendance
+            'recentAttendance'   => $recentAttendance,
+            'month'              => $month,
+            'page'               => $page,
+            'totalPages'         => $totalPages
         ], 'student');
     }
 
@@ -266,26 +284,75 @@ class StudentPortalController extends \Controller
     {
         $student = $this->getCurrentStudent();
         $academicRepo = new ClassSubjectRepository();
-        $session = $academicRepo->getActiveSession();
+        $activeSession = $academicRepo->getActiveSession();
 
         $fees = [];
-        if ($student && $session) {
-            $fees = $this->db->fetchAll(
-                "SELECT f.*, fc.category_name, ss.service_name, f.payment_status as status, IF(f.payment_status = 'Paid', f.amount, 0) as paid_amount
-                 FROM fees f
-                 LEFT JOIN fee_categories fc ON f.category_id = fc.category_id
-                 LEFT JOIN services ss ON f.service_id = ss.service_id
-                 WHERE f.student_id = ? AND f.session_id = ?
-                 ORDER BY f.due_date DESC",
-                [$student['student_id'], $session['session_id']]
+        $sessions = [];
+        $selectedSessionId = isset($_GET['session_id']) ? (int)$_GET['session_id'] : ($activeSession['session_id'] ?? 0);
+        $totalRecords = 0;
+        $totalAmount = 0;
+        $totalPaid = 0;
+        
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $limit = 15;
+        $offset = ($page - 1) * $limit;
+
+        if ($student) {
+            $sessions = $this->db->fetchAll(
+                "SELECT DISTINCT asess.session_id, asess.session_name, asess.start_date
+                 FROM student_academics sa
+                 JOIN academic_sessions asess ON sa.session_id = asess.session_id
+                 WHERE sa.student_id = ?
+                 ORDER BY asess.start_date DESC",
+                [$student['student_id']]
             );
+
+            if (empty(array_filter($sessions, fn($s) => $s['session_id'] == $selectedSessionId)) && !empty($sessions)) {
+                $selectedSessionId = $sessions[0]['session_id'];
+            }
+
+            if ($selectedSessionId > 0) {
+                // Get Totals unpaginated
+                $totals = $this->db->fetch(
+                    "SELECT SUM(amount) as total_amount, SUM(IF(payment_status = 'Paid', amount, 0)) as total_paid
+                     FROM fees
+                     WHERE student_id = ? AND session_id = ?",
+                    [$student['student_id'], $selectedSessionId]
+                );
+                $totalAmount = (float)($totals['total_amount'] ?? 0);
+                $totalPaid = (float)($totals['total_paid'] ?? 0);
+
+                // Count for pagination
+                $totalRecords = $this->db->fetchColumn(
+                    "SELECT COUNT(*) FROM fees WHERE student_id = ? AND session_id = ?",
+                    [$student['student_id'], $selectedSessionId]
+                );
+                
+                $fees = $this->db->fetchAll(
+                    "SELECT f.*, fc.category_name, ss.service_name, f.payment_status as status, IF(f.payment_status = 'Paid', f.amount, 0) as paid_amount
+                     FROM fees f
+                     LEFT JOIN fee_categories fc ON f.category_id = fc.category_id
+                     LEFT JOIN services ss ON f.service_id = ss.service_id
+                     WHERE f.student_id = ? AND f.session_id = ?
+                     ORDER BY f.due_date DESC
+                     LIMIT $limit OFFSET $offset",
+                    [$student['student_id'], $selectedSessionId]
+                );
+            }
         }
+        
+        $totalPages = ceil($totalRecords / $limit);
 
         $this->render('Modules/Student/Views/portal/fees', [
-            'pageTitle' => 'My Fees',
-            'student'   => $student,
-            'session'   => $session,
-            'fees'      => $fees
+            'pageTitle'         => 'My Fees',
+            'student'           => $student,
+            'sessions'          => $sessions,
+            'selectedSessionId' => $selectedSessionId,
+            'fees'              => $fees,
+            'totalAmount'       => $totalAmount,
+            'totalPaid'         => $totalPaid,
+            'page'              => $page,
+            'totalPages'        => $totalPages
         ], 'student');
     }
 
@@ -294,13 +361,21 @@ class StudentPortalController extends \Controller
     // ─────────────────────────────────────────────
     public function notices(): void
     {
-        $notices = $this->db->fetchAll(
-            "SELECT * FROM notices WHERE target_audience IN ('All', 'Students') ORDER BY created_at DESC"
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $perPage = 10;
+        
+        $paginated = $this->db->paginate(
+            "SELECT * FROM notices WHERE target_audience IN ('All', 'Students') ORDER BY created_at DESC",
+            [],
+            $page,
+            $perPage
         );
 
         $this->render('Modules/Student/Views/portal/notices', [
-            'pageTitle' => 'Notices',
-            'notices'   => $notices
+            'pageTitle'  => 'Notices',
+            'notices'    => $paginated['data'],
+            'page'       => $paginated['current_page'],
+            'totalPages' => $paginated['pages']
         ], 'student');
     }
 
@@ -322,7 +397,7 @@ class StudentPortalController extends \Controller
                  LEFT JOIN subjects s ON tt.subject_id = s.subject_id
                  LEFT JOIN teachers t ON tt.teacher_id = t.teacher_id
                  WHERE tt.class_id = ? AND tt.session_id = ?
-                 ORDER BY FIELD(tt.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'), tt.start_time",
+                 ORDER BY FIELD(tt.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), tt.start_time",
                 [$academic['class_id'], $session['session_id']]
             );
         }
@@ -354,8 +429,8 @@ class StudentPortalController extends \Controller
             $exams = $this->db->fetchAll(
                 "SELECT DISTINCT e.*
                  FROM examinations e
-                 JOIN exam_schedules es ON e.exam_id = es.exam_id
-                 WHERE es.class_id = ? AND e.is_approved = 1 AND e.is_schedule_published = 1
+                 JOIN exam_classes ec ON e.exam_id = ec.exam_id
+                 WHERE ec.class_id = ? AND e.is_approved = 1 AND e.is_schedule_published = 1
                  ORDER BY e.start_date DESC",
                 [$academic['class_id']]
             );
@@ -643,6 +718,13 @@ class StudentPortalController extends \Controller
         $pdf->AddPage();
 
         // Header
+        $logoPath = 'c:/wamp64/www/RVA/assets/logo/logo_small.png';
+        if (file_exists($logoPath)) {
+            $pdf->Image($logoPath, 95, 10, 20);
+            $pdf->SetY(32);
+        } else {
+            $pdf->SetY(10);
+        }
         $pdf->SetFont('Arial', 'B', 18);
         $pdf->Cell(0, 10, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', APP_NAME), 0, 1, 'C');
         $pdf->SetFont('Arial', '', 10);
@@ -656,12 +738,7 @@ class StudentPortalController extends \Controller
         $pdf->Cell(40, 7, 'Student Name:', 0);
         $pdf->SetFont('Arial', '', 11);
         $name = ($student['first_name'] ?? '') . ' ' . ($student['middle_name'] ?? '') . ' ' . ($student['last_name'] ?? '');
-        $pdf->Cell(60, 7, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', trim($name)), 0);
-
-        $pdf->SetFont('Arial', 'B', 11);
-        $pdf->Cell(35, 7, 'Admission No:', 0);
-        $pdf->SetFont('Arial', '', 11);
-        $pdf->Cell(0, 7, $student['admission_number'] ?? 'N/A', 0, 1);
+        $pdf->Cell(0, 7, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', trim($name)), 0, 1);
 
         if ($academic) {
             $pdf->SetFont('Arial', 'B', 11);
@@ -770,7 +847,7 @@ class StudentPortalController extends \Controller
         exit;
     }
 
-    public function downloadRoutine(): void
+    public function downloadRoutinePdf(): void
     {
         $student = $this->getCurrentStudent();
         $academic = $student ? $this->getStudentAcademic($student['student_id']) : null;
@@ -798,27 +875,83 @@ class StudentPortalController extends \Controller
             [$academic['class_id'], $examId]
         );
 
-        $filename = "Exam_Routine_" . preg_replace('/[^A-Za-z0-9_-]/', '_', $exam['exam_name']) . ".csv";
-        header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        
-        $output = fopen('php://output', 'w');
-        fputcsv($output, ['Date', 'Day', 'Subject Name', 'Subject Code', 'Start Time', 'End Time', 'Full Marks', 'Pass Marks']);
-        
-        foreach ($schedules as $s) {
-            fputcsv($output, [
-                date('d-M-Y', strtotime($s['exam_date'])),
-                date('l', strtotime($s['exam_date'])),
-                $s['subject_name'],
-                $s['subject_code'],
-                date('h:i A', strtotime($s['start_time'])),
-                date('h:i A', strtotime($s['end_time'])),
-                (float)$s['full_marks'],
-                (float)$s['pass_marks']
-            ]);
+        // Generate PDF
+        require_once APP_ROOT . '/includes/fpdf/fpdf.php';
+        $pdf = new \FPDF('P', 'mm', 'A4');
+        $pdf->SetAutoPageBreak(true, 15);
+        $pdf->AddPage();
+
+        // Header
+        $logoPath = 'c:/wamp64/www/RVA/assets/logo/logo_small.png';
+        if (file_exists($logoPath)) {
+            $pdf->Image($logoPath, 95, 10, 20);
+            $pdf->SetY(32);
+        } else {
+            $pdf->SetY(10);
         }
-        
-        fclose($output);
+        $pdf->SetFont('Arial', 'B', 18);
+        $pdf->Cell(0, 10, iconv('UTF-8', 'ISO-8859-1//TRANSLIT', APP_NAME), 0, 1, 'C');
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->Cell(0, 5, 'Examination Routine', 0, 1, 'C');
+        $pdf->Ln(3);
+        $pdf->Line(10, $pdf->GetY(), 200, $pdf->GetY());
+        $pdf->Ln(5);
+
+        // Details
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->SetFillColor(41, 128, 185);
+        $pdf->SetTextColor(255);
+        $clsLabel = ($academic['class_name'] ?? '') . ' ' . ($academic['section'] ?? '');
+        $pdf->Cell(0, 8, '  ' . iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $exam['exam_name'] . ' | Class ' . $clsLabel), 0, 1, 'L', true);
+        $pdf->SetTextColor(0);
+        $pdf->Ln(4);
+
+        // Table Header
+        $pdf->SetFont('Arial', 'B', 9);
+        $pdf->SetFillColor(52, 73, 94);
+        $pdf->SetTextColor(255);
+        $pdf->Cell(30, 7, 'Date', 1, 0, 'C', true);
+        $pdf->Cell(25, 7, 'Day', 1, 0, 'C', true);
+        $pdf->Cell(65, 7, 'Subject', 1, 0, 'L', true);
+        $pdf->Cell(45, 7, 'Time', 1, 0, 'C', true);
+        $pdf->Cell(25, 7, 'Marks', 1, 1, 'C', true);
+        $pdf->SetTextColor(0);
+
+        // Rows
+        $pdf->SetFont('Arial', '', 9);
+        $fill = false;
+        foreach ($schedules as $s) {
+            if ($fill) $pdf->SetFillColor(245, 245, 245);
+            else $pdf->SetFillColor(255, 255, 255);
+
+            $dateStr = date('d M Y', strtotime($s['exam_date']));
+            $dayStr = date('l', strtotime($s['exam_date']));
+            $subStr = iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $s['subject_name']);
+            $timeStr = date('h:i A', strtotime($s['start_time'])) . ' - ' . date('h:i A', strtotime($s['end_time']));
+            $marksStr = (float)$s['full_marks'] . ' (P:' . (float)$s['pass_marks'] . ')';
+
+            $pdf->Cell(30, 7, $dateStr, 1, 0, 'C', true);
+            $pdf->Cell(25, 7, $dayStr, 1, 0, 'C', true);
+            
+            if (strlen($subStr) > 35) {
+                $subStr = substr($subStr, 0, 32) . '...';
+            }
+            
+            $pdf->Cell(65, 7, '  ' . $subStr, 1, 0, 'L', true);
+            $pdf->Cell(45, 7, $timeStr, 1, 0, 'C', true);
+            $pdf->Cell(25, 7, $marksStr, 1, 1, 'C', true);
+            $fill = !$fill;
+        }
+
+        $pdf->Ln(5);
+        $pdf->Line(10, $pdf->GetY(), 200, $pdf->GetY());
+        $pdf->Ln(5);
+        $pdf->SetFont('Arial', 'I', 8);
+        $pdf->Cell(0, 5, 'This is a computer-generated schedule. Subject to changes by administration.', 0, 1, 'C');
+        $pdf->Cell(0, 5, 'Generated on ' . date('d M Y \a\t h:i A') . ' from ' . APP_NAME, 0, 1, 'C');
+
+        $filename = 'Exam_Routine_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $exam['exam_name']) . '.pdf';
+        $pdf->Output('D', $filename);
         exit;
     }
 

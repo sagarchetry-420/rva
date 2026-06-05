@@ -13,6 +13,7 @@ $router->any('public/admission',      'App\Modules\Admission\Controllers\PublicA
 $router->any('public/check-result',   'App\Modules\Exams\Controllers\PublicResultController', 'check');
 $router->get('public/admission_success',     'App\Modules\Admission\Controllers\PublicAdmissionController', 'success');
 $router->get('public/application_receipt',   'App\Modules\Admission\Controllers\PublicAdmissionController', 'downloadReceipt');
+$router->any('public/track_application',     'App\Modules\Admission\Controllers\PublicAdmissionController', 'track');
 
 // ─── API Routes (no role required) ───
 $router->get('api/notices',      'App\Modules\Notice\Controllers\NoticeController', 'apiNotices');
@@ -36,9 +37,11 @@ $router->get('admin/clear-cache','App\Modules\Admin\Controllers\DashboardControl
 
 $router->get('admin/students',   'App\Modules\Student\Controllers\StudentController', 'index',  ['role' => 'admin']);
 $router->post('admin/students',  'App\Modules\Student\Controllers\StudentController', 'handleAction', ['role' => 'admin']);
+$router->get('admin/student_details', 'App\Modules\Student\Controllers\StudentController', 'details', ['role' => 'admin']);
 
 $router->get('admin/teachers',   'App\Modules\Teacher\Controllers\TeacherController', 'index',  ['role' => 'admin']);
 $router->post('admin/teachers',  'App\Modules\Teacher\Controllers\TeacherController', 'handleAction', ['role' => 'admin']);
+$router->get('admin/teacher_details', 'App\Modules\Teacher\Controllers\TeacherController', 'details', ['role' => 'admin']);
 
 $router->get('admin/classes',    'App\Modules\Academic\Controllers\ClassController',   'index',  ['role' => 'admin']);
 $router->post('admin/classes',   'App\Modules\Academic\Controllers\ClassController',   'handleAction', ['role' => 'admin']);
@@ -58,6 +61,7 @@ $router->post('admin/timetable', 'App\Modules\Timetable\Controllers\TimetableCon
 $router->get('admin/examinations',  'App\Modules\Exams\Controllers\ExamController', 'index',  ['role' => 'admin']);
 $router->post('admin/examinations', 'App\Modules\Exams\Controllers\ExamController', 'handleAction', ['role' => 'admin']);
 $router->get('admin/schedules',     'App\Modules\Exams\Controllers\ExamController', 'schedules', ['role' => 'admin']);
+$router->get('admin/master_schedule','App\Modules\Exams\Controllers\ExamController', 'masterSchedule', ['role' => 'admin']);
 $router->post('admin/schedules',    'App\Modules\Exams\Controllers\ExamController', 'handleAction', ['role' => 'admin']);
 
 $router->get('admin/attendance',  'App\Modules\Attendance\Controllers\AttendanceController', 'index', ['role' => 'admin']);
@@ -69,7 +73,9 @@ $router->get('admin/fees',       'App\Modules\Fees\Controllers\FeeController',  
 $router->post('admin/fees',      'App\Modules\Fees\Controllers\FeeController',    'handleAction', ['role' => 'admin']);
 $router->get('admin/fee_collection',  'App\Modules\Fees\Controllers\FeeController', 'collection', ['role' => 'admin']);
 $router->post('admin/fee_collection', 'App\Modules\Fees\Controllers\FeeController', 'handleAction', ['role' => 'admin']);
-$router->get('admin/receipt',         'App\Modules\Fees\Controllers\ReceiptController', 'view', ['role' => 'admin']);
+$router->get('admin/student_fees',  'App\Modules\Fees\Controllers\FeeController', 'studentFees', ['role' => 'admin']);
+$router->get('admin/fee_config',      'App\Modules\Fees\Controllers\FeeConfigController', 'index', ['role' => 'admin']);
+$router->post('admin/fee_config',     'App\Modules\Fees\Controllers\FeeConfigController', 'handleAction', ['role' => 'admin']);
 
 $router->get('admin/notices',    'App\Modules\Notice\Controllers\NoticeController', 'index', ['role' => 'admin']);
 $router->post('admin/notices',   'App\Modules\Notice\Controllers\NoticeController', 'handleAction', ['role' => 'admin']);
@@ -83,6 +89,7 @@ $router->get('admin/gallery',       'App\Modules\CMS\Controllers\GalleryControll
 $router->post('admin/gallery',      'App\Modules\CMS\Controllers\GalleryController', 'handleAction', ['role' => 'admin']);
 
 $router->get('admin/applications',       'App\Modules\Admission\Controllers\AdmissionController', 'applications', ['role' => 'admin']);
+$router->get('admin/application_view',   'App\Modules\Admission\Controllers\AdmissionController', 'application_view', ['role' => 'admin']);
 $router->post('admin/applications',      'App\Modules\Admission\Controllers\AdmissionController', 'handleAction', ['role' => 'admin']);
 $router->get('admin/admission-settings', 'App\Modules\Admission\Controllers\AdmissionController', 'settings', ['role' => 'admin']);
 $router->post('admin/admission-settings','App\Modules\Admission\Controllers\AdmissionController', 'saveSettings', ['role' => 'admin']);
@@ -92,6 +99,8 @@ $router->post('admin/promotions', 'App\Modules\Student\Controllers\PromotionCont
 
 $router->get('admin/services',   'App\Modules\Fee\Controllers\ServiceController', 'index', ['role' => 'admin']);
 $router->post('admin/services',  'App\Modules\Fee\Controllers\ServiceController', 'handleAction', ['role' => 'admin']);
+$router->get('admin/service_class_fees', 'App\Modules\Fee\Controllers\ServiceController', 'classFees', ['role' => 'admin']);
+$router->post('admin/service_class_fees', 'App\Modules\Fee\Controllers\ServiceController', 'saveClassFees', ['role' => 'admin']);
 
 // $router->get('admin/marksheet',  'App\Modules\Exam\Controllers\ExamController', 'marksheet', ['role' => 'admin']);
 // $router->get('admin/export-fees','App\Modules\Fee\Controllers\FeeController', 'export', ['role' => 'admin']);
@@ -125,6 +134,7 @@ $router->get('student/id_card',    'App\Modules\Student\Controllers\StudentPorta
 $router->get('student/exam_routine','App\Modules\Student\Controllers\StudentPortalController', 'exam_routine', ['role' => 'student']);
 $router->get('student/transcript', 'App\Modules\Student\Controllers\StudentPortalController', 'transcript', ['role' => 'student']);
 $router->get('student/download_transcript', 'App\Modules\Student\Controllers\StudentPortalController', 'downloadTranscript', ['role' => 'student']);
+$router->get('student/downloadRoutinePdf', 'App\Modules\Student\Controllers\StudentPortalController', 'downloadRoutinePdf', ['role' => 'student']);
 $router->get('student/routine',    'App\Modules\Student\Controllers\StudentPortalController', 'downloadRoutine', ['role' => 'student']);
 $router->get('student/export-fees','App\Modules\Student\Controllers\StudentPortalController', 'exportFees', ['role' => 'student']);
 $router->get('student/receipt',    'App\Modules\Fees\Controllers\ReceiptController', 'view', ['role' => 'student']);

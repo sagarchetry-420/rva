@@ -44,13 +44,7 @@
                 <td><?php echo formatMoney($c['admission_fee'] ?? 0); ?></td>
                 <td><?php echo formatMoney($c['exam_fee'] ?? 0); ?></td>
                 <td class="actions-cell">
-                    <button class="btn btn-sm btn-info" onclick='openEditModal(<?php echo htmlspecialchars(json_encode($c)); ?>)'><i class="fas fa-edit"></i> Edit</button>
-                    <form method="POST" action="<?php echo moduleUrl('admin', 'classes'); ?>" style="display:inline" onsubmit="return confirmDelete('Delete this class? This will also remove associated subjects and attendance records.')">
-                        <?php echo csrf_field(); ?>
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="class_id" value="<?php echo $c['class_id']; ?>">
-                        <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-                    </form>
+                    <button class="btn btn-sm btn-primary" onclick='openEditModal(<?php echo htmlspecialchars(json_encode($c)); ?>)'><i class="fas fa-edit"></i> Edit</button>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -74,11 +68,11 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label>Class Name *</label>
-                    <input type="text" name="class_name" required maxlength="50" placeholder="e.g. Class 10">
+                    <input type="text" name="class_name" required maxlength="50" pattern="^[a-zA-Z0-9\s]+$" title="Only letters, numbers, and spaces are allowed." placeholder="e.g. Class 10">
                 </div>
                 <div class="form-group">
                     <label>Section *</label>
-                    <input type="text" name="section" required maxlength="10" placeholder="e.g. A">
+                    <input type="text" name="section" required maxlength="10" pattern="^[a-zA-Z0-9]+$" title="Only letters and numbers are allowed." placeholder="e.g. A">
                 </div>
                 <div class="form-group">
                     <label>Class Teacher</label>
@@ -122,11 +116,11 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label>Class Name *</label>
-                    <input type="text" name="class_name" id="edit_class_name" required maxlength="50">
+                    <input type="text" name="class_name" id="edit_class_name" required maxlength="50" pattern="^[a-zA-Z0-9\s]+$" title="Only letters, numbers, and spaces are allowed.">
                 </div>
                 <div class="form-group">
                     <label>Section *</label>
-                    <input type="text" name="section" id="edit_section" required maxlength="10">
+                    <input type="text" name="section" id="edit_section" required maxlength="10" pattern="^[a-zA-Z0-9]+$" title="Only letters and numbers are allowed.">
                 </div>
                 <div class="form-group">
                     <label>Class Teacher</label>

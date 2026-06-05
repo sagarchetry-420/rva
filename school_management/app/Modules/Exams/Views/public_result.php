@@ -25,7 +25,7 @@
         .form-control { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; transition: border-color 0.2s; box-sizing: border-box; }
         .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
         .btn-check { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
-        .btn-check:hover { background: var(--secondary); }
+        .btn-check:hover { filter: brightness(0.9); }
         
         .marksheet { margin-top: 30px; border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
         .ms-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 15px; }
@@ -77,13 +77,11 @@
         </div>
         <div class="form-group">
             <label>Roll Number</label>
-            <input type="text" name="roll_number" class="form-control" placeholder="e.g. 101" required>
+            <input type="text" name="roll_number" class="form-control" placeholder="e.g. 101" pattern="[a-zA-Z0-9\-_]+" title="Only letters, numbers, hyphens, and underscores are allowed" required>
         </div>
         <button type="submit" class="btn-check"><i class="fa-solid fa-magnifying-glass"></i> Check Result</button>
     </form>
-    <div style="text-align:center; margin-top:20px;">
-        <a href="<?php echo BASE_URL; ?>/index.php" style="color:var(--gray); text-decoration:none; font-size:14px;"><i class="fa-solid fa-arrow-left"></i> Back to Login</a>
-    </div>
+    
 
     <?php else: 
         $stu = $result_data['student'];

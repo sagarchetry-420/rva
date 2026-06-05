@@ -1,0 +1,19 @@
+/* ═══ TIMETABLE ═══ */
+.timetable-table { width: 100%; border-collapse: collapse; }
+.timetable-table th {
+    background: var(--primary);
+    color: white;
+    padding: 12px;
+    font-size: 13px;
+}
+.timetable-table td {
+    padding: 10px;
+    border: 1px solid var(--border);
+    text-align: center;
+    font-size: 13px;
+    min-width: 110px;
+}
+.timetable-cell { background: #eef2ff; border-radius: 6px; padding: 6px 8px; }
+.timetable-cell .subject-name { font-weight: 600; color: var(--primary); font-size: 12px; }
+.timetable-cell .teacher-name { font-size: 11px; color: var(--gray); }
+

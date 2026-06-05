@@ -9,8 +9,8 @@ class AdmissionController extends \Controller
     public function applications(): void
     {
         $filterClass = isset($_GET['class_id']) ? (int)$_GET['class_id'] : 0;
-        $filterStatus = isset($_GET['status']) ? $_GET['status'] : 'pending';
-        $searchQuery = isset($_GET['search']) ? trim($_GET['search']) : '';
+        $filterStatus = isset($_GET['status']) ? strip_tags(trim($_GET['status'])) : 'pending';
+        $searchQuery = isset($_GET['search']) ? strip_tags(trim($_GET['search'])) : '';
         
         // Handle PDF Download
         if (isset($_GET['download_pdf']) && $_GET['download_pdf'] == '1' && $filterStatus === 'approved') {
@@ -79,6 +79,26 @@ class AdmissionController extends \Controller
             'pageTitle' => 'Merit List',
             'meritList' => $meritList,
             'classId'   => $classId
+        ], null);
+    }
+
+    public function application_view(): void
+    {
+        $appId = (int)$this->input('id', 0);
+        $application = $this->db->fetch("SELECT a.*, c.class_name, c.section 
+                                         FROM student_applications a 
+                                         LEFT JOIN classes c ON a.class_id = c.class_id 
+                                         WHERE a.id = ?", [$appId]);
+
+        if (!$application) {
+            $this->flash('error', 'Application not found.');
+            $this->redirect(moduleUrl('admin', 'applications'));
+            return;
+        }
+
+        $this->render('Modules/Admission/Views/application_view', [
+            'pageTitle'   => 'View Application Details',
+            'application' => $application
         ], 'admin');
     }
 

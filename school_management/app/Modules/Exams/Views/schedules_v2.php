@@ -1,15 +1,15 @@
 <?php
 /**
- * Exam Schedules View (Admin) Matrix Version
+ * Exam Schedules View (Admin) Read-Only Version
  * Variables: $exam, $class, $schedules, $subjects, $pageTitle, $examSlots, $matrix, $dates
  */
 ?>
-<div class="page-header">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
     <div>
         <h1><i class="fas fa-calendar-alt"></i> <?php echo htmlspecialchars($pageTitle); ?></h1>
         <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
             <label style="font-weight: bold; margin: 0; color: var(--primary);">Scheduling for Class:</label>
-            <select class="form-control" style="width: auto; display: inline-block; padding: 6px; font-weight: bold;" onchange="window.location.href="<?php echo moduleUrl('admin', 'schedules'); ?>?exam_id=<?php echo $exam['exam_id']; ?>&class_id='+this.value">
+            <select class="form-control" style="width: auto; display: inline-block; padding: 6px; font-weight: bold;" onchange="window.location.href='<?php echo moduleUrl('admin', 'schedules'); ?>?exam_id=<?php echo $exam['exam_id']; ?>&class_id='+this.value">
                 <?php foreach ($exam['classes'] as $c): ?>
                     <option value="<?php echo $c['class_id']; ?>" <?php echo $c['class_id'] == $class['class_id'] ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($c['class_name'] . ' ' . $c['section']); ?>
@@ -17,76 +17,168 @@
                 <?php endforeach; ?>
             </select>
         </div>
-        <p>Define subject timetables and marks structure</p>
+        <p>View exam timetables and marks structure</p>
     </div>
-    <div style="display:flex; gap:10px;">
+    <div>
         <a href="<?php echo moduleUrl('admin', 'examinations'); ?>" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Exams</a>
-        <form method="POST" action="<?php echo moduleUrl('admin', 'schedules'); ?>" style="display:inline;">
-            <?php echo csrf_field(); ?>
-            <input type="hidden" name="exam_id" value="<?php echo $exam['exam_id']; ?>">
-            <input type="hidden" name="class_id" value="<?php echo $class['class_id']; ?>">
-            <input type="hidden" name="action" value="download_exam_details">
-            <button type="submit" class="btn btn-success"><i class="fas fa-file-excel"></i> Exam Details</button>
-        </form>
-        <form method="POST" action="<?php echo moduleUrl('admin', 'schedules'); ?>" style="display:inline;">
-            <?php echo csrf_field(); ?>
-            <input type="hidden" name="action" value="download_schedules_template">
-            <input type="hidden" name="exam_id" value="<?php echo $exam['exam_id']; ?>">
-            <input type="hidden" name="class_id" value="<?php echo $class['class_id']; ?>">
-            <button type="submit" class="btn btn-info"><i class="fas fa-download"></i> CSV Template</button>
-        </form>
-        <button type="button" class="btn btn-warning" onclick="openModal('importCsvModal')"><i class="fas fa-upload"></i> Import CSV</button>
-        <button type="button" class="btn btn-primary" onclick="openAddSlotModal()"><i class="fas fa-plus"></i> Add Time Column</button>
-        <button type="button" class="btn btn-info" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
     </div>
+</div>
+
+<div class="action-buttons-container" style="display: flex; gap: 10px; margin-bottom: 20px;">
+    <form method="POST" action="<?php echo moduleUrl('admin', 'schedules'); ?>" style="display:inline;" class="no-auto-validate">
+        <?php echo csrf_field(); ?>
+        <input type="hidden" name="action" value="download_schedules_template">
+        <input type="hidden" name="exam_id" value="<?php echo $exam['exam_id']; ?>">
+        <input type="hidden" name="class_id" value="<?php echo $class['class_id']; ?>">
+        <button type="submit" class="btn btn-info" style="width: 160px; text-align: center;"><i class="fas fa-download"></i> CSV Template</button>
+    </form>
+    <button type="button" class="btn btn-warning" onclick="openModal('importCsvModal')" style="width: 160px; text-align: center;"><i class="fas fa-upload"></i> Import CSV</button>
+    <button type="button" class="btn btn-primary" onclick="window.print()" style="width: 160px; text-align: center;"><i class="fas fa-print"></i> Print</button>
 </div>
 
 <style>
 @media print {
-    .sidebar, .top-nav, .btn, .actions-cell, .modal, .delete-row-btn, .edit-slot-btn, .remove-slot-btn, #addDateRowBtn { display: none !important; }
-    .main-content { margin-left: 0 !important; padding: 0 !important; }
-    .page-header p { display: none; }
-    input[type="date"], select { border: none; appearance: none; -webkit-appearance: none; -moz-appearance: none; background: transparent; }
+    @page {
+        size: landscape;
+        margin: 10mm;
+    }
+    body * {
+        visibility: hidden;
+    }
+    #printableArea, #printableArea * {
+        visibility: visible;
+    }
+    #printableArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .print-header h2 { margin: 0; color: #000; font-size: 24px; }
+    .print-header h3 { margin: 5px 0 0 0; color: #555; font-size: 18px; }
+    
+    .modern-timetable-wrapper {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+    .timetable-modern {
+        background-color: transparent !important;
+        border-spacing: 0 !important;
+        border-collapse: collapse !important;
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+    .timetable-modern th {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+        padding: 10px !important;
+        background-color: #f5f5f5 !important;
+        -webkit-print-color-adjust: exact;
+    }
+    .timetable-modern td {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+        padding: 10px !important;
+        height: auto !important;
+    }
+    .timetable-modern td.time-col {
+        color: #000 !important;
+        font-weight: bold;
+    }
+}
+
+.print-header {
+    display: none;
+}
+
+.modern-timetable-wrapper {
+    background-color: #faf9f7;
+    background-image: 
+        radial-gradient(circle at 5% 5%, #fff2ec 0%, transparent 30%), 
+        radial-gradient(circle at 95% 95%, #fff2ec 0%, transparent 30%);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid #f0eee9;
+}
+.timetable-modern {
+    background-color: #cbd8cf;
+    border-radius: 12px;
+    padding: 8px;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 10px;
+    min-width: 800px;
+}
+.timetable-modern th {
+    color: #245e54;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    padding: 5px 10px 10px 10px;
+    border: none;
+}
+.timetable-modern td {
+    background-color: #ffffff;
+    border-radius: 6px;
+    padding: 12px 10px;
+    text-align: center;
+    vertical-align: middle;
+    border: none;
+    height: 50px;
+}
+.timetable-modern td.time-col {
+    color: #e08b76;
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 14px;
+}
+.timetable-modern td.subject-cell {
+    color: #444;
+    font-size: 14px;
+    font-weight: 500;
 }
 </style>
 
-<div class="table-container" style="overflow-x: auto;">
-    <form method="POST" action="<?php echo moduleUrl('admin', 'schedules'); ?>" id="scheduleForm">
-        <?php echo csrf_field(); ?>
-        <input type="hidden" name="action" value="update_schedules">
-        <input type="hidden" name="exam_id" value="<?php echo $exam['exam_id']; ?>">
-        <input type="hidden" name="class_id" value="<?php echo $class['class_id']; ?>">
-        
-        <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <button type="button" class="btn btn-secondary" id="addDateRowBtn" onclick="addDateRow()"><i class="fas fa-plus"></i> Add Date Row</button>
-            <button type="submit" class="btn btn-success" id="saveScheduleBtn"><i class="fas fa-save"></i> Save Schedule</button>
+<div id="printableArea">
+    <div class="print-header">
+        <h2><?php echo htmlspecialchars($pageTitle); ?></h2>
+        <h3>Class: <?php echo htmlspecialchars($class['class_name'] . ' ' . $class['section']); ?></h3>
+    </div>
+
+    <?php if (empty($examSlots) || empty($dates)): ?>
+        <div class="empty-state" style="padding: 40px; text-align: center; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 20px;">
+            <div class="empty-icon" style="font-size: 48px; color: #cbd5e1; margin-bottom: 15px;"><i class="fas fa-calendar-xmark"></i></div>
+            <p style="color: #64748b; font-size: 16px;">No schedules for this class. Use "Import CSV" to set up the schedules.</p>
         </div>
-
-
-        <table class="data-table timetable-matrix" style="width: 100%; border-collapse: collapse; min-width: 800px;" id="matrixTable">
+    <?php else: ?>
+        <div class="table-container modern-timetable-wrapper" style="overflow-x: auto; margin-top: 20px;">
+        <table class="timetable-modern">
             <thead>
-                <tr id="matrixHeader">
-                    <th style="background: #f8f9fa; color: #333; border: 1px solid #ddd; padding: 12px; width: 180px; text-align: center; position: sticky; left: 0; z-index: 2;">Date \ Slot</th>
+                <tr>
+                    <th style="width: 120px;">Date \ Slot</th>
                     <?php foreach ($examSlots as $slotKey => $slot): ?>
-                        <th style="background: #f8f9fa; color: #333; border: 1px solid #ddd; padding: 12px; text-align: center; white-space: nowrap;" data-slot="<?php echo htmlspecialchars($slotKey); ?>">
-                            <strong><?php echo htmlspecialchars($slot['label']); ?></strong><br>
-                            <div style="margin-top: 5px; display:flex; gap:5px; justify-content:center;">
-                                <button type="button" class="btn btn-sm btn-info edit-slot-btn" style="padding: 2px 6px; font-size: 11px;" onclick="openEditSlotModal('<?php echo htmlspecialchars($slotKey); ?>', '<?php echo $slot['start_time']; ?>', '<?php echo $slot['end_time']; ?>')" title="Edit Slot"><i class="fas fa-edit"></i> Edit</button>
-                                <button type="button" class="btn btn-sm btn-danger remove-slot-btn" style="padding: 2px 6px; font-size: 11px;" onclick="removeSlotColumn('<?php echo htmlspecialchars($slotKey); ?>', '<?php echo $slot['start_time']; ?>', '<?php echo $slot['end_time']; ?>')" title="Remove Slot"><i class="fas fa-trash"></i> Remove</button>
-                            </div>
+                        <th>
+                            <strong><?php echo htmlspecialchars($slot['label']); ?></strong>
                         </th>
                     <?php endforeach; ?>
                 </tr>
             </thead>
-            <tbody id="matrixBody">
-                <?php $rowIndex = 0; ?>
+            <tbody>
                 <?php foreach ($dates as $date): ?>
-                    <tr id="row_<?php echo $rowIndex; ?>">
-                        <td style="background: #f8f9fa; color: #333; border: 1px solid #ddd; padding: 12px; text-align: center; position: sticky; left: 0; z-index: 1;">
-                            <div style="display:flex; align-items:center; gap:5px;">
-                                <input type="date" name="row_dates[<?php echo $rowIndex; ?>]" value="<?php echo htmlspecialchars($date); ?>" min="<?php echo $exam['start_date']; ?>" max="<?php echo $exam['end_date']; ?>" class="form-control" required style="width: 100%;">
-                                <button type="button" class="btn btn-sm btn-danger delete-row-btn" onclick="removeDateRow('row_<?php echo $rowIndex; ?>')" title="Remove Row"><i class="fas fa-trash"></i></button>
-                            </div>
+                    <tr>
+                        <td class="time-col">
+                            <?php echo date('d M Y', strtotime($date)); ?><br>
+                            <span style="font-size: 12px; font-weight: normal; color: #666;"><?php echo date('l', strtotime($date)); ?></span>
                         </td>
                         <?php foreach ($examSlots as $slotKey => $slot): ?>
                             <?php 
@@ -98,99 +190,35 @@
                                     $selectedFullMarks = $matrix[$date][$slotKey]['full_marks'];
                                     $selectedPassMarks = $matrix[$date][$slotKey]['pass_marks'];
                                 }
+                                
+                                $subjectName = '--';
+                                if ($selectedSubjectId > 0) {
+                                    foreach ($subjects as $s) {
+                                        if ($s['subject_id'] == $selectedSubjectId) {
+                                            $subjectName = $s['subject_name'] . ' (' . $s['subject_code'] . ')';
+                                            break;
+                                        }
+                                    }
+                                }
                             ?>
-                            <td style="border: 1px solid var(--border); padding: 10px; text-align: center; vertical-align: top; background: <?php echo $selectedSubjectId > 0 ? '#f0fdf4' : '#fff'; ?>; transition: background 0.3s;" data-slot-col="<?php echo htmlspecialchars($slotKey); ?>">
-                                <div style="display:flex; flex-direction:column; gap:8px;">
-                                    <select name="schedules[<?php echo $rowIndex; ?>][<?php echo htmlspecialchars($slotKey); ?>][subject_id]" class="form-control" style="width: 100%; min-width: 220px; font-weight: <?php echo $selectedSubjectId > 0 ? '600' : 'normal'; ?>; border: 1px solid <?php echo $selectedSubjectId > 0 ? '#86efac' : '#cbd5e1'; ?>;" onchange="this.parentElement.parentElement.style.background = this.value !== '0' ? '#f0fdf4' : '#fff'; this.style.fontWeight = this.value !== '0' ? '600' : 'normal'; this.style.borderColor = this.value !== '0' ? '#86efac' : '#cbd5e1';">
-                                        <option value="0">-- Unassigned --</option>
-                                        <?php foreach ($subjects as $s): ?>
-                                            <option value="<?php echo $s['subject_id']; ?>" <?php echo $selectedSubjectId == $s['subject_id'] ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($s['subject_name'] . ' (' . $s['subject_code'] . ')'); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <div style="display:flex; gap:6px; align-items:center;">
-                                        <div style="flex:1; display:flex; align-items:center; border:1px solid #e2e8f0; border-radius:4px; overflow:hidden; background:#fff;">
-                                            <span style="font-size:10px; background:#f8fafc; padding:4px 6px; color:#64748b; border-right:1px solid #e2e8f0; font-weight:600;">Full</span>
-                                            <input type="number" name="schedules[<?php echo $rowIndex; ?>][<?php echo htmlspecialchars($slotKey); ?>][full_marks]" class="mark-input" style="width:100%; border:none; padding:4px; font-size:11px; text-align:center; outline:none;" value="<?php echo $selectedFullMarks; ?>" min="0" step="0.01">
-                                        </div>
-                                        <div style="flex:1; display:flex; align-items:center; border:1px solid #e2e8f0; border-radius:4px; overflow:hidden; background:#fff;">
-                                            <span style="font-size:10px; background:#f8fafc; padding:4px 6px; color:#64748b; border-right:1px solid #e2e8f0; font-weight:600;">Pass</span>
-                                            <input type="number" name="schedules[<?php echo $rowIndex; ?>][<?php echo htmlspecialchars($slotKey); ?>][pass_marks]" class="mark-input" style="width:100%; border:none; padding:4px; font-size:11px; text-align:center; outline:none;" value="<?php echo $selectedPassMarks; ?>" min="0" step="0.01">
-                                        </div>
-                                    </div>
-                                </div>
+                            <td class="subject-cell">
+                                <?php if ($selectedSubjectId > 0): ?>
+                                    <span style="color:#374151; font-weight: 600; display: block; margin-bottom: 4px;">
+                                        <?php echo htmlspecialchars($subjectName); ?>
+                                    </span>
+                                    <span style="font-size:12px; font-weight:normal; color:#245e54;">Marks: <?php echo (float)$selectedFullMarks; ?> (Pass: <?php echo (float)$selectedPassMarks; ?>)</span>
+                                <?php else: ?>
+                                    <span style="color:#9ca3af; font-style: italic; font-weight: normal;">--</span>
+                                <?php endif; ?>
                             </td>
                         <?php endforeach; ?>
                     </tr>
-                    <?php $rowIndex++; ?>
                 <?php endforeach; ?>
             </tbody>
         </table>
-        <?php if (empty($examSlots)): ?>
-            <div id="emptyNotice" style="padding: 20px; text-align: center; color: var(--gray);">
-                No exam slots defined yet. Click "Add Time Column" to start building the schedule.
-            </div>
-        <?php endif; ?>
-    </form>
-</div>
-
-<!-- Add/Edit Exam Slot Modal -->
-<div id="examSlotModal" class="modal">
-    <div class="modal-content" style="max-width: 450px; border-radius: 12px; overflow: hidden; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.2);">
-        <div class="modal-header" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 20px; border-bottom: none;">
-            <h2 id="examSlotModalTitle" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;">
-                <div style="background: rgba(255,255,255,0.2); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <span>Add Time Slot</span>
-            </h2>
-            <span class="close" onclick="closeModal('examSlotModal')" style="color: white; opacity: 0.8; text-shadow: none;">&times;</span>
-        </div>
-        <form id="slotForm" method="POST" action="<?php echo moduleUrl('admin', 'schedules'); ?>" onsubmit="return validateSlotForm(this);">
-            <?php echo csrf_field(); ?>
-            <input type="hidden" name="action" id="slotAction" value="add_exam_slot">
-            <input type="hidden" name="exam_id" value="<?php echo $exam['exam_id']; ?>">
-            <input type="hidden" name="class_id" value="<?php echo $class['class_id']; ?>">
-            <input type="hidden" name="old_start_time" id="slotOldStartTime" value="">
-            <input type="hidden" name="old_end_time" id="slotOldEndTime" value="">
-
-            <div class="modal-body" style="padding: 25px;">
-                <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 20px;">Define a new time column for your exam schedule. This slot will be applied across all dates.</p>
-                <div class="row" style="display:flex; gap:20px; margin-bottom: 5px;">
-                    <div class="form-group" style="flex:1;">
-                        <label style="font-weight: 600; color: var(--text-color); margin-bottom: 8px;">Start Time *</label>
-                        <div style="position: relative;">
-                            <input type="time" name="start_time" id="slotStartTime" required class="form-control" value="09:00" style="padding-left: 35px; border-radius: 8px;">
-                            <i class="fas fa-hourglass-start" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray);"></i>
-                        </div>
-                    </div>
-                    <div class="form-group" style="flex:1;">
-                        <label style="font-weight: 600; color: var(--text-color); margin-bottom: 8px;">End Time *</label>
-                        <div style="position: relative;">
-                            <input type="time" name="end_time" id="slotEndTime" required class="form-control" value="12:00" style="padding-left: 35px; border-radius: 8px;">
-                            <i class="fas fa-hourglass-end" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray);"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer" style="padding: 15px 25px; background: #f8f9fa; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('examSlotModal')" style="border-radius: 6px; padding: 10px 20px;">Cancel</button>
-                <button type="submit" class="btn btn-primary" style="border-radius: 6px; padding: 10px 20px;"><i class="fas fa-check-circle"></i> Save Slot</button>
-            </div>
-        </form>
     </div>
+<?php endif; ?>
 </div>
-
-<!-- Delete Slot Form -->
-<form id="deleteSlotForm" method="POST" action="<?php echo moduleUrl('admin', 'schedules'); ?>" style="display:none;">
-    <?php echo csrf_field(); ?>
-    <input type="hidden" name="action" value="delete_exam_slot">
-    <input type="hidden" name="exam_id" value="<?php echo $exam['exam_id']; ?>">
-    <input type="hidden" name="class_id" value="<?php echo $class['class_id']; ?>">
-    <input type="hidden" name="start_time" id="deleteSlotStartTime" value="">
-    <input type="hidden" name="end_time" id="deleteSlotEndTime" value="">
-</form>
 
 <!-- Import CSV Modal -->
 <div id="importCsvModal" class="modal">
@@ -222,181 +250,20 @@
 </div>
 
 <script>
-const subjectsData = <?php echo json_encode($subjects ?? []) ?: '[]'; ?>;
-let rowCounter = <?php echo $rowIndex ?? 0; ?>;
-
-function addDateRow() {
-    const tbody = document.getElementById('matrixBody');
-    const tr = document.createElement('tr');
-    tr.id = 'row_' + rowCounter;
-    
-    // Create Date Cell
-    let html = `
-        <td style="background: #f8f9fa; color: #333; border: 1px solid #ddd; padding: 12px; text-align: center; position: sticky; left: 0; z-index: 1;">
-            <div style="display:flex; align-items:center; gap:5px;">
-                <input type="date" name="row_dates[${rowCounter}]" min="<?php echo $exam['start_date']; ?>" max="<?php echo $exam['end_date']; ?>" class="form-control" required style="width: 100%;">
-                <button type="button" class="btn btn-sm btn-danger delete-row-btn" onclick="removeDateRow('row_${rowCounter}')" title="Remove Row"><i class="fas fa-trash"></i></button>
-            </div>
-        </td>
-    `;
-    
-    // Create Select Cells for existing slots
-    const headerRow = document.getElementById('matrixHeader');
-    const ths = headerRow.querySelectorAll('th[data-slot]');
-    
-    ths.forEach(th => {
-        const slotKey = th.getAttribute('data-slot');
-        let selectHtml = `<select name="schedules[${rowCounter}][${slotKey}][subject_id]" class="form-control" style="width: 100%; min-width: 220px; font-weight: normal; border: 1px solid #cbd5e1;" onchange="this.parentElement.parentElement.style.background = this.value !== '0' ? '#f0fdf4' : '#fff'; this.style.fontWeight = this.value !== '0' ? '600' : 'normal'; this.style.borderColor = this.value !== '0' ? '#86efac' : '#cbd5e1';">
-            <option value="0">-- Unassigned --</option>`;
-        
-        subjectsData.forEach(sub => {
-            selectHtml += `<option value="${sub.subject_id}">${sub.subject_name} (${sub.subject_code})</option>`;
-        });
-        selectHtml += `</select>
-        <div style="display:flex; gap:6px; align-items:center;">
-            <div style="flex:1; display:flex; align-items:center; border:1px solid #e2e8f0; border-radius:4px; overflow:hidden; background:#fff;">
-                <span style="font-size:10px; background:#f8fafc; padding:4px 6px; color:#64748b; border-right:1px solid #e2e8f0; font-weight:600;">Full</span>
-                <input type="number" name="schedules[${rowCounter}][${slotKey}][full_marks]" class="mark-input" style="width:100%; border:none; padding:4px; font-size:11px; text-align:center; outline:none;" value="100" min="0" step="0.01">
-            </div>
-            <div style="flex:1; display:flex; align-items:center; border:1px solid #e2e8f0; border-radius:4px; overflow:hidden; background:#fff;">
-                <span style="font-size:10px; background:#f8fafc; padding:4px 6px; color:#64748b; border-right:1px solid #e2e8f0; font-weight:600;">Pass</span>
-                <input type="number" name="schedules[${rowCounter}][${slotKey}][pass_marks]" class="mark-input" style="width:100%; border:none; padding:4px; font-size:11px; text-align:center; outline:none;" value="35" min="0" step="0.01">
-            </div>
-        </div>`;
-        
-        html += `<td style="border: 1px solid var(--border); padding: 10px; text-align: center; vertical-align: top; background: #fff; transition: background 0.3s;" data-slot-col="${slotKey}">
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        ${selectHtml}
-                    </div>
-                 </td>`;
-    });
-    
-    tr.innerHTML = html;
-    tbody.appendChild(tr);
-    rowCounter++;
-    checkFormCompleteness();
+function openModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.style.display = 'flex';
 }
 
-function removeDateRow(rowId) {
-    if (confirm("Remove this date row? Any subjects assigned on this date will be removed when saving.")) {
-        const row = document.getElementById(rowId);
-        if (row) row.remove();
-        checkFormCompleteness();
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const importModal = document.getElementById('importCsvModal');
+    if (event.target == importModal) {
+        importModal.style.display = "none";
     }
 }
-
-function validateSlotForm(form) {
-    const newStart = form.start_time.value;
-    const newEnd = form.end_time.value;
-    const editingSlotKey = document.getElementById('slotAction').value === 'edit_exam_slot' 
-        ? document.getElementById('slotOldStartTime').value.substring(0,5) + '|' + document.getElementById('slotOldEndTime').value.substring(0,5) 
-        : null;
-
-    if (newStart >= newEnd) {
-        alert("Start Time must be before End Time.");
-        return false;
-    }
-
-    // Check existing columns for overlap
-    const headers = document.querySelectorAll('th[data-slot]');
-    for (let i = 0; i < headers.length; i++) {
-        const slotKey = headers[i].getAttribute('data-slot');
-        // If editing, skip the slot being edited
-        if (editingSlotKey && slotKey.startsWith(editingSlotKey)) {
-            continue;
-        }
-
-        const parts = slotKey.split('|');
-        if (parts.length >= 2) {
-            const existStart = parts[0].substring(0,5);
-            const existEnd = parts[1].substring(0,5);
-
-            if (newStart < existEnd && newEnd > existStart) {
-                alert("This time overlaps with an existing column: " + existStart + " - " + existEnd);
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-function openAddSlotModal() {
-    document.getElementById('examSlotModalTitle').innerText = 'Add Exam Slot';
-    document.getElementById('slotAction').value = 'add_exam_slot';
-    document.getElementById('slotOldStartTime').value = '';
-    document.getElementById('slotOldEndTime').value = '';
-    document.getElementById('slotStartTime').value = '09:00';
-    document.getElementById('slotEndTime').value = '12:00';
-    openModal('examSlotModal');
-}
-
-function openEditSlotModal(slotKey, startTime, endTime) {
-    document.getElementById('examSlotModalTitle').innerText = 'Edit Exam Slot';
-    document.getElementById('slotAction').value = 'edit_exam_slot';
-    
-    // Set hidden fields to track the old slot
-    document.getElementById('slotOldStartTime').value = startTime;
-    document.getElementById('slotOldEndTime').value = endTime;
-
-    // Remove seconds from time for input type="time"
-    document.getElementById('slotStartTime').value = startTime.substring(0, 5);
-    document.getElementById('slotEndTime').value = endTime.substring(0, 5);
-    openModal('examSlotModal');
-}
-
-function removeSlotColumn(slotKey, startTime, endTime) {
-    if (confirm("Are you sure you want to remove this column? This will permanently delete the column and unassign any subjects in this slot.")) {
-        document.getElementById('deleteSlotStartTime').value = startTime;
-        document.getElementById('deleteSlotEndTime').value = endTime;
-        document.getElementById('deleteSlotForm').submit();
-    }
-}
-
-function checkFormCompleteness() {
-    const saveBtn = document.getElementById('saveScheduleBtn');
-    if (!saveBtn) return;
-    
-    let isComplete = true;
-    
-    // Check all date inputs
-    const dateInputs = document.querySelectorAll('#matrixBody input[type="date"]');
-    dateInputs.forEach(dateInput => {
-        if (!dateInput.value) {
-            isComplete = false;
-        }
-    });
-
-    // Check all selects and their corresponding marks
-    const selects = document.querySelectorAll('#matrixBody select');
-    selects.forEach(select => {
-        if (select.value === '0') {
-            isComplete = false; // Cannot have unassigned subjects
-        } else {
-            const cell = select.closest('td');
-            const marks = cell.querySelectorAll('.mark-input');
-            marks.forEach(mark => {
-                if (!mark.value || parseFloat(mark.value) <= 0) {
-                    isComplete = false;
-                }
-            });
-        }
-    });
-
-    saveBtn.disabled = !isComplete;
-    if (!isComplete) {
-        saveBtn.style.opacity = '0.5';
-        saveBtn.style.cursor = 'not-allowed';
-    } else {
-        saveBtn.style.opacity = '1';
-        saveBtn.style.cursor = 'pointer';
-    }
-}
-
-// Bind the validation to form changes
-document.getElementById('scheduleForm').addEventListener('input', checkFormCompleteness);
-document.getElementById('scheduleForm').addEventListener('change', checkFormCompleteness);
-
-// Run on page load
-window.addEventListener('DOMContentLoaded', checkFormCompleteness);
-
 </script>

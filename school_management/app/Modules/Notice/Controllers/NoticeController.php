@@ -19,18 +19,22 @@ class NoticeController extends \Controller
         // Show: non-broadcasted notices, OR broadcasted notices within 7 days
         $query .= " AND (is_broadcasted = 0 OR (is_broadcasted = 1 AND (broadcast_date IS NULL OR DATE_ADD(broadcast_date, INTERVAL 7 DAY) > NOW())))";
 
-        // Build filter conditions
+        // Build filter conditions with strict backend sanitization
         if (!empty($filterType) && !empty($filterValue)) {
-            if ($filterType === 'year') {
+            if ($filterType === 'year' && preg_match('/^\d{4}$/', (string)$filterValue)) {
                 $query .= " AND YEAR(created_at) = ?";
                 $params[] = (int)$filterValue;
-            } elseif ($filterType === 'date') {
+            } elseif ($filterType === 'date' && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$filterValue)) {
                 $query .= " AND DATE(created_at) = ?";
                 $params[] = $filterValue;
-            } elseif ($filterType === 'day') {
+            } elseif ($filterType === 'day' && preg_match('/^[1-7]$/', (string)$filterValue)) {
                 // Day of week: 1=Sunday, 2=Monday, ..., 7=Saturday
                 $query .= " AND DAYOFWEEK(created_at) = ?";
                 $params[] = (int)$filterValue;
+            } else {
+                // Reset filter if invalid (prevent proxy tampering)
+                $filterType = '';
+                $filterValue = '';
             }
         }
 
@@ -65,9 +69,9 @@ class NoticeController extends \Controller
 
         if ($action === 'create') {
             $data = [
-                'title'           => $this->input('title', ''),
-                'description'     => $this->input('content', ''),
-                'target_audience' => ucfirst($this->input('target_role', 'all')),
+                'title'           => preg_replace('/[^a-zA-Z0-9\s\-_.,!?()]/', '', strip_tags((string)$this->input('title', ''))),
+                'description'     => strip_tags((string)$this->input('content', '')),
+                'target_audience' => ucfirst(strip_tags((string)$this->input('target_role', 'all'))),
                 'is_active'       => 1,
                 'posted_by'       => $_SESSION['user_id'] ?? 0,
                 'created_at'      => date('Y-m-d H:i:s'),
@@ -87,7 +91,7 @@ class NoticeController extends \Controller
                 if ($attachment) {
                     $data['attachment_path'] = $attachment;
                 } else {
-                    $this->flash('error', 'Invalid file. Only PDF, Word, Excel, PowerPoint, Images, and ZIP files are allowed (Max 5MB).');
+                    $this->flash('error', 'Invalid file or file too large. Only PDF, Word, Excel, PowerPoint, Images, and ZIP files are allowed (Max 200KB).');
                     $this->redirect(moduleUrl('admin', 'notices'));
                     return;
                 }
@@ -138,7 +142,7 @@ class NoticeController extends \Controller
 
     private function handleAttachmentUpload($file): ?string
     {
-        $maxFileSize = 5 * 1024 * 1024; // 5MB
+        $maxFileSize = 200 * 1024; // 200KB
         $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'gif', 'zip'];
         $allowedMimes = [
             'application/pdf',
@@ -158,6 +162,12 @@ class NoticeController extends \Controller
         // Validate file size
         if ($file['size'] > $maxFileSize) {
             return null;
+        }
+
+        // Deep filename inspection to prevent double extensions or embedded malicious extensions
+        $safeFileName = str_replace("\0", "", strtolower($file['name']));
+        if (preg_match('/\.(php|phtml|phar|sh|exe|pl|cgi|js|html|htm)\b/i', $safeFileName)) {
+            return null; // Reject files with malicious extensions anywhere in their name
         }
 
         // Validate file type

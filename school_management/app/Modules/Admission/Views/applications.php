@@ -193,9 +193,7 @@
 }
 </style>
 
-<form method="GET" action="index.php" class="filter-form-wrapper">
-    <input type="hidden" name="module" value="admin">
-    <input type="hidden" name="action" value="applications">
+<form method="GET" action="<?php echo moduleUrl('admin', 'applications'); ?>" class="filter-form-wrapper">
     <input type="hidden" name="status" value="<?php echo htmlspecialchars($filterStatus ?? 'pending'); ?>">
     
     <div class="search-input-group">
@@ -220,9 +218,15 @@
     
     <?php if (($filterStatus ?? 'pending') === 'approved'): ?>
         <div>
-            <button type="submit" name="download_pdf" value="1" class="btn-export-pdf" formtarget="_blank">
-                <i class="fas fa-file-pdf"></i> Export PDF
-            </button>
+            <?php 
+                $pdfUrl = moduleUrl('admin', 'applications') . '?status=' . urlencode($filterStatus ?? 'pending') . '&class_id=' . $filterClass . '&download_pdf=1';
+                if (!empty($searchQuery)) {
+                    $pdfUrl .= '&search=' . urlencode($searchQuery);
+                }
+            ?>
+            <a href="<?php echo $pdfUrl; ?>" class="btn-export-pdf" target="_blank" style="display: inline-block; text-align: center; text-decoration: none; padding: 10px 15px; border-radius: 6px; box-sizing: border-box; background: var(--primary); color: white; border: none; font-weight: 600; box-shadow: 0 4px 6px rgba(128,0,0,0.2); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 8px rgba(128,0,0,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(128,0,0,0.2)';">
+                <i class="fas fa-file-pdf" style="margin-right: 5px;"></i> Export PDF
+            </a>
         </div>
     <?php endif; ?>
 </form>
@@ -271,29 +275,13 @@
                             if ($status === 'rejected') $badgeColor = 'var(--danger)';
                             ?>
                             <span style="color:<?php echo $badgeColor; ?>; font-weight:bold;">
-                                <?php echo $status === 'approved' ? 'Merit List' : ucfirst($status); ?>
+                                <?php echo ucfirst($status); ?>
                             </span>
                         </td>
                         <td class="actions-cell">
                             <div class="actions-wrapper">
                                 <!-- Primary Action Button -->
-                                <?php if (($app['status'] ?? 'pending') === 'pending'): ?>
-                                    <form method="POST" action="<?php echo moduleUrl('admin', 'applications'); ?>" style="margin:0;" title="Approve & add to Merit List">
-                                        <?php echo csrf_field(); ?>
-                                        <input type="hidden" name="action" value="approve">
-                                        <input type="hidden" name="application_id" value="<?php echo $app['id']; ?>">
-                                        <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-check"></i> Approve</button>
-                                    </form>
-                                <?php elseif (($app['status'] ?? '') === 'approved'): ?>
-                                    <form method="POST" action="<?php echo moduleUrl('admin', 'applications'); ?>" style="margin:0;" title="Officially Enroll Student">
-                                        <?php echo csrf_field(); ?>
-                                        <input type="hidden" name="action" value="enroll">
-                                        <input type="hidden" name="application_id" value="<?php echo $app['id']; ?>">
-                                        <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-user-plus"></i> Enroll</button>
-                                    </form>
-                                <?php else: ?>
-                                    <span style="color:#9ca3af; font-size:13px; font-style:italic;">No Actions</span>
-                                <?php endif; ?>
+                                <a href="<?php echo moduleUrl('admin', 'application_view'); ?>?id=<?php echo $app['id']; ?>" class="btn btn-sm" style="background-color: var(--primary); color: white; border: none; border-radius: 6px; padding: 6px 14px; font-weight: 600; font-size: 13px; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 4px rgba(128,0,0,0.2);" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 6px rgba(128,0,0,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(128,0,0,0.2)';"><i class="fa-solid fa-eye"></i> View Details</a>
 
                                 <!-- Dropdown for Documents and Secondary Actions -->
                                 <div class="action-dropdown">
@@ -301,6 +289,25 @@
                                         <i class="fa-solid fa-ellipsis-vertical"></i>
                                     </button>
                                     <div class="action-dropdown-content">
+                                        <!-- Quick Status Actions -->
+                                        <?php if (($app['status'] ?? 'pending') === 'pending'): ?>
+                                            <form method="POST" action="<?php echo moduleUrl('admin', 'applications'); ?>" style="margin:0;">
+                                                <?php echo csrf_field(); ?>
+                                                <input type="hidden" name="action" value="approve">
+                                                <input type="hidden" name="application_id" value="<?php echo $app['id']; ?>">
+                                                <button type="submit" class="text-info" style="color: #059669;"><i class="fas fa-check"></i> Quick Approve</button>
+                                            </form>
+                                            <div style="border-top: 1px solid #e5e7eb; margin: 4px 0;"></div>
+                                        <?php elseif (($app['status'] ?? '') === 'approved'): ?>
+                                            <form method="POST" action="<?php echo moduleUrl('admin', 'applications'); ?>" style="margin:0;">
+                                                <?php echo csrf_field(); ?>
+                                                <input type="hidden" name="action" value="enroll">
+                                                <input type="hidden" name="application_id" value="<?php echo $app['id']; ?>">
+                                                <button type="submit" class="text-primary"><i class="fas fa-user-plus"></i> Quick Enroll</button>
+                                            </form>
+                                            <div style="border-top: 1px solid #e5e7eb; margin: 4px 0;"></div>
+                                        <?php endif; ?>
+                                        
                                         <!-- Documents Section -->
                                         <?php 
                                         if (!empty($app['documents'])) {

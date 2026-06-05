@@ -25,8 +25,24 @@ class QuoteController extends \Controller
         $this->validateCsrf();
 
         if ($action === 'create') {
-            $quote_text = $this->input('quote_text', '');
-            $author = $this->input('author', '');
+            $quote_text = trim($this->input('quote_text', ''));
+            $author = trim($this->input('author', ''));
+
+            // Backend validation
+            if (!preg_match('/^[a-zA-Z\s.,\-]+$/', $author)) {
+                $this->flash('error', 'Author name contains invalid characters. Only letters, spaces, dots, and hyphens are allowed.');
+                $this->redirect(moduleUrl('admin', 'quotes'));
+                return;
+            }
+            if (preg_match('/[@#$%^&*_=<>{}~|]+/', $quote_text)) {
+                $this->flash('error', 'Quote text contains invalid or malicious characters.');
+                $this->redirect(moduleUrl('admin', 'quotes'));
+                return;
+            }
+
+            // Sanitize
+            $quote_text = strip_tags($quote_text);
+            $author = strip_tags($author);
 
             if (empty($quote_text) || empty($author)) {
                 $this->flash('error', 'Quote text and author are required.');

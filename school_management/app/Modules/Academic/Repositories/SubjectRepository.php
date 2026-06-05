@@ -22,7 +22,24 @@ class SubjectRepository
 
     public function findAll(): array
     {
-        return $this->db->fetchAll("SELECT * FROM subjects ORDER BY subject_name");
+        return $this->db->fetchAll("SELECT * FROM subjects WHERE is_active = 1 ORDER BY subject_name");
+    }
+
+    public function paginateSubjects(int $page = 1, string $search = '', int $perPage = 10): array
+    {
+        $sql = "SELECT * FROM subjects WHERE is_active = 1";
+        $params = [];
+
+        if (!empty($search)) {
+            $sql .= " AND (subject_name LIKE ? OR subject_code LIKE ?)";
+            $searchTerm = "%{$search}%";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        $sql .= " ORDER BY subject_name";
+
+        return $this->db->paginate($sql, $params, $page, $perPage);
     }
 
     public function create(array $data): int
@@ -37,7 +54,7 @@ class SubjectRepository
 
     public function delete(int $subjectId): bool
     {
-        return $this->db->delete('subjects', 'subject_id = ?', [$subjectId]) > 0;
+        return $this->db->update('subjects', ['is_active' => 0], 'subject_id = ?', [$subjectId]) > 0;
     }
 
     /**

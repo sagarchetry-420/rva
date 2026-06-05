@@ -111,7 +111,6 @@
     <!-- IN-PAGE LOADER -->
     <div class="loader-wrapper" id="pageLoaderWrapper">
         <div class="loader-container">
-            <img src="../assets/logo/logo_small.png" alt="RVA Logo" class="loader-logo">
             <div class="spinner-container">
                 <span class="loader"></span>
             </div>
@@ -445,7 +444,7 @@
             <div class="about-grid">
                 <div class="about-card" data-person="managing-director">
                     <div class="slide slide1">
-                        <img src="../assets/managing director/managing director1.jpg" alt="Managing Director"
+                        <img src="../assets/managing director/managing director1.jpg" alt="Managing Director" loading="lazy"
                             class="card-image">
                         <div class="image-overlay">
                             <h4>Gulap Chetia <br> Managing Director, RVA</h4>
@@ -462,7 +461,7 @@
                 </div>
                 <div class="about-card" data-person="dean">
                     <div class="slide slide1">
-                        <img src="../assets/dean/dean1.jpg" alt="Dean" class="card-image">
+                        <img src="../assets/dean/dean1.jpg" alt="Dean" class="card-image" loading="lazy">
                         <div class="image-overlay">
                             <h4>Gaurab Gogoi <br> Dean, RVA</h4>
                         </div>
@@ -477,7 +476,7 @@
                 </div>
                 <div class="about-card" data-person="deputy-dean">
                     <div class="slide slide1">
-                        <img src="../assets/deputy dean/deputy deans.jpg" alt="Deputy Dean" class="card-image">
+                        <img src="../assets/deputy dean/deputy deans.jpg" alt="Deputy Dean" class="card-image" loading="lazy">
                         <div class="image-overlay">
                             <h4>Shikhyadeep Phulkonwar <br> Deputy Dean, RVA</h4>
                         </div>
@@ -492,7 +491,7 @@
                 </div>
                 <div class="about-card" data-person="admin-coordinator">
                     <div class="slide slide1">
-                        <img src="../assets/administrative coordinator/administrative coordinator.jpg"
+                        <img src="../assets/administrative coordinator/administrative coordinator.jpg" loading="lazy"
                             alt="Administrative Coordinator" class="card-image">
                         <div class="image-overlay">
                             <h4>Jharna Baruah <br> Admin. Coordinator, RVA</h4>
@@ -516,7 +515,8 @@
     <section class="notices" id="notices">
         <div class="notices-banner" id="important-notices-banner">
             <div class="nb-title">
-                <h2>IMPORTANT<br>NOTICE</h2>
+                <h2 class="title-stacked">IMPORTANT<br>NOTICE</h2>
+                <h2 class="title-inline">Important Notice</h2>
             </div>
             <div class="nb-item">
                 <div class="notice-date">Loading...</div>
@@ -534,6 +534,28 @@
             </div>
         </div>
     </section>
+
+    <script>
+        // Trigger the custom smooth left slide animation for the notices banner when scrolled into view
+        document.addEventListener('DOMContentLoaded', function () {
+            const noticeBanner = document.getElementById('important-notices-banner');
+            if (noticeBanner) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            // Small delay so the user registers the full red banner before it slides away
+                            setTimeout(() => {
+                                noticeBanner.classList.add('revealed');
+                            }, 400);
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.4 }); // Trigger when 40% of the banner is visible
+                
+                observer.observe(noticeBanner);
+            }
+        });
+    </script>
 
     <!-- Contact Section -->
     <section class="contact" id="contact">
@@ -705,6 +727,8 @@
         // Failsafe: if the internet is slow and images take forever, force hide after 8 seconds
         setTimeout(hideLoader, 8000);
     </script>
+    <!-- Rossie Chatbot -->
+    <script src="/RVA/rossie/rossie.js"></script>
 </body>
 
 </html>

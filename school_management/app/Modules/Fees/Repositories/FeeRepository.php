@@ -50,7 +50,7 @@ class FeeRepository
     {
         $term = '%' . trim($term) . '%';
         $sql = "SELECT DISTINCT s.student_id, s.roll_number, s.first_name, s.last_name, c.class_name, c.section,
-                       (SELECT SUM(amount) FROM fees f WHERE f.student_id = s.student_id AND f.session_id = ? AND f.payment_status = 'Pending') as pending_amount
+                       COALESCE((SELECT SUM(amount) FROM fees f WHERE f.student_id = s.student_id AND f.session_id = ? AND f.payment_status = 'Pending'), 0) as pending_amount
                 FROM students s
                 LEFT JOIN student_academics sa ON s.student_id = sa.student_id AND sa.session_id = ?
                 LEFT JOIN classes c ON COALESCE(sa.class_id, s.current_class_id) = c.class_id
@@ -58,22 +58,45 @@ class FeeRepository
                 WHERE (sa.session_id IS NOT NULL OR f.fee_id IS NOT NULL)
                 AND (sa.admission_status = 'Active' OR sa.admission_status IS NULL)
                 AND (s.roll_number LIKE ? OR s.first_name LIKE ? OR s.last_name LIKE ? OR f.receipt_number LIKE ? OR f.remarks LIKE ?)
-                ORDER BY c.class_name, s.first_name";
+                ORDER BY pending_amount DESC, c.class_name, s.first_name";
         return $this->db->paginate($sql, [$sessionId, $sessionId, $sessionId, $term, $term, $term, $term, $term], $page, $perPage);
     }
 
     public function findStudentsByClass(int $classId, int $sessionId, int $page = 1, int $perPage = 20): array
     {
         $sql = "SELECT s.student_id, s.roll_number, s.first_name, s.last_name, c.class_name, c.section,
-                       (SELECT SUM(amount) FROM fees f WHERE f.student_id = s.student_id AND f.session_id = ? AND f.payment_status = 'Pending') as pending_amount
+                       COALESCE((SELECT SUM(amount) FROM fees f WHERE f.student_id = s.student_id AND f.session_id = ? AND f.payment_status = 'Pending'), 0) as pending_amount
                 FROM students s
                 LEFT JOIN student_academics sa ON s.student_id = sa.student_id AND sa.session_id = ?
                 LEFT JOIN classes c ON COALESCE(sa.class_id, s.current_class_id) = c.class_id
                 WHERE COALESCE(sa.class_id, s.current_class_id) = ? 
                 AND (sa.session_id IS NOT NULL OR EXISTS (SELECT 1 FROM fees f2 WHERE f2.student_id = s.student_id AND f2.session_id = ?))
                 AND (sa.admission_status = 'Active' OR sa.admission_status IS NULL)
-                ORDER BY s.roll_number ASC, s.first_name ASC";
+                ORDER BY pending_amount DESC, s.roll_number ASC, s.first_name ASC";
         return $this->db->paginate($sql, [$sessionId, $sessionId, $classId, $sessionId], $page, $perPage);
+    }
+
+    public function countStudentsWithPendingDues(int $sessionId, string $term = '', int $classId = 0): int
+    {
+        $params = [$sessionId, $sessionId];
+        $sql = "SELECT COUNT(DISTINCT f.student_id) as total
+                FROM fees f
+                LEFT JOIN students s ON f.student_id = s.student_id
+                LEFT JOIN student_academics sa ON s.student_id = sa.student_id AND sa.session_id = ?
+                WHERE f.session_id = ? AND f.payment_status = 'Pending'
+                AND (sa.admission_status = 'Active' OR sa.admission_status IS NULL)";
+        
+        if ($classId > 0) {
+            $sql .= " AND COALESCE(sa.class_id, s.current_class_id) = ?";
+            $params[] = $classId;
+        } elseif (!empty($term)) {
+            $termStr = '%' . trim($term) . '%';
+            $sql .= " AND (s.roll_number LIKE ? OR s.first_name LIKE ? OR s.last_name LIKE ? OR f.receipt_number LIKE ? OR f.remarks LIKE ?)";
+            array_push($params, $termStr, $termStr, $termStr, $termStr, $termStr);
+        }
+
+        $result = $this->db->fetch($sql, $params);
+        return (int)($result['total'] ?? 0);
     }
 
     public function getReceiptData(string $receiptNumber): ?array

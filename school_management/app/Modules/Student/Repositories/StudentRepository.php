@@ -16,17 +16,30 @@ class StudentRepository
     /**
      * Find all students with optional class filter, paginated
      */
-    public function findAll(?int $classId = null, int $page = 1, int $perPage = 20): array
+    public function findAll(?int $classId = null, int $page = 1, int $perPage = 20, ?string $searchQuery = null): array
     {
         $sql = "SELECT s.*, c.class_name, c.section, u.username, u.email as user_email
                 FROM students s
                 LEFT JOIN classes c ON s.current_class_id = c.class_id
                 LEFT JOIN users u ON s.user_id = u.user_id";
         $params = [];
+        $conditions = [];
 
         if ($classId && $classId > 0) {
-            $sql .= " WHERE s.current_class_id = ?";
+            $conditions[] = "s.current_class_id = ?";
             $params[] = $classId;
+        }
+
+        if (!empty($searchQuery)) {
+            $conditions[] = "(s.first_name LIKE ? OR s.last_name LIKE ? OR CONCAT(s.first_name, ' ', s.last_name) LIKE ? OR s.roll_number LIKE ? OR s.email LIKE ? OR s.phone LIKE ? OR u.username LIKE ?)";
+            $searchTerm = "%{$searchQuery}%";
+            $cleanSearch = ltrim($searchQuery, '@');
+            $usernameSearchTerm = "%{$cleanSearch}%";
+            array_push($params, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $usernameSearchTerm);
+        }
+
+        if (!empty($conditions)) {
+            $sql .= " WHERE " . implode(" AND ", $conditions);
         }
 
         $sql .= " ORDER BY s.student_id DESC";

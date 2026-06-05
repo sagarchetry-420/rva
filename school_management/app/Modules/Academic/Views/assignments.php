@@ -16,7 +16,7 @@
         <i class="fas fa-exclamation-triangle"></i> No active academic session found. You must set an active session before assigning subjects.
     </div>
 <?php else: ?>
-    <div style="background:var(--primary-light); color:var(--primary-dark); padding:10px 15px; border-radius:8px; margin-bottom:20px; font-weight:bold;">
+    <div style="background:var(--primary-light); color:white; padding:10px 15px; border-radius:8px; margin-bottom:20px; font-weight:bold;">
         <i class="fas fa-calendar-alt"></i> Active Session: <?php echo htmlspecialchars($session['session_name']); ?>
     </div>
 
@@ -24,9 +24,9 @@
         
         <!-- Left Side: Selection & Add -->
         <div class="col-md-4" style="flex:1;">
-            <div class="form-card">
+            <div class="form-card" style="margin-bottom: 20px;">
                 <h3>Select Class</h3>
-                <form method="GET" style="margin-bottom: 20px;">
+                <form method="GET">
                     <input type="hidden" name="module" value="admin">
                     <input type="hidden" name="action" value="assignments">
                     <select name="class_id" class="form-control" onchange="this.form.submit()" style="width:100%; padding:10px; border:1px solid var(--border);">
@@ -38,16 +38,17 @@
                         <?php endforeach; ?>
                     </select>
                 </form>
+            </div>
 
-                <?php if ($filterClass): ?>
-                <hr style="border:none; border-top:1px solid var(--border); margin:20px 0;">
+            <?php if ($filterClass): ?>
+            <div class="form-card">
                 <h3>Assign New Subject</h3>
                 <form method="POST" action="<?php echo moduleUrl('admin', 'assignments'); ?>">
                     <?php echo csrf_field(); ?>
                     <input type="hidden" name="action" value="assign">
                     <input type="hidden" name="class_id" value="<?php echo $filterClass; ?>">
                     
-                    <div class="form-group">
+                    <div class="form-group" style="margin-bottom: 15px;">
                         <label>Subject *</label>
                         <select name="subject_id" required style="width:100%; padding:10px; border:1px solid var(--border);">
                             <option value="">-- Select Subject --</option>
@@ -57,7 +58,7 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" style="margin-bottom: 15px;">
                         <label>Assigned Teacher</label>
                         <select name="teacher_id" style="width:100%; padding:10px; border:1px solid var(--border);">
                             <option value="">-- No Teacher / TBD --</option>
@@ -67,10 +68,10 @@
                         </select>
                     </div>
 
-                    <button type="submit" class="btn btn-primary" style="width:100%;"><i class="fas fa-link"></i> Assign to Class</button>
+                    <button type="submit" class="btn btn-primary" style="width:100%; padding:10px;"><i class="fas fa-link"></i> Assign to Class</button>
                 </form>
-                <?php endif; ?>
             </div>
+            <?php endif; ?>
         </div>
 
         <!-- Right Side: Assigned List -->
@@ -129,7 +130,7 @@
                                         "teacher_id" => $a["teacher_id"]
                                     ])); ?>)'><i class="fas fa-edit"></i> Edit Teacher</button>
                                     
-                                    <form method="POST" action="<?php echo moduleUrl('admin', 'assignments'); ?>" style="display:inline" onsubmit="return confirmDelete('Remove this subject from the class?')">
+                                    <form method="POST" action="<?php echo moduleUrl('admin', 'assignments'); ?>" style="display:inline" onsubmit="return confirm('Are you sure you want to remove this subject from the class? This action cannot be undone.');">
                                         <?php echo csrf_field(); ?>
                                         <input type="hidden" name="action" value="remove">
                                         <input type="hidden" name="assignment_id" value="<?php echo $a['id']; ?>">

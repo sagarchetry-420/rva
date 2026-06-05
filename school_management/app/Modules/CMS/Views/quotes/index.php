@@ -26,7 +26,7 @@
                     <th>Quote Text</th>
                     <th>Author</th>
                     <th>Status</th>
-                    <th class="actions-cell">Actions</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,7 +41,7 @@
                                 <span style="color:var(--gray);"><i class="fas fa-eye-slash"></i> Hidden</span>
                             <?php endif; ?>
                         </td>
-                        <td class="actions-cell">
+                        <td>
                             <div style="display:flex; gap:5px;">
                                 <form method="POST" action="<?php echo moduleUrl('admin', 'quotes'); ?>" style="display:inline;">
                                     <?php echo csrf_field(); ?>
@@ -49,7 +49,7 @@
                                     <input type="hidden" name="id" value="<?php echo $q['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-info" title="Toggle Visibility"><i class="fas fa-eye"></i></button>
                                 </form>
-                                <form method="POST" action="<?php echo moduleUrl('admin', 'quotes'); ?>" style="display:inline;" onsubmit="return confirm('Delete this quote?');">
+                                <form method="POST" action="<?php echo moduleUrl('admin', 'quotes'); ?>" style="display:inline;" onsubmit="return confirmDelete('Are you sure you want to delete this quote?');">
                                     <?php echo csrf_field(); ?>
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?php echo $q['id']; ?>">
@@ -81,7 +81,7 @@
                 </div>
                 <div class="form-group">
                     <label>Author *</label>
-                    <input type="text" name="author" required placeholder="e.g. Albert Einstein">
+                    <input type="text" name="author" required pattern="^[a-zA-Z\s.,\-]+$" title="Author name should not contain special characters like @, #, $, %" placeholder="e.g. Albert Einstein">
                 </div>
             </div>
             <div class="modal-footer">

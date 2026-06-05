@@ -32,9 +32,15 @@ class ExamService
             return ['success' => false, 'message' => 'No active academic session found.'];
         }
 
+        $today = date('Y-m-d');
+        if ($data['start_date'] < $today) {
+            return ['success' => false, 'message' => 'Start Date cannot be set to a past date.'];
+        }
+
         // Check for duplicates
         $duplicate = $this->examRepo->findDuplicateExam(
             $session['session_id'], 
+            $data['exam_name'],
             $data['exam_type'], 
             $data['start_date'], 
             $data['end_date']
@@ -68,6 +74,55 @@ class ExamService
         }
 
         return ['success' => true, 'message' => 'Exam created successfully.', 'exam_id' => $examId];
+    }
+
+    public function updateExam(int $examId, array $data, int $userId): array
+    {
+        $session = $this->academicRepo->getActiveSession();
+        if (!$session) {
+            return ['success' => false, 'message' => 'No active academic session found.'];
+        }
+
+        // Fetch original exam to validate date changes
+        $originalExam = $this->examRepo->findById($examId);
+        if (!$originalExam) {
+            return ['success' => false, 'message' => 'Exam not found.'];
+        }
+
+        $today = date('Y-m-d');
+        if ($data['start_date'] !== $originalExam['start_date'] && $data['start_date'] < $today) {
+            return ['success' => false, 'message' => 'Start Date cannot be set to a past date.'];
+        }
+
+        // Check for duplicates (exclude self)
+        $duplicate = $this->examRepo->findDuplicateExam(
+            $session['session_id'], 
+            $data['exam_name'],
+            $data['exam_type'], 
+            $data['start_date'], 
+            $data['end_date']
+        );
+        
+        if ($duplicate && $duplicate['exam_id'] != $examId) {
+            if (in_array($data['exam_type'], ['Mid-Term', 'Final'])) {
+                return ['success' => false, 'message' => "A {$data['exam_type']} exam already exists for this academic session."];
+            } else {
+                return ['success' => false, 'message' => "A {$data['exam_type']} already exists during these dates (overlaps with '{$duplicate['exam_name']}')."];
+            }
+        }
+
+        $this->examRepo->update($examId, [
+            'exam_name'  => $data['exam_name'],
+            'exam_type'  => $data['exam_type'],
+            'start_date' => $data['start_date'],
+            'end_date'   => $data['end_date']
+        ]);
+
+        if (!empty($data['class_ids'])) {
+            $this->examRepo->syncExamClasses($examId, $data['class_ids']);
+        }
+
+        return ['success' => true, 'message' => 'Exam updated successfully.'];
     }
 
     public function approveExam(int $examId, int $adminId): array

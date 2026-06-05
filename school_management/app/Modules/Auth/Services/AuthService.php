@@ -19,11 +19,27 @@ class AuthService
      * Authenticate user with email/username and password
      * Supports MD5 → bcrypt auto-migration
      */
-    public function authenticate(string $identifier, string $password): array
+    public function authenticate(string $identifier, string $password, string $ipAddress = ''): array
     {
+        if ($ipAddress !== '') {
+            $attempts = $this->userRepo->getLoginAttempts($ipAddress, $identifier);
+            if ($attempts && $attempts['attempts'] >= 5) {
+                $lastAttempt = strtotime($attempts['last_attempt']);
+                $fifteenMinsAgo = strtotime('-15 minutes');
+                if ($lastAttempt > $fifteenMinsAgo) {
+                    return ['success' => false, 'message' => 'Too many failed attempts. Please try again in 15 minutes.'];
+                } else {
+                    $this->userRepo->clearLoginAttempts($ipAddress, $identifier);
+                }
+            }
+        }
+
         $user = $this->userRepo->findByEmailOrUsername($identifier);
 
         if (!$user) {
+            if ($ipAddress !== '') {
+                $this->userRepo->incrementLoginAttempts($ipAddress, $identifier);
+            }
             return ['success' => false, 'message' => 'No account found with that email or username.'];
         }
 
@@ -32,13 +48,21 @@ class AuthService
             return ['success' => false, 'message' => 'Your account has been deactivated. Contact admin.'];
         }
 
-        // Additional check for teachers: if today is past their leaving date
+        // Additional check for teachers and students: if today is past their leaving date
         if ($user['user_type'] === 'teacher') {
             $db = \Database::getInstance();
             $teacher = $db->fetch("SELECT leaving_date FROM teachers WHERE user_id = ?", [$user['user_id']]);
             if ($teacher && !empty($teacher['leaving_date'])) {
                 if (strtotime(date('Y-m-d')) > strtotime($teacher['leaving_date'])) {
                     return ['success' => false, 'message' => 'Your account is inactive since ' . date('d M, Y', strtotime($teacher['leaving_date'])) . '. Contact admin.'];
+                }
+            }
+        } elseif ($user['user_type'] === 'student') {
+            $db = \Database::getInstance();
+            $student = $db->fetch("SELECT leaving_date FROM students WHERE user_id = ?", [$user['user_id']]);
+            if ($student && !empty($student['leaving_date'])) {
+                if (strtotime(date('Y-m-d')) > strtotime($student['leaving_date'])) {
+                    return ['success' => false, 'message' => 'Your account is inactive since ' . date('d M, Y', strtotime($student['leaving_date'])) . '. Contact admin.'];
                 }
             }
         }
@@ -63,7 +87,14 @@ class AuthService
         }
 
         if (!$authenticated) {
+            if ($ipAddress !== '') {
+                $this->userRepo->incrementLoginAttempts($ipAddress, $identifier);
+            }
             return ['success' => false, 'message' => 'Incorrect password. Please try again.'];
+        }
+
+        if ($ipAddress !== '') {
+            $this->userRepo->clearLoginAttempts($ipAddress, $identifier);
         }
 
         // Create session

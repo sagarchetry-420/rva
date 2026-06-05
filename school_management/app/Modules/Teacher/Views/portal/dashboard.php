@@ -11,31 +11,37 @@
     </div>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
-    <div class="form-card" style="text-align: center; padding: 30px;">
-        <div style="font-size: 2.5rem; color: var(--primary-color, #2c5f2d); margin-bottom: 10px;">
+<div class="stats-grid" style="margin-bottom: 30px;">
+    <a href="<?php echo moduleUrl('teacher', 'my-classes'); ?>" class="stat-card" style="text-decoration: none;">
+        <div class="stat-icon" style="color: var(--primary); background: #fdf2f2;">
             <i class="fas fa-chalkboard"></i>
         </div>
-        <h3 style="margin: 0 0 5px 0;"><?php echo $classesTeaching; ?></h3>
-        <p style="margin: 0; color: #666;">Classes Assigned</p>
-    </div>
+        <div class="stat-details">
+            <h3><?php echo $classesTeaching; ?></h3>
+            <p>Classes Assigned</p>
+        </div>
+    </a>
 
-    <div class="form-card" style="text-align: center; padding: 30px;">
-        <div style="font-size: 2.5rem; color: #2196F3; margin-bottom: 10px;">
+    <a href="<?php echo moduleUrl('teacher', 'my-classes'); ?>" class="stat-card" style="text-decoration: none;">
+        <div class="stat-icon" style="color: #2196F3; background: #e3f2fd;">
             <i class="fas fa-book"></i>
         </div>
-        <h3 style="margin: 0 0 5px 0;"><?php echo $subjectsTeaching; ?></h3>
-        <p style="margin: 0; color: #666;">Subjects Teaching</p>
-    </div>
+        <div class="stat-details">
+            <h3><?php echo $subjectsTeaching; ?></h3>
+            <p>Subjects Teaching</p>
+        </div>
+    </a>
 
-    <div class="form-card" style="text-align: center; padding: 30px;">
-        <div style="font-size: 2.5rem; color: #FF9800; margin-bottom: 10px;">
+    <div class="stat-card">
+        <div class="stat-icon" style="color: #FF9800; background: #fff3e0;">
             <i class="fas fa-user-tie"></i>
         </div>
-        <h3 style="margin: 0 0 5px 0;">
-            <?php echo $classTeacherOf ? htmlspecialchars($classTeacherOf['class_name'] . ' ' . $classTeacherOf['section']) : 'N/A'; ?>
-        </h3>
-        <p style="margin: 0; color: #666;">Class Teacher Of</p>
+        <div class="stat-details">
+            <h3>
+                <?php echo $classTeacherOf ? htmlspecialchars($classTeacherOf['class_name'] . ' ' . $classTeacherOf['section']) : 'N/A'; ?>
+            </h3>
+            <p>Class Teacher Of</p>
+        </div>
     </div>
 </div>
 

@@ -28,7 +28,7 @@
                     <th>Achievement</th>
                     <th>Percentage</th>
                     <th>Status</th>
-                    <th class="actions-cell">Actions</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -51,7 +51,7 @@
                                 <span style="color:var(--gray);"><i class="fas fa-eye-slash"></i> Hidden</span>
                             <?php endif; ?>
                         </td>
-                        <td class="actions-cell">
+                        <td>
                             <div style="display:flex; gap:5px;">
                                 <form method="POST" action="<?php echo moduleUrl('admin', 'hall-of-fame'); ?>" style="display:inline;">
                                     <?php echo csrf_field(); ?>
@@ -59,7 +59,7 @@
                                     <input type="hidden" name="id" value="<?php echo $e['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-info" title="Toggle Visibility"><i class="fas fa-eye"></i></button>
                                 </form>
-                                <form method="POST" action="<?php echo moduleUrl('admin', 'hall-of-fame'); ?>" style="display:inline;" onsubmit="return confirm('Delete this entry?');">
+                                <form method="POST" action="<?php echo moduleUrl('admin', 'hall-of-fame'); ?>" style="display:inline;" onsubmit="return confirmDelete('Are you sure you want to delete this entry?');">
                                     <?php echo csrf_field(); ?>
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?php echo $e['id']; ?>">
@@ -96,15 +96,15 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label>Student Name *</label>
-                    <input type="text" name="name" required pattern="^[^0-9]+$" title="Name should not contain numbers" placeholder="e.g. Priya Sharma">
+                    <input type="text" name="name" required pattern="^[a-zA-Z\s]+$" title="Name should only contain letters and spaces" placeholder="e.g. Priya Sharma">
                 </div>
                 <div class="form-group">
                     <label>Achievement *</label>
-                    <input type="text" name="achievement" required placeholder="e.g. 12th Science Topper">
+                    <input type="text" name="achievement" required pattern="^[a-zA-Z0-9\s.,\-]+$" title="Achievement should not contain special characters like @, #, $, %" placeholder="e.g. 12th Science Topper">
                 </div>
                 <div class="form-group">
                     <label>Percentage / Score</label>
-                    <input type="text" name="percentage" placeholder="e.g. 98.6%">
+                    <input type="text" name="percentage" pattern="^[0-9]+(\.[0-9]{1,2})?%?$" title="Percentage should be a valid number or percentage" placeholder="e.g. 98.6%">
                 </div>
                 <div class="form-group">
                     <label>Photo *</label>

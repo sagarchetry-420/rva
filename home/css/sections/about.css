@@ -3,7 +3,7 @@ section.about {
     background-color: #ffffff;
     padding-bottom: 60px;
     position: relative;
-    z-index: 10; /* Ensures hovered cards overlap the next section */
+    z-index: 20; /* Ensures hovered cards overlap the next section */
 }
 /* About Title - Left aligned */
 .about-title {

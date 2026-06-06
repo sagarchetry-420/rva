@@ -22,18 +22,18 @@
     }
 
     // Preload the avatar image to optimize loading speed
-    if (!document.querySelector('link[href="/rossie/rossie.png"]')) {
+    if (!document.querySelector(`link[href="${basePath}/rossie.png"]`)) {
         const preloadLink = document.createElement('link');
         preloadLink.rel = 'preload';
         preloadLink.as = 'image';
-        preloadLink.href = '/rossie/rossie.png';
+        preloadLink.href = `${basePath}/rossie.png`;
         document.head.appendChild(preloadLink);
     }
 
     // 2. Inject HTML UI
     const defaultHistory = `
         <div class="rossie-message-row bot">
-            <img src="/rossie/rossie.png" class="rossie-msg-avatar" alt="Rossie" loading="eager" decoding="async" width="28" height="28" draggable="false">
+            <img src="${basePath}/rossie.png" class="rossie-msg-avatar" alt="Rossie" loading="eager" decoding="async" width="28" height="28" draggable="false">
             <div class="rossie-message bot">Hi! I am Rossie, How can I help you today?</div>
         </div>
     `;
@@ -45,7 +45,7 @@
         <div id="rossie-chatbot-window">
             <div class="rossie-header">
                 <div class="rossie-header-info">
-                    <div class="rossie-avatar"><img src="/rossie/rossie.png" alt="Rossie" loading="eager" fetchpriority="high" decoding="async" width="40" height="40" draggable="false"></div>
+                    <div class="rossie-avatar"><img src="${basePath}/rossie.png" alt="Rossie" loading="eager" fetchpriority="high" decoding="async" width="40" height="40" draggable="false"></div>
                     <div>
                         <h3 class="rossie-title">Rossie</h3>
                         <div class="rossie-status">Online</div>
@@ -66,7 +66,7 @@
             </div>
         </div>
         <button id="rossie-chatbot-toggle" aria-label="Open Chat">
-            <img src="/rossie/rossie.png" alt="Rossie AI" loading="eager" fetchpriority="high" decoding="async" width="60" height="60" draggable="false">
+            <img src="${basePath}/rossie.png" alt="Rossie AI" loading="eager" fetchpriority="high" decoding="async" width="60" height="60" draggable="false">
         </button>
     `;
     document.body.appendChild(container);
@@ -111,7 +111,7 @@
             currentAudio.pause();
         }
 
-        fetch('/rossie/tts.php', {
+        fetch(basePath + '/tts.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: text })
@@ -418,7 +418,7 @@
         
         if (sender === 'bot') {
             rowDiv.innerHTML = `
-                <img src="/rossie/rossie.png" class="rossie-msg-avatar" alt="Rossie" loading="lazy" decoding="async" width="28" height="28" draggable="false">
+                <img src="${basePath}/rossie.png" class="rossie-msg-avatar" alt="Rossie" loading="lazy" decoding="async" width="28" height="28" draggable="false">
                 <div class="rossie-message bot">${text}</div>
             `;
             speakText(text);
@@ -450,7 +450,7 @@
             const rowDiv = document.createElement('div');
             rowDiv.className = 'rossie-message-row bot';
             rowDiv.innerHTML = `
-                <img src="/rossie/rossie.png" class="rossie-msg-avatar" alt="Rossie" loading="lazy" decoding="async" width="28" height="28" draggable="false">
+                <img src="${basePath}/rossie.png" class="rossie-msg-avatar" alt="Rossie" loading="lazy" decoding="async" width="28" height="28" draggable="false">
                 <div class="rossie-message bot" style="width: 100%;">
                     I drafted the following quote:<br><br>
                     <i>"${quoteText}"</i><br>
@@ -522,7 +522,7 @@
         rowDiv.className = 'rossie-message-row bot';
         rowDiv.id = 'rossie-typing-indicator';
         rowDiv.innerHTML = `
-            <img src="/rossie/rossie.png" class="rossie-msg-avatar" alt="Rossie" loading="lazy" decoding="async" width="28" height="28">
+            <img src="${basePath}/rossie.png" class="rossie-msg-avatar" alt="Rossie" loading="lazy" decoding="async" width="28" height="28">
             <div class="rossie-typing">
                 <div class="rossie-typing-dot"></div>
                 <div class="rossie-typing-dot"></div>

@@ -283,7 +283,7 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error fetching notices:', error);
+                    console.warn('Error fetching notices:', error);
                     const noticeList = document.getElementById('noticeList');
                     noticeList.innerHTML = '<div class="notice-list-item"><p>Error loading notices.</p></div>';
                 });

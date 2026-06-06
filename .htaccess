@@ -3,7 +3,7 @@
     RewriteBase /
 
     # Explicitly redirect root requests to the /RVA/home/ directory
-    RewriteRule ^$ home/ [R=301,L]
+    RewriteRule ^$ home/ [R=301,QSD,L]
 
     # Internally serve .html files for clean URLs
     RewriteCond %{REQUEST_FILENAME} !-d

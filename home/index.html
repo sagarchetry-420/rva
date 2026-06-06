@@ -208,7 +208,14 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             fetch('../school_management/index.php?module=api&action=notices')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new TypeError("Oops, we didn't get JSON!");
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     const marquee = document.getElementById('dynamic-notice-marquee');
                     const marqueeClone = document.getElementById('dynamic-notice-marquee-clone');
@@ -347,7 +354,14 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             fetch('../school_management/index.php?module=api&action=hall-of-fame')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new TypeError("Oops, we didn't get JSON!");
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     const fameGrid = document.getElementById('dynamic-fame-grid');
                     if (data && data.length > 0) {

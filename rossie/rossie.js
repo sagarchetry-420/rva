@@ -118,12 +118,14 @@
         })
         .then(response => {
             if (!response.ok) throw new Error('TTS Error');
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) throw new Error('TTS got HTML instead of Audio');
             return response.blob();
         })
         .then(blob => {
             const audioUrl = URL.createObjectURL(blob);
             currentAudio = new Audio(audioUrl);
-            currentAudio.play();
+            currentAudio.play().catch(err => console.warn('Audio playback prevented:', err));
         })
         .catch(err => {
             console.error('ElevenLabs TTS failed:', err);
@@ -350,7 +352,13 @@
             },
             body: JSON.stringify({ message: text })
         })
-            .then(response => response.json())
+            .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (!response.ok || !contentType || !contentType.includes('application/json')) {
+                    throw new TypeError("Oops, we didn't get JSON!");
+                }
+                return response.json();
+            })
             .then(data => {
                 removeTyping();
                 if (data.error) {

@@ -128,7 +128,7 @@
             currentAudio.play().catch(err => console.warn('Audio playback prevented:', err));
         })
         .catch(err => {
-            console.error('ElevenLabs TTS failed:', err);
+            console.warn('ElevenLabs TTS failed:', err);
         });
     }
     // Speech Recognition Logic
@@ -403,7 +403,7 @@
             .catch(error => {
                 removeTyping();
                 appendMessage('Error connecting to the server.', 'bot');
-                console.error('Rossie API Error:', error);
+                console.warn('Rossie API Error:', error);
             });
     }
 

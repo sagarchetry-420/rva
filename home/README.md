@@ -114,5 +114,5 @@ home/
 ✅ No links to school_management folder
 
 ## 🚀 Live URLs
-- Landing Page: `http://localhost/RVA/home/`
-- Gallery Page: `http://localhost/RVA/home/gallery.html`
+- Landing Page: `http://localhost/home/`
+- Gallery Page: `http://localhost/home/gallery.html`

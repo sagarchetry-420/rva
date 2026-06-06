@@ -1,5 +1,5 @@
 RewriteEngine On
-RewriteBase /RVA/school_management/
+RewriteBase /school_management/
 
 # Disable directory browsing
 Options -Indexes

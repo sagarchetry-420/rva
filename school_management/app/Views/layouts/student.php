@@ -10,7 +10,7 @@ $pageTitle = $pageTitle ?? 'Dashboard';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle); ?> - <?php echo APP_NAME; ?></title>
-    <link rel="icon" type="image/png" href="/RVA/assets/logo/logo_png.png">
+    <link rel="icon" type="image/png" href="/assets/logo/logo_png.png">
     <link rel="stylesheet" href="<?php echo asset('css/style.css'); ?>">
     <?php if (isset($moduleCss)): ?>
         <?php foreach ((array)$moduleCss as $cssFile): ?>
@@ -38,6 +38,6 @@ $pageTitle = $pageTitle ?? 'Dashboard';
     <script src="<?php echo asset('js/script.js'); ?>"></script>
     <?php if (isset($extraJs)): ?><script><?php echo $extraJs; ?></script><?php endif; ?>
     <!-- Rossie Chatbot -->
-    <script src="/RVA/rossie/rossie.js"></script>
+    <script src="/rossie/rossie.js"></script>
 </body>
 </html>

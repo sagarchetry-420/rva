@@ -6,7 +6,7 @@
 <div class="auth-container admission-form-container">
     <div class="auth-header" style="text-align: center; margin-bottom: 30px;">
         <div class="auth-logo" style="margin-bottom: 10px;">
-            <img src="/RVA/assets/logo/logo_small.png" alt="School Logo" style="max-height: 80px; width: auto;" loading="lazy">
+            <img src="/assets/logo/logo_small.png" alt="School Logo" style="max-height: 80px; width: auto;" loading="lazy">
         </div>
         <h1 style="margin-top: 5px; font-size: 28px;"><?php echo htmlspecialchars($pageTitle); ?></h1>
         <p class="text-muted" style="margin-bottom: 20px;">Enter your details to check the status of your admission application</p>

@@ -30,7 +30,7 @@
                     </small>
                 </div>
                 <?php if (!empty($notice['attachment_path'])): ?>
-                    <a href="/RVA/<?php echo htmlspecialchars($notice['attachment_path']); ?>" target="_blank" class="btn btn-sm btn-secondary">
+                    <a href="/<?php echo htmlspecialchars($notice['attachment_path']); ?>" target="_blank" class="btn btn-sm btn-secondary">
                         <i class="fas fa-download"></i> Attachment
                     </a>
                 <?php endif; ?>

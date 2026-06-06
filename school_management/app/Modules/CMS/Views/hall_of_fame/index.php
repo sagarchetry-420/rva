@@ -36,7 +36,7 @@
                     <tr>
                         <td>
                             <?php if (!empty($e['image_path'])): ?>
-                                <img src="/RVA/<?php echo htmlspecialchars($e['image_path']); ?>" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: 50%; cursor: pointer;" class="clickable-photo" data-image="<?php echo htmlspecialchars($e['image_path']); ?>" data-name="<?php echo htmlspecialchars($e['name']); ?>" onclick="openPhotoPreview_hof(this)">
+                                <img src="/<?php echo htmlspecialchars($e['image_path']); ?>" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: 50%; cursor: pointer;" class="clickable-photo" data-image="<?php echo htmlspecialchars($e['image_path']); ?>" data-name="<?php echo htmlspecialchars($e['name']); ?>" onclick="openPhotoPreview_hof(this)">
                             <?php else: ?>
                                 <div style="width: 50px; height: 50px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i class="fas fa-user text-muted"></i></div>
                             <?php endif; ?>

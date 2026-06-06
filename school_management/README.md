@@ -54,7 +54,7 @@ school_management/
    Rename or create a `.env` file in the root directory and configure your Database and SMTP settings:
    ```env
    APP_ENV=development
-   BASE_URL=http://localhost/RVA/school_management
+   BASE_URL=http://localhost/school_management
 
    DB_HOST=localhost
    DB_NAME=RVA

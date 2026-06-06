@@ -10,7 +10,7 @@ $pageTitle = $pageTitle ?? 'Login';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle); ?> - <?php echo APP_NAME; ?></title>
-    <link rel="icon" type="image/png" href="/RVA/assets/logo/logo_png.png">
+    <link rel="icon" type="image/png" href="/assets/logo/logo_png.png">
     <link rel="stylesheet" href="<?php echo asset('css/style.css'); ?>">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>

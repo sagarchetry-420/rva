@@ -102,7 +102,7 @@ class App
             $env = self::env('APP_ENV', 'development');
             $baseUrl = $env === 'production' 
                 ? self::env('PROD_BASE_URL', 'https://rosevalleyacademy.page.gd/RVA/school_management') 
-                : self::env('DEV_BASE_URL', 'http://localhost/RVA/school_management');
+                : self::env('DEV_BASE_URL', 'http://localhost/school_management');
             define('BASE_URL', rtrim($baseUrl, '/'));
         }
     }
